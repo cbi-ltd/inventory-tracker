@@ -1,10 +1,11 @@
 package org.inventory_tracker.entity;
 
+import java.time.ZoneId;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.List;
 
 @Getter
 @Setter
@@ -15,26 +16,26 @@ public class Station extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
+    private String code;
+
+    @Column(nullable = false)
     private String name;
 
+    @Column(nullable = false)
     private String address;
+
+    private String city;
+
+    private String state;
+
+    private String phoneNumber;
 
     private String email;
 
-    private String phone;
+    @Column(nullable =false)
+    private Boolean active = true;
 
-    private Double totalCapacity;
-
-    @ManyToOne
-    @JoinColumn(name = "company_id")
-    private Company company;
-
-    @OneToMany(mappedBy = "station")
-    private List<Attendant> attendants;
-
-    @OneToMany(mappedBy = "station")
-    private List<PosTerminal> terminals;
-
-    @OneToMany(mappedBy = "station")
-    private List<StationInventory> inventories;
+    @Column(nullable = false)
+    private ZoneId timeZone;
 }

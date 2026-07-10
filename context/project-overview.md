@@ -27,7 +27,7 @@ Pumps are assigned daily to an attendant (that means the attendant on a pump tod
 
 Each pump will also be assigned to a POS-terminal via the POS terminal's serial number (if possible, provision can be made for attendants briefly lending another attendant's POS terminal for certain transactions - due to network issues or any other issue - this might violate report authenticity as we aim to know what attendant manned this POS terminal and is therefore responsible for ALL the transactions made via this POS terminal)
 
-No need for shifts, since attendants clock-into their pumps at a set-time with an initial pump-reading and clock-out of it at a set-time with a closing reading
+Attendants clock-into their pumps at a set-time with an initial pump-reading and clock-out of it at a set-time with a closing reading
 
 Note that i already have a seperate model for pump-audits, because the vision of this fuel-application is to eventually generate a very comprehensive report that top-executives of the Companies can look at to see business performance and monitor inflow, outflow and general transactional activities
 

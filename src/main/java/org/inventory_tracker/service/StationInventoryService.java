@@ -1,287 +1,235 @@
 package org.inventory_tracker.service;
 
-
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.config.mapper.StationInventoryMapper;
 import org.inventory_tracker.dto.request.CreateStationInventoryRequest;
 import org.inventory_tracker.dto.response.StationInventoryResponse;
 import org.inventory_tracker.entity.Station;
 import org.inventory_tracker.entity.StationInventory;
-import org.inventory_tracker.enums.ProductType;
 import org.inventory_tracker.repository.StationInventoryRepository;
 import org.inventory_tracker.repository.StationRepository;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDate;
+import org.inventory_tracker.repository.ProductRepository;
+import org.inventory_tracker.entity.Product;
+import org.inventory_tracker.entity.ProductPriceHistory;
+import org.inventory_tracker.repository.ProductPriceHistoryRepository;
+import org.inventory_tracker.exception.DuplicateResourceException;
+import org.inventory_tracker.exception.ResourceNotFoundException;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import org.inventory_tracker.dto.request.UpdateStationInventoryRequest;
+import org.inventory_tracker.util.ShiftUtil;
 import java.util.List;
-import java.util.Optional;
+
 
 @Service
 @RequiredArgsConstructor
 public class StationInventoryService {
 
-    private final StationInventoryRepository repository;
-    private final StationRepository stationRepository;
+    private final StationInventoryRepository stationInventoryRepository;
     private final StationInventoryMapper stationInventoryMapper;
 
-    public StationInventory createDailySnapshot(
-            String merchantId,
-            String outletId,
-            ProductType productType,
-            Double openingQuantity
-    ) {
+    private final StationRepository stationRepository;
+    private final ProductRepository productRepository;
 
-        StationInventory inventory = new StationInventory();
-
-        inventory.setMerchantId(merchantId);
-        inventory.setOutletId(outletId);
-        inventory.setProductType(productType);
-
-        inventory.setOpeningQuantity(openingQuantity);
-        inventory.setClosingQuantity(openingQuantity);
-
-        inventory.setQuantitySold(0.0);
-
-        inventory.setBusinessDate(LocalDate.now());
-
-        return repository.save(inventory);
-    }
+    private final ProductPriceHistoryRepository priceHistoryRepository;
 
     @Transactional
-    public void updateAfterSale(
-            String outletId,
-            ProductType productType,
-            Double litresSold
-    ) {
+    public StationInventoryResponse createStationInventory(
+            CreateStationInventoryRequest request) {
 
-        Optional<StationInventory> inventory =
-                repository.findTodayInventory(
-                        outletId,
-                        productType
-                );
+        if (stationInventoryRepository.existsByStationIdAndProductId(
+                request.getStationId(),
+                request.getProductId())) {
 
-        inventory.get().setQuantitySold(
-                inventory.get().getQuantitySold() + litresSold
-        );
+            throw new DuplicateResourceException(
+                    "Inventory already exists for this product at the station.");
+        }
 
-        inventory.get().setClosingQuantity(
-                inventory.get().getClosingQuantity() - litresSold
-        );
+        Station station =
+                stationRepository.findById(request.getStationId())
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Station not found"));
 
-        repository.save(inventory.get());
-    }
-
-//  ___________________________________________
-
-    public StationInventoryResponse create(CreateStationInventoryRequest request) {
-
-        Station station = stationRepository.findById(
-                request.getStationId()
-        ).orElseThrow(() ->
-                new RuntimeException("Station not found")
-        );
+        Product product =
+                productRepository.findById(request.getProductId())
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Product not found"));
 
         StationInventory inventory =
                 stationInventoryMapper.toEntity(request);
 
-//        inventory.setStation(station);
+        inventory.setStation(station);
+        inventory.setProduct(product);
+        inventory.setCurrentQuantity(request.getOpeningQuantity());
+        inventory.setSellingPrice(request.getSellingPrice());
+        inventory.setReorderLevel(request.getReorderLevel());
+        inventory.setActive(true);
 
-        StationInventory savedInventory =
-                repository.save(inventory);
+        StationInventory saved =
+                stationInventoryRepository.save(inventory);
 
-        return stationInventoryMapper.toResponse(
-                savedInventory
-        );
+        ProductPriceHistory history =
+                new ProductPriceHistory();
+
+        history.setStation(station);
+        history.setProduct(product);
+        history.setOldPrice(BigDecimal.ZERO);
+        history.setNewPrice(request.getSellingPrice());
+        history.setReason("Initial selling price");
+        history.setChangedBy("SYSTEM");
+        history.setBusinessDate(
+                ShiftUtil.businessDate(station.getTimeZone()));
+        history.setChangedAt(LocalDateTime.now(station.getTimeZone()));
+
+        priceHistoryRepository.save(history);
+
+        return stationInventoryMapper.toResponse(saved);
     }
 
-    public List<StationInventoryResponse> getAll() {
+    @Transactional
+    public StationInventoryResponse updateStationInventory(
+            Long id,
+            UpdateStationInventoryRequest request) {
 
-        List<StationInventory> inventories =
-                repository.findAll();
+        StationInventory inventory =
+                stationInventoryRepository.findById(id)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Inventory not found"));
+
+        BigDecimal oldPrice =
+                inventory.getSellingPrice();
+
+        inventory.setSellingPrice(request.getSellingPrice());
+        inventory.setReorderLevel(request.getReorderLevel());
+
+        StationInventory updated =
+                stationInventoryRepository.save(inventory);
+
+        if (oldPrice.compareTo(request.getSellingPrice()) != 0) {
+
+            ProductPriceHistory history =
+                    new ProductPriceHistory();
+
+            history.setStation(updated.getStation());
+            history.setProduct(updated.getProduct());
+
+            history.setOldPrice(oldPrice);
+            history.setNewPrice(request.getSellingPrice());
+
+            history.setReason("Price updated");
+
+            history.setChangedBy("SYSTEM");
+
+            history.setBusinessDate(
+                    ShiftUtil.businessDate(
+                            updated.getStation().getTimeZone()));
+
+            history.setChangedAt(
+                    LocalDateTime.now(
+                            updated.getStation().getTimeZone()));
+
+            priceHistoryRepository.save(history);
+        }
+
+        return stationInventoryMapper.toResponse(updated);
+    }
+
+    @Transactional(readOnly = true)
+    public StationInventoryResponse getInventoryById(Long id) {
+
+        StationInventory inventory =
+                stationInventoryRepository.findById(id)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Inventory not found"));
+
+        return stationInventoryMapper.toResponse(inventory);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StationInventoryResponse> getStationInventory(
+            Long stationId) {
+
+        if (!stationRepository.existsById(stationId)) {
+            throw new ResourceNotFoundException(
+                    "Station not found");
+        }
 
         return stationInventoryMapper.toResponseList(
-                inventories
+
+                stationInventoryRepository
+                        .findByStationIdOrderByProduct_NameAsc(
+                                stationId)
         );
     }
 
-    public StationInventoryResponse getById(Long id) {
+    @Transactional(readOnly = true)
+    public List<StationInventoryResponse> getAllInventories() {
+
+        return stationInventoryMapper.toResponseList(
+
+                stationInventoryRepository
+                        .findAllByOrderByStation_NameAscProduct_NameAsc()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<StationInventoryResponse> getActiveInventories() {
+
+        return stationInventoryMapper.toResponseList(
+
+                stationInventoryRepository
+                        .findByActiveTrueOrderByStation_NameAsc()
+        );
+    }
+
+    @Transactional
+    public StationInventoryResponse activateInventory(Long id) {
 
         StationInventory inventory =
-                repository.findById(id)
+                stationInventoryRepository.findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Inventory not found"
-                                )
-                        );
+                                new ResourceNotFoundException(
+                                        "Inventory not found"));
+
+        if (Boolean.TRUE.equals(inventory.getActive())) {
+
+            throw new DuplicateResourceException(
+                    "Inventory is already active");
+        }
+
+        inventory.setActive(true);
 
         return stationInventoryMapper.toResponse(
-                inventory
-        );
+
+                stationInventoryRepository.save(inventory));
     }
 
-    public StationInventoryResponse update(
-            Long id,
-            CreateStationInventoryRequest request
-    ) {
+    @Transactional
+    public StationInventoryResponse deactivateInventory(Long id) {
 
         StationInventory inventory =
-                repository.findById(id)
+                stationInventoryRepository.findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Inventory not found"
-                                )
-                        );
+                                new ResourceNotFoundException(
+                                        "Inventory not found"));
 
-        Station station = stationRepository.findById(
-                request.getStationId()
-        ).orElseThrow(() ->
-                new RuntimeException("Station not found")
-        );
+        if (Boolean.FALSE.equals(inventory.getActive())) {
 
-        inventory.setProductType(request.getProductType());
-//        inventory.setQuantity(request.getQuantity());
-//        inventory.setStation(station);
+            throw new DuplicateResourceException(
+                    "Inventory is already inactive");
+        }
 
-        StationInventory updatedInventory =
-                repository.save(inventory);
+        inventory.setActive(false);
 
         return stationInventoryMapper.toResponse(
-                updatedInventory
-        );
-    }
 
-    public void delete(Long id) {
-
-        StationInventory inventory =
-                repository.findById(id)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Inventory not found"
-                                )
-                        );
-
-        repository.delete(inventory);
+                stationInventoryRepository.save(inventory));
     }
 
 }
-
-
-
-
-//import lombok.RequiredArgsConstructor;
-//import org.inventory_tracker.dto.request.CreateStationInventoryRequest;
-//import org.inventory_tracker.dto.response.StationInventoryResponse;
-//import org.inventory_tracker.entity.Station;
-//import org.inventory_tracker.entity.StationInventory;
-//import org.inventory_tracker.config.mapper.StationInventoryMapper;
-//import org.inventory_tracker.repository.StationInventoryRepository;
-//import org.inventory_tracker.repository.StationRepository;
-//import org.springframework.stereotype.Service;
-//
-//import java.util.List;
-//
-//@Service
-//@RequiredArgsConstructor
-//public class StationInventoryService {
-//
-//    private final StationInventoryRepository
-//            stationInventoryRepository;
-//
-//    private final StationRepository stationRepository;
-//
-//    private final StationInventoryMapper
-//            stationInventoryMapper;
-//
-//    public StationInventoryResponse create(
-//            CreateStationInventoryRequest request
-//    ) {
-//
-//        Station station = stationRepository.findById(
-//                request.getStationId()
-//        ).orElseThrow(() ->
-//                new RuntimeException("Station not found")
-//        );
-//
-//        StationInventory inventory =
-//                stationInventoryMapper.toEntity(request);
-//
-//        inventory.setStation(station);
-//
-//        StationInventory savedInventory =
-//                stationInventoryRepository.save(inventory);
-//
-//        return stationInventoryMapper.toResponse(
-//                savedInventory
-//        );
-//    }
-//
-//    public List<StationInventoryResponse> getAll() {
-//
-//        List<StationInventory> inventories =
-//                stationInventoryRepository.findAll();
-//
-//        return stationInventoryMapper.toResponseList(
-//                inventories
-//        );
-//    }
-//
-//    public StationInventoryResponse getById(Long id) {
-//
-//        StationInventory inventory =
-//                stationInventoryRepository.findById(id)
-//                        .orElseThrow(() ->
-//                                new RuntimeException(
-//                                        "Inventory not found"
-//                                )
-//                        );
-//
-//        return stationInventoryMapper.toResponse(
-//                inventory
-//        );
-//    }
-//
-//    public StationInventoryResponse update(
-//            Long id,
-//            CreateStationInventoryRequest request
-//    ) {
-//
-//        StationInventory inventory =
-//                stationInventoryRepository.findById(id)
-//                        .orElseThrow(() ->
-//                                new RuntimeException(
-//                                        "Inventory not found"
-//                                )
-//                        );
-//
-//        Station station = stationRepository.findById(
-//                request.getStationId()
-//        ).orElseThrow(() ->
-//                new RuntimeException("Station not found")
-//        );
-//
-//        inventory.setProductType(request.getProductType());
-//        inventory.setQuantity(request.getQuantity());
-//        inventory.setStation(station);
-//
-//        StationInventory updatedInventory =
-//                stationInventoryRepository.save(inventory);
-//
-//        return stationInventoryMapper.toResponse(
-//                updatedInventory
-//        );
-//    }
-//
-//    public void delete(Long id) {
-//
-//        StationInventory inventory =
-//                stationInventoryRepository.findById(id)
-//                        .orElseThrow(() ->
-//                                new RuntimeException(
-//                                        "Inventory not found"
-//                                )
-//                        );
-//
-//        stationInventoryRepository.delete(inventory);
-//    }
-//}

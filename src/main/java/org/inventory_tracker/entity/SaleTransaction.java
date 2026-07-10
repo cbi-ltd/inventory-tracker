@@ -47,10 +47,6 @@ public class SaleTransaction extends BaseEntity {
     private Attendant attendant;
 
     @ManyToOne
-    @JoinColumn(name = "business_category_id")
-    private BusinessType businessType;
-
-    @ManyToOne
     @JoinColumn(name = "pos_terminal_id")
-    private PosTerminal posTerminal;
+    private Terminal posTerminal;
 }

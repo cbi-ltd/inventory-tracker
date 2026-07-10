@@ -1,28 +1,34 @@
-package org.inventory_tracker.dto.response;
+// package org.inventory_tracker.dto.response;
 
+// import lombok.AllArgsConstructor;
+// import lombok.Builder;
+// import lombok.Data;
+// import lombok.NoArgsConstructor;
+// import lombok.Getter;
+// import lombok.Setter;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+// @Getter
+// @Setter
+// @Builder
+// @NoArgsConstructor
+// @AllArgsConstructor
+// public class StationResponse {
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class TransactionResponse {
+//     private Long id;
 
-    private Long id;
+//     private String code;
 
-    private String transactionReference;
+//     private String name;
 
-    private Double amount;
+//     private String address;
 
-    private String status;
+//     private String city;
 
-    private String paymentMethod;
+//     private String state;
 
-    private String attendantName;
+//     private String phoneNumber;
 
-    private String stationName;
-}
+//     private String email;
+
+//     private Boolean active;
+// }

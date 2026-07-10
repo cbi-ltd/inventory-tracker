@@ -12,9 +12,21 @@ import java.util.List;
 public interface StationInventoryMapper {
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "station", ignore = true)
+    @Mapping(target = "product", ignore = true)
+    @Mapping(target = "currentQuantity", ignore = true)
+    @Mapping(target = "active", ignore = true)
     StationInventory toEntity(
             CreateStationInventoryRequest request
     );
+
+    @Mapping(source = "station.id", target = "stationId")
+    @Mapping(source = "station.name", target = "stationName")
+
+    @Mapping(source = "product.id", target = "productId")
+    @Mapping(source = "product.name", target = "productName")
+    @Mapping(source = "product.productType", target = "productType")
+    @Mapping(source = "product.unitOfMeasure", target = "unit")
 
     StationInventoryResponse toResponse(
             StationInventory inventory
@@ -23,22 +35,4 @@ public interface StationInventoryMapper {
     List<StationInventoryResponse> toResponseList(
             List<StationInventory> inventories
     );
-
-
-
-//    @Mapping(target = "id", ignore = true)
-//    @Mapping(target = "station", ignore = true)
-//    StationInventory toEntity(
-//            CreateStationInventoryRequest request
-//    );
-//
-//    @Mapping(source = "station.id", target = "stationId")
-//    @Mapping(source = "station.name", target = "stationName")
-//    StationInventoryResponse toResponse(
-//            StationInventory inventory
-//    );
-//
-//    List<StationInventoryResponse> toResponseList(
-//            List<StationInventory> inventories
-//    );
 }

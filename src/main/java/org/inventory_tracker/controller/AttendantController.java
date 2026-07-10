@@ -3,10 +3,8 @@ package org.inventory_tracker.controller;
 import lombok.RequiredArgsConstructor;
 
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
-import org.inventory_tracker.dto.request.AssignPumpRequest;
 import org.inventory_tracker.dto.request.CreateAttendantRequest;
 import org.inventory_tracker.dto.response.AttendantResponse;
-import org.inventory_tracker.dto.response.PumpAssignmentResponse;
 import org.inventory_tracker.service.AttendantService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

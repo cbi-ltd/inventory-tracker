@@ -3,11 +3,13 @@ package org.inventory_tracker.service;
 import java.time.LocalDate;
 import org.springframework.transaction.annotation.Transactional;
 import org.inventory_tracker.dto.request.AssignPumpRequest;
+import org.inventory_tracker.dto.request.ChangeTerminalAssignmentRequest;
 import org.inventory_tracker.dto.response.PumpAssignmentResponse;
 import org.inventory_tracker.entity.Attendant;
 import org.inventory_tracker.entity.Pump;
 import org.inventory_tracker.entity.PumpAssignment;
 import org.inventory_tracker.entity.Station;
+import org.inventory_tracker.entity.Terminal;
 import org.inventory_tracker.repository.AttendantRepository;
 import org.inventory_tracker.repository.PumpRepository;
 import org.inventory_tracker.repository.PumpAssignmentRepository;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.config.mapper.PumpAssignmentMapper;
 import java.util.List;
+import org.inventory_tracker.repository.TerminalRepository;
 
 
 @Service
@@ -30,7 +33,27 @@ public class PumpAssignmentService {
     private final PumpRepository pumpRepository;
     private final PumpAssignmentMapper pumpAssignmentMapper;
     private final StationRepository stationRepository;
+    private final TerminalRepository terminalRepository;
 
+
+    @Transactional
+    public PumpAssignmentResponse changeTerminalAssignment(Long assignmentId,
+        ChangeTerminalAssignmentRequest request) {
+
+        PumpAssignment assignment =
+                pumpAssignmentRepository.findById(assignmentId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Pump assignment not found"));
+
+        Terminal terminal = terminalRepository.findById(request.getTerminalId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
+
+        assignment.setTerminal(terminal);
+        PumpAssignment updated = pumpAssignmentRepository.save(assignment);
+
+        return pumpAssignmentMapper.toResponse(updated);
+    }
 
         
     @Transactional
@@ -48,8 +71,11 @@ public class PumpAssignmentService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Station not found"));
 
-        LocalDate today = LocalDate.now();
-        Shift currentShift = ShiftUtil.currentShift();
+        LocalDate today = ShiftUtil.businessDate(station.getTimeZone());
+        Shift currentShift = ShiftUtil.currentShift(station.getTimeZone());
+        
+        // LocalDate today = LocalDate.now();
+        // Shift currentShift = ShiftUtil.currentShift();
 
         pumpAssignmentRepository
                 .findByPumpIdAndAssignmentDateAndShiftAndActiveTrue(
@@ -69,14 +95,13 @@ public class PumpAssignmentService {
                         .findAllByAttendantIdAndActiveTrue(attendant.getId());
 
         if (!activeAssignments.isEmpty()) {
-
             activeAssignments.forEach(a -> a.setActive(false));
-
             pumpAssignmentRepository.saveAll(activeAssignments);
         }
 
         PumpAssignment assignment = new PumpAssignment();
         assignment.setPump(pump);
+        assignment.setTerminal(pump.getDefaultTerminal());
         assignment.setAttendant(attendant);
         assignment.setStation(station);
         assignment.setAssignmentDate(today);

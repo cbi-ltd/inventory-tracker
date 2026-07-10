@@ -5,251 +5,151 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.config.mapper.PumpAuditMapper;
 import org.inventory_tracker.dto.request.CreatePumpAuditRequest;
-import org.inventory_tracker.dto.request.CreatePumpRequest;
 import org.inventory_tracker.dto.response.PumpAuditResponse;
-import org.inventory_tracker.dto.response.PumpResponse;
-import org.inventory_tracker.entity.*;
-import org.inventory_tracker.repository.*;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
+import org.inventory_tracker.entity.PumpAssignment;
+import org.inventory_tracker.entity.PumpAudit;
+import org.inventory_tracker.exception.DuplicateResourceException;
+import org.inventory_tracker.exception.ResourceNotFoundException;
+import org.inventory_tracker.repository.PumpAssignmentRepository;
+import org.inventory_tracker.repository.PumpAuditRepository;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 
 @Service
 @RequiredArgsConstructor
 public class PumpAuditService {
 
-    private final PumpAuditRepository auditRepository;
-    private final PumpRepository pumpRepository;
-    private final StationRepository stationRepository;
-    private final AttendantRepository attendantRepository;
-    private final PosTerminalRepository posTerminalRepository;
+    private final PumpAuditRepository pumpAuditRepository;
+    private final PumpAssignmentRepository pumpAssignmentRepository;
     private final PumpAuditMapper pumpAuditMapper;
 
-    public PumpAudit openShift(Long pumpId,
-                               String outletId,
-                               String merchantId,
-                               String staffId,
-                               String posTerminalId,
-                               Double openingReading) {
+    @Transactional
+    public PumpAuditResponse createPumpAudit(
+            CreatePumpAuditRequest request) {
 
-        Pump pump = pumpRepository.findById(pumpId)
-                .orElseThrow(() -> new RuntimeException("Pump not found"));
+        PumpAssignment assignment =
+                pumpAssignmentRepository.findById(
+                                request.getPumpAssignmentId())
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Pump assignment not found"));
 
-        PumpAudit audit = new PumpAudit();
-        audit.setPump(pump);
-        audit.setOutletId(outletId);
-        audit.setMerchantId(merchantId);
-        audit.setAttendantId(staffId);
-        // audit.setPosTerminalId(posTerminalId);
-        audit.setOpeningReading(openingReading);
+        if (pumpAuditRepository.findByPumpAssignment_Id(
+                assignment.getId()).isPresent()) {
 
-        return auditRepository.save(audit);
+            throw new DuplicateResourceException(
+                    "Pump audit already exists for this assignment");
+        }
+
+        PumpAudit audit =
+                pumpAuditMapper.toEntity(request);
+
+        audit.setPumpAssignment(assignment);
+
+        audit.setBusinessDate(
+                assignment.getAssignmentDate());
+
+        audit.setClockInTime(
+                assignment.getCreatedAt());
+
+        audit.setClockOutTime(
+                assignment.getUpdatedAt());
+
+        /*
+         * These values will eventually come from:
+         *
+         * - Pump meter integration
+         * - Admin reconciliation
+         * - Automatic calculations
+         */
+
+        BigDecimal opening = BigDecimal.ZERO;
+        BigDecimal closing = BigDecimal.ZERO;
+
+        audit.setOpeningReading(opening);
+        audit.setClosingReading(closing);
+
+        audit.setTotalDispensed(closing.subtract(opening));
+        PumpAudit saved = pumpAuditRepository.save(audit);
+
+        return pumpAuditMapper.toResponse(saved);
     }
 
-    public PumpAudit closeShift(Long auditId, Double closingReading) {
+    @Transactional
+    public PumpAuditResponse getPumpAuditById(Long id) {
 
-        PumpAudit audit = auditRepository.findById(auditId)
-                .orElseThrow(() -> new RuntimeException("Audit not found"));
-
-        audit.setClosingReading(closingReading);
-
-        double dispensed = closingReading - audit.getOpeningReading();
-        audit.setTotalDispensed(dispensed);
-
-        return auditRepository.save(audit);
-    }
-
-        public PumpAuditResponse create(CreatePumpAuditRequest request) {
-        Station station = stationRepository.findById(request.getStationId())
-                .orElseThrow(() -> new RuntimeException("Station not found"));
-
-        Attendant attendant = attendantRepository.findById(request.getAttendantId())
-                .orElseThrow(() -> new RuntimeException("Attendant not found"));
-
-        PosTerminal terminal = posTerminalRepository.findById(request.getPosTerminalId())
-                .orElseThrow(() -> new RuntimeException("POS terminal not found"));
-
-        PumpAudit audit = pumpAuditMapper.toEntity(request);
-        audit.setStation(station);
-        // audit.setAttendant(attendant);
-        audit.setPosTerminal(terminal);
-
-        PumpAudit savedAudit = auditRepository.save(audit);
-        return pumpAuditMapper.toResponse(savedAudit);
-    }
-
-    public List<PumpAuditResponse> getAll() {
-        List<PumpAudit> audits = auditRepository.findAll();
-        return pumpAuditMapper.toResponseList(audits);
-    }
-
-    public PumpAuditResponse getById(Long id) {
-        PumpAudit audit = auditRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pump audit not found"));
+        PumpAudit audit =
+                pumpAuditRepository.findById(id)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Pump audit not found"));
 
         return pumpAuditMapper.toResponse(audit);
     }
 
-    public PumpAuditResponse update(Long id, CreatePumpAuditRequest request) {
+    @Transactional
+    public List<PumpAuditResponse> getAllPumpAudits() {
 
-        PumpAudit audit = auditRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pump audit not found"));
-
-        Station station = stationRepository.findById(request.getStationId())
-                .orElseThrow(() -> new RuntimeException("Station not found"));
-
-        Attendant attendant = attendantRepository.findById(request.getAttendantId())
-                .orElseThrow(() -> new RuntimeException("Attendant not found"));
-
-        PosTerminal terminal = posTerminalRepository.findById(request.getPosTerminalId())
-                .orElseThrow(() -> new RuntimeException("POS terminal not found"));
-
-        audit.setPump(request.getPump());
-        audit.setOpeningReading(request.getOpeningReading());
-        audit.setClosingReading(request.getClosingReading());
-        audit.setStation(station);
-        // audit.setAttendant(attendant);
-        audit.setPosTerminal(terminal);
-
-        PumpAudit updatedAudit = auditRepository.save(audit);
-        return pumpAuditMapper.toResponse(updatedAudit);
+        return pumpAuditMapper.toResponseList(
+                pumpAuditRepository
+                        .findAllByOrderByBusinessDateDesc());
     }
 
     @Transactional
-    public PumpResponse createPump(CreatePumpRequest request) {
-        Station station = stationRepository
-                .findById(request.getStationId())
-                .orElseThrow(() -> new RuntimeException("Station not found"));
+    public List<PumpAuditResponse> getPumpAuditsByStation(
+            Long stationId) {
 
-        Pump pump = new Pump();
-        pump.setPumpNumber(request.getPumpNumber());
-        pump.setStation(station);
-        pump.setActive(true);
-
-        pump = pumpRepository.save(pump);
-        return PumpResponse.builder()
-                .id(pump.getId())
-                .pumpNumber(pump.getPumpNumber())
-                .build();
+        return pumpAuditMapper.toResponseList(
+                pumpAuditRepository
+                        .findByPumpAssignment_Station_IdOrderByBusinessDateDesc(
+                                stationId));
     }
 
-    public void delete(Long id) {
-        PumpAudit audit = auditRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pump audit not found"));
+    @Transactional
+    public List<PumpAuditResponse> getPumpAuditsByPump(
+            Long pumpId) {
 
-        auditRepository.delete(audit);
+        return pumpAuditMapper.toResponseList(
+                pumpAuditRepository
+                        .findByPumpAssignment_Pump_IdOrderByBusinessDateDesc(
+                                pumpId));
+    }
+
+    @Transactional
+    public List<PumpAuditResponse> getPumpAuditsByAttendant(
+            Long attendantId) {
+
+        return pumpAuditMapper.toResponseList(
+                pumpAuditRepository
+                        .findByPumpAssignment_Attendant_IdOrderByBusinessDateDesc(
+                                attendantId));
+    }
+
+    @Transactional
+    public List<PumpAuditResponse> getPumpAuditsByBusinessDate(
+            LocalDate businessDate) {
+
+        return pumpAuditMapper.toResponseList(
+                pumpAuditRepository
+                        .findByBusinessDateOrderByClockInTimeAsc(
+                                businessDate));
+    }
+
+    @Transactional
+    public PumpAuditResponse getPumpAuditByAssignment(
+            Long assignmentId) {
+
+        PumpAudit audit =
+                pumpAuditRepository
+                        .findByPumpAssignment_Id(
+                                assignmentId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Pump audit not found"));
+
+        return pumpAuditMapper.toResponse(audit);
     }
 }
-
-
-
-
-
-
-
-
-//import jakarta.transaction.Transactional;
-//import lombok.RequiredArgsConstructor;
-//import org.inventory_tracker.dto.request.CreatePumpAuditRequest;
-//import org.inventory_tracker.dto.request.CreatePumpRequest;
-//import org.inventory_tracker.dto.response.PumpAuditResponse;
-//import org.inventory_tracker.dto.response.PumpResponse;
-//import org.inventory_tracker.entity.*;
-//import org.inventory_tracker.config.mapper.PumpAuditMapper;
-//import org.inventory_tracker.repository.*;
-//import org.springframework.stereotype.Service;
-//
-//import java.util.List;
-//
-//@Service
-//@RequiredArgsConstructor
-//public class PumpAuditService {
-//
-//    private final PumpAuditRepository pumpAuditRepository;
-//    private final PumpRepository pumpRepository;
-//    private final StationRepository stationRepository;
-//    private final AttendantRepository attendantRepository;
-//    private final PosTerminalRepository posTerminalRepository;
-//    private final PumpAuditMapper pumpAuditMapper;
-//
-//    public PumpAuditResponse create(CreatePumpAuditRequest request) {
-//        Station station = stationRepository.findById(request.getStationId())
-//                .orElseThrow(() -> new RuntimeException("Station not found"));
-//
-//        Attendant attendant = attendantRepository.findById(request.getAttendantId())
-//                .orElseThrow(() -> new RuntimeException("Attendant not found"));
-//
-//        PosTerminal terminal = posTerminalRepository.findById(request.getPosTerminalId())
-//                .orElseThrow(() -> new RuntimeException("POS terminal not found"));
-//
-//        PumpAudit audit = pumpAuditMapper.toEntity(request);
-//        audit.setStation(station);
-//        audit.setAttendant(attendant);
-//        audit.setPosTerminal(terminal);
-//
-//        PumpAudit savedAudit = pumpAuditRepository.save(audit);
-//        return pumpAuditMapper.toResponse(savedAudit);
-//    }
-//
-//    public List<PumpAuditResponse> getAll() {
-//        List<PumpAudit> audits = pumpAuditRepository.findAll();
-//        return pumpAuditMapper.toResponseList(audits);
-//    }
-//
-//    public PumpAuditResponse getById(Long id) {
-//        PumpAudit audit = pumpAuditRepository.findById(id)
-//                .orElseThrow(() -> new RuntimeException("Pump audit not found"));
-//
-//        return pumpAuditMapper.toResponse(audit);
-//    }
-//
-//    public PumpAuditResponse update(Long id, CreatePumpAuditRequest request) {
-//
-//        PumpAudit audit = pumpAuditRepository.findById(id)
-//                .orElseThrow(() -> new RuntimeException("Pump audit not found"));
-//
-//        Station station = stationRepository.findById(request.getStationId())
-//                .orElseThrow(() -> new RuntimeException("Station not found"));
-//
-//        Attendant attendant = attendantRepository.findById(request.getAttendantId())
-//                .orElseThrow(() -> new RuntimeException("Attendant not found"));
-//
-//        PosTerminal terminal = posTerminalRepository.findById(request.getPosTerminalId())
-//                .orElseThrow(() -> new RuntimeException("POS terminal not found"));
-//
-//        audit.setPump(request.getPump());
-//        audit.setOpeningReading(request.getOpeningReading());
-//        audit.setClosingReading(request.getClosingReading());
-//        audit.setStation(station);
-//        audit.setAttendant(attendant);
-//        audit.setPosTerminal(terminal);
-//
-//        PumpAudit updatedAudit = pumpAuditRepository.save(audit);
-//        return pumpAuditMapper.toResponse(updatedAudit);
-//    }
-//
-//    @Transactional
-//    public PumpResponse createPump(CreatePumpRequest request) {
-//        Station station = stationRepository
-//                .findById(request.getStationId())
-//                .orElseThrow(() -> new RuntimeException("Station not found"));
-//
-//        Pump pump = new Pump();
-//        pump.setPumpNumber(request.getPumpNumber());
-//        pump.setStation(station);
-//        pump.setActive(true);
-//
-//        pump = pumpRepository.save(pump);
-//        return PumpResponse.builder()
-//                .id(pump.getId())
-//                .pumpNumber(pump.getPumpNumber())
-//                .build();
-//    }
-//
-//    public void delete(Long id) {
-//        PumpAudit audit = pumpAuditRepository.findById(id)
-//                .orElseThrow(() -> new RuntimeException("Pump audit not found"));
-//
-//        pumpAuditRepository.delete(audit);
-//    }
-//}

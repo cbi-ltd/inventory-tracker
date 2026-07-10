@@ -37,4 +37,13 @@ public interface PumpAssignmentRepository
     List<PumpAssignment> findByStationId(Long stationId);
 
     List<PumpAssignment> findAllByAttendantIdAndActiveTrue(Long attendantId);
+
+    long countByStationIdAndActiveTrue(Long stationId);
+    long countByPumpStationIdAndActiveTrue(Long stationId);
+
+    long countByActiveTrue();
+
+    long countByPumpId(Long pumpId);
+
+    long countByPumpIdAndActiveTrue(Long pumpId);
 }

@@ -7,66 +7,168 @@ import org.inventory_tracker.service.StationInventoryService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import jakarta.validation.Valid;
+import java.time.LocalDateTime;
 import java.util.List;
+import org.inventory_tracker.dto.request.UpdateStationInventoryRequest;
+import org.inventory_tracker.dto.common.ApiSuccessResponse;
+
 
 @RestController
 @RequestMapping("/station-inventories")
 @RequiredArgsConstructor
 public class StationInventoryController {
 
-    private final StationInventoryService
-            stationInventoryService;
+    private final StationInventoryService stationInventoryService;
 
     @PostMapping
-    public ResponseEntity<StationInventoryResponse> create(
-            @RequestBody CreateStationInventoryRequest request
-    ) {
+    public ResponseEntity<ApiSuccessResponse<StationInventoryResponse>>
+    createStationInventory(
+            @Valid
+            @RequestBody CreateStationInventoryRequest request) {
 
-        return new ResponseEntity<>(
-                stationInventoryService.create(request),
-                HttpStatus.CREATED
-        );
+        StationInventoryResponse response =
+                stationInventoryService
+                        .createStationInventory(request);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(
+                        new ApiSuccessResponse<>(
+                                LocalDateTime.now(),
+                                HttpStatus.CREATED.value(),
+                                "Station inventory created successfully",
+                                response
+                        )
+                );
     }
 
-    @GetMapping
-    public ResponseEntity<List<StationInventoryResponse>>
-    getAll() {
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiSuccessResponse<StationInventoryResponse>>
+    updateStationInventory(
+            @PathVariable Long id,
+            @Valid
+            @RequestBody UpdateStationInventoryRequest request) {
+
+        StationInventoryResponse response =
+                stationInventoryService
+                        .updateStationInventory(id, request);
 
         return ResponseEntity.ok(
-                stationInventoryService.getAll()
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Station inventory updated successfully",
+                        response
+                )
         );
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<StationInventoryResponse>
-    getById(@PathVariable Long id) {
+    public ResponseEntity<ApiSuccessResponse<StationInventoryResponse>>
+    getInventoryById(@PathVariable Long id) {
+
+        StationInventoryResponse response =
+                stationInventoryService
+                        .getInventoryById(id);
 
         return ResponseEntity.ok(
-                stationInventoryService.getById(id)
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Inventory retrieved successfully",
+                        response
+                )
         );
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<StationInventoryResponse>
-    update(
-            @PathVariable Long id,
-            @RequestBody
-            CreateStationInventoryRequest request
-    ) {
+    @GetMapping
+    public ResponseEntity<ApiSuccessResponse<List<StationInventoryResponse>>>
+    getAllInventories() {
+
+        List<StationInventoryResponse> response =
+                stationInventoryService
+                        .getAllInventories();
 
         return ResponseEntity.ok(
-                stationInventoryService.update(id, request)
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Inventories retrieved successfully",
+                        response
+                )
         );
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(
-            @PathVariable Long id
-    ) {
+    @GetMapping("/station/{stationId}")
+    public ResponseEntity<ApiSuccessResponse<List<StationInventoryResponse>>>
+    getStationInventory(
+            @PathVariable Long stationId) {
 
-        stationInventoryService.delete(id);
+        List<StationInventoryResponse> response =
+                stationInventoryService
+                        .getStationInventory(stationId);
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Station inventory retrieved successfully",
+                        response
+                )
+        );
+    }
+
+    @GetMapping("/active")
+    public ResponseEntity<ApiSuccessResponse<List<StationInventoryResponse>>>
+    getActiveInventories() {
+
+        List<StationInventoryResponse> response =
+                stationInventoryService
+                        .getActiveInventories();
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Active inventories retrieved successfully",
+                        response
+                )
+        );
+    }
+
+    @PatchMapping("/{id}/activate")
+    public ResponseEntity<ApiSuccessResponse<StationInventoryResponse>>
+    activateInventory(@PathVariable Long id) {
+
+        StationInventoryResponse response =
+                stationInventoryService
+                        .activateInventory(id);
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Inventory activated successfully",
+                        response
+                )
+        );
+    }
+
+    @PatchMapping("/{id}/deactivate")
+    public ResponseEntity<ApiSuccessResponse<StationInventoryResponse>>
+    deactivateInventory(@PathVariable Long id) {
+
+        StationInventoryResponse response =
+                stationInventoryService
+                        .deactivateInventory(id);
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Inventory deactivated successfully",
+                        response
+                )
+        );
     }
 }

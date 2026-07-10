@@ -31,5 +31,13 @@ public class PumpAssignment extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private Shift shift;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "terminal_id")
+    private Terminal terminal;
+
+    // always copied from Pump Entity
+    // private String actualTerminalId;
+    // private String actualTerminalSerialNumber;
+
     private Boolean active = true;
 }

@@ -14,12 +14,16 @@ public interface PumpAssignmentMapper {
     @Mapping(source = "station.name", target = "stationName")
 
     @Mapping(source = "pump.id", target = "pumpId")
-    @Mapping(source = "pump.name", target = "pumpName")
+    @Mapping(source = "pump.pumpName", target = "pumpName")
     @Mapping(source = "pump.pumpNumber", target = "pumpNumber")
 
     @Mapping(source = "attendant.id", target = "attendantId")
     @Mapping(source = "attendant.fullName", target = "attendantName")
     @Mapping(source = "attendant.username", target = "username")
+
+    @Mapping(source = "terminal.id", target = "terminalDbId")
+    @Mapping(source = "terminal.terminalId", target = "terminalId")
+    @Mapping(source = "terminal.terminalSerialNumber", target = "terminalSerialNumber")
 
     PumpAssignmentResponse toResponse(
             PumpAssignment assignment

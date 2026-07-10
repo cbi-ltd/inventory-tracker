@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.inventory_tracker.dto.request.AssignPumpRequest;
+import org.inventory_tracker.dto.request.ChangeTerminalAssignmentRequest;
 import org.inventory_tracker.dto.response.PumpAssignmentResponse;
 import org.inventory_tracker.service.PumpAssignmentService;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,28 @@ import java.util.List;
 public class PumpAssignmentController {
 
     private final PumpAssignmentService pumpAssignmentService;
+
+
+    @PatchMapping("/{assignmentId}/terminal")
+public ResponseEntity<ApiSuccessResponse<PumpAssignmentResponse>>
+changeTerminalAssignment(
+        @PathVariable Long assignmentId,
+        @Valid @RequestBody ChangeTerminalAssignmentRequest request) {
+
+    PumpAssignmentResponse response =
+            pumpAssignmentService.changeTerminalAssignment(
+                    assignmentId,
+                    request);
+
+    return ResponseEntity.ok(
+            new ApiSuccessResponse<>(
+                    LocalDateTime.now(),
+                    HttpStatus.OK.value(),
+                    "Assignment terminal updated successfully",
+                    response
+            )
+    );
+}
 
 
 @PostMapping

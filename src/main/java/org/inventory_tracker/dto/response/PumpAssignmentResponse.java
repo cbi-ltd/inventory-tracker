@@ -23,6 +23,11 @@ public class PumpAssignmentResponse {
     private Long attendantId;
     private String attendantName;
     private String username;
+    private Long terminalDbId;
+    private String terminalId;
+    private String terminalSerialNumber;
+    // private String actualTerminalId;
+    // private String actualTerminalSerialNumber;
 
     private LocalDate assignmentDate;
 

@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.dto.request.CreateAttendantRequest;
 import org.inventory_tracker.dto.response.AttendantResponse;
 import org.inventory_tracker.entity.Attendant;
-import org.inventory_tracker.repository.PumpAssignmentRepository;
-import org.inventory_tracker.config.mapper.PumpAssignmentMapper;
 import org.inventory_tracker.entity.Station;
 import org.inventory_tracker.config.mapper.AttendantMapper;
 import org.inventory_tracker.repository.AttendantRepository;

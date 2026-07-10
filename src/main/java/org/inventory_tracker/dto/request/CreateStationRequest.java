@@ -1,27 +1,28 @@
 package org.inventory_tracker.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+
+@Getter
+@Setter
 public class CreateStationRequest {
 
-    @NotBlank
+    @NotBlank(message = "Station code is required")
+    private String code;
+
+    @NotBlank(message = "Station name is required")
     private String name;
 
+    @NotBlank(message = "Station address is required")
     private String address;
 
+    private String city;
+
+    private String state;
+
+    private String phoneNumber;
+
     private String email;
-
-    private String phone;
-
-    private Double totalCapacity;
-
-    private Long companyId;
-
-    private String companyName;
 }

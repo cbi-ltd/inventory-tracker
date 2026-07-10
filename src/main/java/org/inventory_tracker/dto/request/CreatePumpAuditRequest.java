@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.inventory_tracker.entity.Pump;
+import jakarta.validation.constraints.NotNull;
 
 @Getter
 @Setter
@@ -12,10 +12,19 @@ import org.inventory_tracker.entity.Pump;
 @AllArgsConstructor
 public class CreatePumpAuditRequest {
 
-    private Pump pump;
-    private Double openingReading;
-    private Double closingReading;
-    private Long stationId;
-    private Long attendantId;
-    private Long posTerminalId;
+
+    @NotNull(message = "Pump assignment is required")
+    private Long pumpAssignmentId;
+
+    @NotNull(message = "Opening meter reading is required")
+    private Double openingMeterReading;
+
+    private String remarks;
+
+    // private Pump pump;
+    // private Double openingReading;
+    // private Double closingReading;
+    // private Long stationId;
+    // private Long attendantId;
+    // private Long posTerminalId;
 }
