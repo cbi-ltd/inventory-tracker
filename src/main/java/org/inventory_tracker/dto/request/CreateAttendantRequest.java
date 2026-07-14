@@ -17,7 +17,6 @@ public class CreateAttendantRequest {
     @NotBlank
     private String username;
 
-    @NotBlank
     private String pin;
 
     @NotBlank
