@@ -44,12 +44,14 @@ public class StationController {
 
         List<StationResponse> response =
                 stationService.getAllStations();
+        Integer count = response.size();
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Stations retrieved successfully",
+                        count,
                         response
                 )
         );
@@ -77,18 +79,20 @@ public class StationController {
 
         List<StationResponse> response =
                 stationService.getActiveStations();
+        Integer count = response.size();
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Active stations retrieved successfully",
+                        count,
                         response
                 )
         );
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<ApiSuccessResponse<StationResponse>> updateStation(
             @PathVariable Long id,
             @Valid @RequestBody UpdateStationRequest request) {

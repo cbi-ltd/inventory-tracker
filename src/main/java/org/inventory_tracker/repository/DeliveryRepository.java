@@ -61,5 +61,5 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
 
     long countByProductId(Long productId);
 
-    long countByReceivedBy(String receivedBy);
+//     long countByReceivedBy(String receivedBy);
 }

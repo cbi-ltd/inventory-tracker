@@ -21,7 +21,6 @@ public interface TerminalRepository extends JpaRepository<Terminal, Long> {
             String terminalSerialNumber
     );
 
-    boolean existsByTerminalMacAddress(String macAddress);
 
     List<Terminal> findAllByOrderByTerminalIdAsc();
 

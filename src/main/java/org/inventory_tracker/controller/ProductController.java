@@ -45,11 +45,14 @@ public class ProductController {
         List<ProductResponse> response =
                 productService.getAllProducts();
 
+        int count = response.size();
+
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Products retrieved successfully",
+                        count,
                         response
                 )
         );
@@ -78,11 +81,14 @@ public class ProductController {
         List<ProductResponse> response =
                 productService.getActiveProducts();
 
+        int count = response.size();
+
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Active products retrieved successfully",
+                        count,
                         response
                 )
         );
@@ -90,10 +96,11 @@ public class ProductController {
 
     @GetMapping("/type/{productType}")
     public ResponseEntity<ApiSuccessResponse<List<ProductResponse>>> getProductsByType(
-            @PathVariable ProductType productType) {
+            @PathVariable String productType) {
 
+        ProductType type = ProductType.fromValue(productType);
         List<ProductResponse> response =
-                productService.getProductsByType(productType);
+                productService.getProductsByType(type);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
@@ -105,7 +112,7 @@ public class ProductController {
         );
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<ApiSuccessResponse<ProductResponse>> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody UpdateProductRequest request) {

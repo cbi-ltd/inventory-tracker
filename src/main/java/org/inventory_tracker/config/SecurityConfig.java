@@ -1,115 +1,115 @@
-// package org.inventory_tracker.config;
+package org.inventory_tracker.config;
 
 
-// import lombok.RequiredArgsConstructor;
+import lombok.RequiredArgsConstructor;
 // import org.inventory_tracker.security.JwtAuthenticationFilter;
-// import org.springframework.context.annotation.Bean;
-// import org.springframework.context.annotation.Configuration;
-// import org.springframework.security.authentication.AuthenticationManager;
-// import org.springframework.security.authentication.AuthenticationProvider;
-// import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-// import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-// import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
-// import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-// import org.springframework.security.config.http.SessionCreationPolicy;
-// import org.springframework.security.core.userdetails.UserDetailsService;
-// import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-// import org.springframework.security.crypto.password.PasswordEncoder;
-// import org.springframework.security.web.SecurityFilterChain;
-// import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-// @Configuration
-// @RequiredArgsConstructor
-// @EnableMethodSecurity
-// public class SecurityConfig {
+@Configuration
+@RequiredArgsConstructor
+@EnableMethodSecurity
+public class SecurityConfig {
 
-//     private final JwtAuthenticationFilter jwtAuthFilter;
+    // private final JwtAuthenticationFilter jwtAuthFilter;
 
-//     private final UserDetailsService userDetailsService;
+    private final UserDetailsService userDetailsService;
 
-//     @Bean
-//     public SecurityFilterChain securityFilterChain(
-//             HttpSecurity http
-//     ) throws Exception {
+    @Bean
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http
+    ) throws Exception {
 
 
-//         http
-//                 .csrf(csrf -> csrf.disable())
-//                 .authorizeHttpRequests(auth ->
-//                         auth.anyRequest().permitAll()
-//                 );
+        http
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth ->
+                        auth.anyRequest().permitAll()
+                );
 
-//         return http.build();
+        return http.build();
 
-//         // http
-//         //         .csrf(csrf -> csrf.disable())
+        // http
+        //         .csrf(csrf -> csrf.disable())
 
-//         //         .authorizeHttpRequests(auth -> auth
+        //         .authorizeHttpRequests(auth -> auth
 
-//         //                 .requestMatchers(
-//         //                         "/auth/**",
-//         //                         "/swagger-ui/**",
-//         //                         "/v3/api-docs/**"
-//         //                 )
-//         //                 .permitAll()
+        //                 .requestMatchers(
+        //                         "/auth/**",
+        //                         "/swagger-ui/**",
+        //                         "/v3/api-docs/**"
+        //                 )
+        //                 .permitAll()
 
-//         //                 .requestMatchers(
-//         //                         "/companies/**"
-//         //                 )
-//         //                 .hasRole("SUPER_ADMIN")
+        //                 .requestMatchers(
+        //                         "/companies/**"
+        //                 )
+        //                 .hasRole("SUPER_ADMIN")
 
-//         //                 .requestMatchers(
-//         //                         "/stations/**"
-//         //                 )
-//         //                 .hasAnyRole(
-//         //                         "SUPER_ADMIN",
-//         //                         "ADMIN"
-//         //                 )
+        //                 .requestMatchers(
+        //                         "/stations/**"
+        //                 )
+        //                 .hasAnyRole(
+        //                         "SUPER_ADMIN",
+        //                         "ADMIN"
+        //                 )
 
-//         //                 .anyRequest()
-//         //                 .authenticated()
-//         //         )
+        //                 .anyRequest()
+        //                 .authenticated()
+        //         )
 
-//         //         .sessionManagement(session ->
-//         //                 session.sessionCreationPolicy(
-//         //                         SessionCreationPolicy.STATELESS
-//         //                 )
-//         //         )
+        //         .sessionManagement(session ->
+        //                 session.sessionCreationPolicy(
+        //                         SessionCreationPolicy.STATELESS
+        //                 )
+        //         )
 
-//         //         .authenticationProvider(authenticationProvider())
+        //         .authenticationProvider(authenticationProvider())
 
-//         //         .addFilterBefore(
-//         //                 jwtAuthFilter,
-//         //                 UsernamePasswordAuthenticationFilter.class
-//         //         );
+        //         .addFilterBefore(
+        //                 jwtAuthFilter,
+        //                 UsernamePasswordAuthenticationFilter.class
+        //         );
 
-//         // return http.build();
-//     }
+        // return http.build();
+    }
 
-//     @Bean
-//     public AuthenticationProvider authenticationProvider() {
+    @Bean
+    public AuthenticationProvider authenticationProvider() {
 
-//         DaoAuthenticationProvider provider =
-//                 new DaoAuthenticationProvider();
+        DaoAuthenticationProvider provider =
+                new DaoAuthenticationProvider();
 
-//         provider.setUserDetailsService(userDetailsService);
+        provider.setUserDetailsService(userDetailsService);
 
-//         provider.setPasswordEncoder(passwordEncoder());
+        provider.setPasswordEncoder(passwordEncoder());
 
-//         return provider;
-//     }
+        return provider;
+    }
 
-//     @Bean
-//     public PasswordEncoder passwordEncoder() {
+    @Bean
+    public PasswordEncoder passwordEncoder() {
 
-//         return new BCryptPasswordEncoder();
-//     }
+        return new BCryptPasswordEncoder();
+    }
 
-//     @Bean
-//     public AuthenticationManager authenticationManager(
-//             AuthenticationConfiguration config
-//     ) throws Exception {
+    @Bean
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config
+    ) throws Exception {
 
-//         return config.getAuthenticationManager();
-//     }
-// }
+        return config.getAuthenticationManager();
+    }
+}

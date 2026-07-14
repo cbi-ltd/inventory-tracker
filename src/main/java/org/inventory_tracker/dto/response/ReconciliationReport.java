@@ -1,4 +1,4 @@
-package org.inventory_tracker.dto;
+package org.inventory_tracker.dto.response;
 
 import lombok.Builder;
 import lombok.Getter;

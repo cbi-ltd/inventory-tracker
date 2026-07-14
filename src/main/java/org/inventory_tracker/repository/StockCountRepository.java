@@ -38,4 +38,6 @@ public interface StockCountRepository
     long countByBusinessDate(LocalDate businessDate);
 
     long countByCountedBy(String countedBy);
+
+    long countByProductId(Long productId);
 }

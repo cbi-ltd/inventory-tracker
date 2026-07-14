@@ -15,7 +15,7 @@ import org.inventory_tracker.dto.common.ApiSuccessResponse;
 
 
 @RestController
-@RequestMapping("/station-inventories")
+@RequestMapping("api/v1/station-inventories")
 @RequiredArgsConstructor
 public class StationInventoryController {
 
@@ -42,7 +42,7 @@ public class StationInventoryController {
                 );
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<ApiSuccessResponse<StationInventoryResponse>>
     updateStationInventory(
             @PathVariable Long id,
@@ -89,11 +89,14 @@ public class StationInventoryController {
                 stationInventoryService
                         .getAllInventories();
 
+        int count = response.size();
+
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Inventories retrieved successfully",
+                        count,
                         response
                 )
         );
@@ -108,11 +111,14 @@ public class StationInventoryController {
                 stationInventoryService
                         .getStationInventory(stationId);
 
+        int count = response.size();
+
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Station inventory retrieved successfully",
+                        count,
                         response
                 )
         );

@@ -3,7 +3,7 @@ package org.inventory_tracker.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.inventory_tracker.entity.Product;
+
 
 @Entity
 @Getter
@@ -22,6 +22,8 @@ public class Pump {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "default_terminal_id")
     private Terminal defaultTerminal;
+
+    private String terminalSerialNumber;
 
     @ManyToOne
     @JoinColumn(name = "product_id")

@@ -1,6 +1,7 @@
 package org.inventory_tracker.controller;
 
 import org.inventory_tracker.dto.request.CreatePumpRequest;
+import org.inventory_tracker.dto.request.UpdatePumpRequest;
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.inventory_tracker.dto.response.PumpResponse;
 import org.inventory_tracker.service.PumpService;
@@ -44,11 +45,14 @@ public class PumpController {
         List<PumpResponse> response =
                 pumpService.getAllPumps();
 
+        int count = response.size();
+
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Pumps retrieved successfully",
+                        count,
                         response
                 )
         );
@@ -78,11 +82,14 @@ public class PumpController {
         List<PumpResponse> response =
                 pumpService.getPumpsByStation(stationId);
 
+        int count = response.size();
+
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Station pumps retrieved successfully",
+                        count,
                         response
                 )
         );
@@ -93,21 +100,24 @@ public class PumpController {
 
         List<PumpResponse> response =
                 pumpService.getActivePumps();
+        
+        int count = response.size();
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Active pumps retrieved successfully",
+                        count,
                         response
                 )
         );
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<ApiSuccessResponse<PumpResponse>> updatePump(
             @PathVariable Long id,
-            @Valid @RequestBody CreatePumpRequest request) {
+            @Valid @RequestBody UpdatePumpRequest request) {
 
         PumpResponse response =
                 pumpService.updatePump(id, request);

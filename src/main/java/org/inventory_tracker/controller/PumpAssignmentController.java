@@ -22,108 +22,109 @@ public class PumpAssignmentController {
     private final PumpAssignmentService pumpAssignmentService;
 
 
-    @PatchMapping("/{assignmentId}/terminal")
-public ResponseEntity<ApiSuccessResponse<PumpAssignmentResponse>>
-changeTerminalAssignment(
-        @PathVariable Long assignmentId,
-        @Valid @RequestBody ChangeTerminalAssignmentRequest request) {
+        @PatchMapping("/{assignmentId}/terminal")
+        public ResponseEntity<ApiSuccessResponse<PumpAssignmentResponse>>changeTerminalAssignment(
+                @PathVariable Long assignmentId,
+                @Valid @RequestBody ChangeTerminalAssignmentRequest request) {
 
-    PumpAssignmentResponse response =
-            pumpAssignmentService.changeTerminalAssignment(
-                    assignmentId,
-                    request);
+                PumpAssignmentResponse response =
+                        pumpAssignmentService.changeTerminalAssignment(
+                                assignmentId,
+                                request);
 
-    return ResponseEntity.ok(
-            new ApiSuccessResponse<>(
-                    LocalDateTime.now(),
-                    HttpStatus.OK.value(),
-                    "Assignment terminal updated successfully",
-                    response
-            )
-    );
-}
+                return ResponseEntity.ok(
+                        new ApiSuccessResponse<>(
+                                LocalDateTime.now(),
+                                HttpStatus.OK.value(),
+                                "Assignment terminal updated successfully",
+                                response
+                        )
+                );
+        }
 
 
-@PostMapping
-public ResponseEntity<ApiSuccessResponse<PumpAssignmentResponse>>
-assignPumpToAttendant(
-        @Valid @RequestBody AssignPumpRequest request) {
+        @PostMapping
+        public ResponseEntity<ApiSuccessResponse<PumpAssignmentResponse>>assignPumpToAttendant(
+                @Valid @RequestBody AssignPumpRequest request) {
 
-    PumpAssignmentResponse response =
-            pumpAssignmentService.assignPumpToAttendant(request);
+                PumpAssignmentResponse response =
+                        pumpAssignmentService.assignPumpToAttendant(request);
 
-    return ResponseEntity.status(HttpStatus.CREATED)
-            .body(
-                    new ApiSuccessResponse<>(
-                            LocalDateTime.now(),
-                            HttpStatus.CREATED.value(),
-                            "Pump assigned successfully",
-                            response
-                    )
-            );
-}
+                return ResponseEntity.status(HttpStatus.CREATED)
+                        .body(
+                                new ApiSuccessResponse<>(
+                                        LocalDateTime.now(),
+                                        HttpStatus.CREATED.value(),
+                                        "Pump assigned successfully",
+                                        response
+                                )
+                        );
+        }
 
 
 
 
 
-    @GetMapping("/current/{attendantId}")
-public ResponseEntity<ApiSuccessResponse<PumpAssignmentResponse>>
-getPumpCurrentAssignment(
-        @PathVariable Long attendantId) {
+        @GetMapping("/current/{attendantId}")
+        public ResponseEntity<ApiSuccessResponse<PumpAssignmentResponse>> getPumpCurrentAssignment(
+                        @PathVariable Long attendantId) {
 
-    PumpAssignmentResponse response =
-            pumpAssignmentService
-                    .getPumpCurrentAssignment(attendantId);
+                PumpAssignmentResponse response =
+                        pumpAssignmentService
+                                .getPumpCurrentAssignment(attendantId);
 
-    return ResponseEntity.ok(
-            new ApiSuccessResponse<>(
-                    LocalDateTime.now(),
-                    HttpStatus.OK.value(),
-                    "Current pump assignment retrieved successfully",
-                    response
-            )
-    );
-}
-
-
-@GetMapping("/history/{attendantId}")
-public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>>
-getAttendantPumpAssignmentHistory(
-        @PathVariable Long attendantId) {
-
-    List<PumpAssignmentResponse> response =
-            pumpAssignmentService
-                    .getAttendantPumpAssignmentHistory(attendantId);
-
-    return ResponseEntity.ok(
-            new ApiSuccessResponse<>(
-                    LocalDateTime.now(),
-                    HttpStatus.OK.value(),
-                    "Pump assignment history retrieved successfully",
-                    response
-            )
-    );
-}
+                return ResponseEntity.ok(
+                        new ApiSuccessResponse<>(
+                                LocalDateTime.now(),
+                                HttpStatus.OK.value(),
+                                "Current pump assignment retrieved successfully",
+                                response
+                        )
+                );
+        }
 
 
-@GetMapping("/today/{stationId}")
-public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>>
-getTodayPumpAssignments(
-        @PathVariable Long stationId) {
+        @GetMapping("/history/{attendantId}")
+        public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>>getAttendantPumpAssignmentHistory(
+                @PathVariable Long attendantId) {
 
-    List<PumpAssignmentResponse> response =
-            pumpAssignmentService
-                    .getTodayPumpAssignments(stationId);
+                List<PumpAssignmentResponse> response =
+                        pumpAssignmentService
+                                .getAttendantPumpAssignmentHistory(attendantId);
 
-    return ResponseEntity.ok(
-            new ApiSuccessResponse<>(
-                    LocalDateTime.now(),
-                    HttpStatus.OK.value(),
-                    "Today's pump assignments retrieved successfully",
-                    response
-            )
-    );
-}
-}
+                int count = response.size();
+
+                return ResponseEntity.ok(
+                        new ApiSuccessResponse<>(
+                                LocalDateTime.now(),
+                                HttpStatus.OK.value(),
+                                "Pump assignment history retrieved successfully",
+                                count,
+                                response
+                        )
+                );
+        }
+
+
+        @GetMapping("/today/{stationId}")
+        public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>>getTodayPumpAssignments(
+                @PathVariable Long stationId) {
+
+                List<PumpAssignmentResponse> response =
+                        pumpAssignmentService
+                                .getTodayPumpAssignments(stationId);
+
+                int count = response.size();
+
+                return ResponseEntity.ok(
+                        new ApiSuccessResponse<>(
+                                LocalDateTime.now(),
+                                HttpStatus.OK.value(),
+                                "Today's pump assignments retrieved successfully",
+                                count,
+                                response
+                        )
+                );
+                }
+        }
 

@@ -8,13 +8,13 @@ import lombok.Setter;
 @Setter
 public class UpdateStationRequest {
 
-    @NotBlank(message = "Station code is required")
+    // @NotBlank(message = "Station code is required")
     private String code;
 
-    @NotBlank(message = "Station name is required")
+    // @NotBlank(message = "Station name is required")
     private String name;
 
-    @NotBlank(message = "Station address is required")
+    // @NotBlank(message = "Station address is required")
     private String address;
 
     private String city;

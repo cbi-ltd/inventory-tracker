@@ -11,6 +11,8 @@ import org.inventory_tracker.dto.request.UpdateStationRequest;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -36,7 +38,7 @@ public class StationService {
                 });
 
         Station station = stationMapper.toEntity(request);
-
+        station.setTimeZone(ZoneId.of("Africa/Lagos"));
         Station savedStation = stationRepository.save(station);
 
         return stationMapper.toResponse(savedStation);
@@ -70,40 +72,40 @@ public class StationService {
     }
 
     @Transactional
-    public StationResponse updateStation(
-            Long id,
-            UpdateStationRequest request) {
+    public StationResponse updateStation(Long id, UpdateStationRequest request) {
 
         Station station = stationRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Station not found"));
 
-        if (!station.getCode().equalsIgnoreCase(request.getCode())) {
+        stationMapper.updateStationFromDto(request, station);
 
-            stationRepository.findByCodeIgnoreCase(request.getCode())
-                    .ifPresent(existing -> {
-                        throw new DuplicateResourceException(
-                                "Station code already exists");
-                    });
-        }
+        // if (!station.getCode().equalsIgnoreCase(request.getCode())) {
 
-        if (!station.getName().equalsIgnoreCase(request.getName())) {
+        //     stationRepository.findByCodeIgnoreCase(request.getCode())
+        //             .ifPresent(existing -> {
+        //                 throw new DuplicateResourceException(
+        //                         "Station code already exists");
+        //             });
+        // }
 
-            stationRepository.findByNameIgnoreCase(request.getName())
-                    .ifPresent(existing -> {
-                        throw new DuplicateResourceException(
-                                "Station name already exists");
-                    });
-        }
+        // if (!station.getName().equalsIgnoreCase(request.getName())) {
 
-        station.setCode(request.getCode());
-        station.setName(request.getName());
-        station.setAddress(request.getAddress());
-        station.setCity(request.getCity());
-        station.setState(request.getState());
-        station.setPhoneNumber(request.getPhoneNumber());
-        station.setEmail(request.getEmail());
+        //     stationRepository.findByNameIgnoreCase(request.getName())
+        //             .ifPresent(existing -> {
+        //                 throw new DuplicateResourceException(
+        //                         "Station name already exists");
+        //             });
+        // }
+
+        // station.setCode(request.getCode());
+        // station.setName(request.getName());
+        // station.setAddress(request.getAddress());
+        // station.setCity(request.getCity());
+        // station.setState(request.getState());
+        // station.setPhoneNumber(request.getPhoneNumber());
+        // station.setEmail(request.getEmail());
 
         Station updatedStation =
                 stationRepository.save(station);

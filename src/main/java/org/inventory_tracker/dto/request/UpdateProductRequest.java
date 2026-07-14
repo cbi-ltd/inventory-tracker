@@ -11,13 +11,13 @@ import lombok.Setter;
 @Setter
 public class UpdateProductRequest {
 
-    @NotBlank(message = "Product name is required")
+    // @NotBlank(message = "Product name is required")
     private String name;
 
-    @NotNull(message = "Product type is required")
+    // @NotNull(message = "Product type is required")
     private ProductType productType;
 
-    @NotNull(message = "Unit of measure is required")
+    // @NotNull(message = "Unit of measure is required")
     private UnitOfMeasure unitOfMeasure;
 
     private String description;

@@ -17,6 +17,10 @@ public class ProductResponse {
 
     private ProductType productType;
 
+    private String productCode;
+
+    private String productDescription;
+
     private UnitOfMeasure unitOfMeasure;
 
     private Boolean active;

@@ -6,6 +6,7 @@ import org.inventory_tracker.repository.PumpRepository;
 import org.inventory_tracker.repository.StationRepository;
 import org.inventory_tracker.config.mapper.PumpMapper;
 import org.inventory_tracker.dto.request.CreatePumpRequest;
+import org.inventory_tracker.dto.request.UpdatePumpRequest;
 import org.inventory_tracker.dto.response.PumpResponse;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
@@ -62,44 +63,54 @@ public class PumpService {
     }
 
     @Transactional
-    public PumpResponse updatePump(Long id,
-                                   CreatePumpRequest request) {
+    public PumpResponse updatePump(Long id, UpdatePumpRequest request) {
 
         Pump pump = pumpRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Pump not found"));
 
-        Station station = stationRepository.findById(request.getStationId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Station not found"));
-
-        Product product = productRepository.findById(request.getProductId())
-        .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
-
-        // if (!pump.getPumpNumber().equals(request.getPumpNumber())
-        //         &&
-        //         pumpRepository.existsByPumpNumberAndStation_Id(
-        //                 request.getPumpNumber(),
-        //                 station.getId())) {
-
-        //     throw new DuplicateResourceException(
-        //             "Pump number already exists in this station");
-        // }
-
-        if (pumpRepository.existsByPumpNumberAndStation_IdAndIdNot(request.getPumpNumber(), request.getStationId(), id)) {
+        if (request.getPumpNumber() != null && 
+                pumpRepository.existsByPumpNumberAndStation_IdAndIdNot(
+                        request.getPumpNumber(), 
+                        request.getStationId() != null ? request.getStationId() : pump.getStation().getId(), 
+                        id)) {
                 throw new DuplicateResourceException("Pump number already exists in this station");
         }
 
-        pump.setPumpNumber(request.getPumpNumber());
-        pump.setPumpName(request.getPumpName());
-        Terminal terminal = terminalRepository.findById(request.getDefaultTerminalId())
-                                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
+        pumpMapper.updatePumpFromDto(request, pump);
 
-        pump.setDefaultTerminal(terminal);
-        // pump.setDefaultTerminalId(request.getTerminalId());
-        // pump.setDefaultTerminalSerialNumber(request.getTerminalSerialNumber());
-        pump.setProduct(product);
-        pump.setStation(station);
+        // pump.setPumpNumber(request.getPumpNumber());
+        // pump.setPumpName(request.getPumpName());
+        // Terminal terminal = terminalRepository.findById(request.getDefaultTerminalId())
+        //                         .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
+
+        // pump.setDefaultTerminal(terminal);
+        // pump.setProduct(product);
+        // pump.setStation(station);
+
+        if (request.getStationId() != null) {
+                Station station = stationRepository.findById(request.getStationId())
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Station not found"));
+
+                pump.setStation(station);
+        }
+
+        if (request.getProductId() != null) {
+                Product product = productRepository.findById(request.getProductId())
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Product not found"));
+
+                pump.setProduct(product);
+        }
+
+        if (request.getDefaultTerminalId() != null) {
+                Terminal terminal = terminalRepository.findById(request.getDefaultTerminalId())
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Terminal not found"));
+
+                pump.setDefaultTerminal(terminal);
+        }
 
         Pump updatedPump = pumpRepository.save(pump);
 

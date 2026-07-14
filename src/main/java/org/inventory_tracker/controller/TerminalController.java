@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/terminals")
+@RequestMapping("api/v1/terminals")
 @RequiredArgsConstructor
 public class TerminalController {
 
@@ -85,11 +85,14 @@ public class TerminalController {
         List<TerminalResponse> response =
                 terminalService.getAllTerminals();
 
+        int count = response.size();
+
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Terminals retrieved successfully",
+                        count,
                         response
                 )
         );
@@ -102,11 +105,14 @@ public class TerminalController {
         List<TerminalResponse> response =
                 terminalService.getActiveTerminals();
 
+        int count = response.size();
+
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Active terminals retrieved successfully",
+                        count,
                         response
                 )
         );

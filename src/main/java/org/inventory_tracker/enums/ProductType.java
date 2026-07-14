@@ -1,5 +1,7 @@
 package org.inventory_tracker.enums;
 
+import java.util.Arrays;
+
 public enum ProductType {
     PETROL("PMS", "Premium Motor Spirit"),
     DIESEL("AGO", "Automotive Gas Oil"),
@@ -26,5 +28,14 @@ public enum ProductType {
 
     public String getDescription() {
         return description;
+    }
+
+    public static ProductType fromValue(String value){
+        return Arrays.stream(values())
+            .filter(type -> type.name().equalsIgnoreCase(value) 
+                || type.code.equalsIgnoreCase(value)
+                || type.description.equalsIgnoreCase(value))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Unknown product type: " + value));
     }
 }

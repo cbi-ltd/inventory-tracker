@@ -24,6 +24,16 @@ public class Product {
     @Column(nullable = false)
     private ProductType productType;
 
+    @Transient
+    public String getProductCode() {
+        return productType != null ? productType.getCode() : null;
+    }
+
+    @Transient
+    public String getProductDescription() {
+        return productType != null ? productType.getDescription() : null;
+    }
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UnitOfMeasure unitOfMeasure;

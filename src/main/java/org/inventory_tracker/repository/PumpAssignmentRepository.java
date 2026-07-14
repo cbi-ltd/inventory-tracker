@@ -46,4 +46,6 @@ public interface PumpAssignmentRepository
     long countByPumpId(Long pumpId);
 
     long countByPumpIdAndActiveTrue(Long pumpId);
+
+    Optional<PumpAssignment> findFirstByAttendantIdAndActiveTrue(Long attendantId);
 }

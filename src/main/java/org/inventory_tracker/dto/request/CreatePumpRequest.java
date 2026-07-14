@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import org.inventory_tracker.entity.Product;
 
 
 @Getter
@@ -19,10 +18,6 @@ public class CreatePumpRequest {
 
     private Long defaultTerminalId;
 
-    // @NotBlank(message = "Terminal ID is required")
-    // private String terminalId;
-
-    // @NotBlank(message = "Terminal serial number is required")
     private String terminalSerialNumber;
 
     @NotNull(message = "Product ID is required")

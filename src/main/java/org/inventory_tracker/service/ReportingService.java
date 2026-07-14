@@ -1,6 +1,5 @@
 package org.inventory_tracker.service;
 
-package org.inventory_tracker.service;
 
 import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.dto.response.DashboardResponse;
@@ -10,6 +9,7 @@ import org.inventory_tracker.dto.response.ProductReportResponse;
 import org.inventory_tracker.dto.response.PumpReportResponse;
 import org.inventory_tracker.dto.response.StationReportResponse;
 import org.inventory_tracker.dto.response.AttendantReportResponse;
+import org.inventory_tracker.entity.PumpAssignment;
 import org.inventory_tracker.entity.StationInventory;
 import org.inventory_tracker.repository.AttendantRepository;
 import org.inventory_tracker.repository.DeliveryRepository;
@@ -24,6 +24,7 @@ import org.inventory_tracker.repository.StockTransferRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -303,57 +304,29 @@ public class ReportingService {
     @Transactional(readOnly = true)
     public List<ProductReportResponse> getProductReport() {
 
-        return productRepository.findAll()
-
-                .stream()
-
+        return productRepository.findAll().stream()
                 .map(product -> ProductReportResponse.builder()
+                        .productId(product.getId())
+                        .productName(product.getName())
 
-                        .productId(
-                                product.getId())
+                        .productCode(product.getProductType() != null ? product.getProductType().getCode(): null)
 
-                        .productName(
-                                product.getName())
+                        .stationsStockingProduct(stationInventoryRepository
+                                        .countDistinctStationsByProductId(product.getId()))
 
-                        .productCode(
-                                product.getProductCode())
+                        .totalQuantity(calculateProductQuantity(product.getId()))
 
-                        .stationsStockingProduct(
-                                stationInventoryRepository
-                                        .countDistinctStationsByProductId(
-                                                product.getId()))
+                        .averageSellingPrice(calculateAverageSellingPrice(product.getId()))
 
-                        .totalQuantity(
-                                calculateProductQuantity(
-                                        product.getId()))
+                        .inventoryValue(calculateProductInventoryValue(product.getId()))
 
-                        .averageSellingPrice(
-                                calculateAverageSellingPrice(
-                                        product.getId()))
+                        .deliveries(deliveryRepository.countByProductId(product.getId()))
 
-                        .inventoryValue(
-                                calculateProductInventoryValue(
-                                        product.getId()))
+                        .transfers(stockTransferRepository.countByProductId(product.getId()))
 
-                        .deliveries(
-                                deliveryRepository
-                                        .countByProductId(
-                                                product.getId()))
+                        .adjustments(stockAdjustmentRepository.countByProductId(product.getId()))
 
-                        .transfers(
-                                stockTransferRepository
-                                        .countByProductId(
-                                                product.getId()))
-
-                        .adjustments(
-                                stockAdjustmentRepository
-                                        .countByProductId(
-                                                product.getId()))
-
-                        .stockCounts(
-                                stockCountRepository
-                                        .countByProductId(
-                                                product.getId()))
+                        .stockCounts(stockCountRepository.countByProductId(product.getId()))
 
                         .build())
 
@@ -407,72 +380,37 @@ public class ReportingService {
     @Transactional(readOnly = true)
     public List<AttendantReportResponse> getAttendantReport() {
 
-        return attendantRepository.findAll()
+        return attendantRepository.findAll().stream()
+                .map(attendant -> {
+                    PumpAssignment assignment =
+                            pumpAssignmentRepository.findFirstByAttendantIdAndActiveTrue(attendant.getId())
+                                    .orElse(null);
 
-                .stream()
+                    String assignedPump =assignment == null? null
+                                    : assignment.getPump().getPumpNumber();
 
-                .map(attendant -> AttendantReportResponse.builder()
-
-                        .attendantId(
-                                attendant.getId())
-
-                        .username(
-                                attendant.getUsername())
-
-                        .fullName(
-                                attendant.getFullName())
-
-                        .stationName(
-
-                                attendant.getStation() != null
-
-                                        ? attendant.getStation().getName()
-
-                                        : null
-
-                        )
-
-                        .assignedPump(
-
-                                attendant.getPumpAssignment() != null
-
-                                        ? attendant.getPumpAssignment()
-                                                .getPump()
-                                                .getPumpNumber()
-
-                                        : null
-
-                        )
-
-                        .active(
-                                attendant.getActive())
-
-                        .completedShifts(0L)
-
-                        .stockCountsPerformed(
-                                stockCountRepository
-                                        .countByCountedBy(
-                                                attendant.getUsername()))
-
-                        .adjustmentsPerformed(
-                                stockAdjustmentRepository
-                                        .countByAdjustedBy(
-                                                attendant.getUsername()))
-
-                        .deliveriesReceived(
-                                deliveryRepository
-                                        .countByReceivedBy(
-                                                attendant.getUsername()))
-
-                        .transfersInitiated(
-                                stockTransferRepository
-                                        .countByInitiatedBy(
-                                                attendant.getUsername()))
-
-                        .build())
-
+                    return AttendantReportResponse.builder()
+                            .attendantId(attendant.getId())
+                            .username(attendant.getUsername())
+                            .fullName(attendant.getFullName())
+                            .stationName(
+                                    attendant.getStation() != null
+                                            ? attendant.getStation().getName()
+                                            : null
+                            )
+                            .assignedPump(assignedPump)
+                            .active(attendant.getActive())
+                            .completedShifts(0L)
+                            .stockCountsPerformed(stockCountRepository.countByCountedBy(attendant.getUsername()))
+                            .adjustmentsPerformed(stockAdjustmentRepository.countByAdjustedBy(attendant.getUsername()))
+                            .deliveriesReceived(0L)
+                            // .deliveriesReceived(deliveryRepository.countByReceivedBy(attendant.getUsername()))
+                            .transfersInitiated(stockTransferRepository.countByInitiatedBy(attendant.getUsername()))
+                            .build();
+                })
                 .toList();
     }
+
 
     private BigDecimal calculateTotalInventoryQuantity() {
 
