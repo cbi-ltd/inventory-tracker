@@ -55,4 +55,21 @@ public final class ShiftUtil {
     public static LocalDate businessDate(ZoneId zoneId) {
         return LocalDate.now(zoneId);
     }
+
+    public static Shift determineShift(LocalTime time) {
+
+    if (time.isBefore(LocalTime.of(6, 0))) {
+        return Shift.OVERNIGHT;
+    }
+
+    if (time.isBefore(LocalTime.of(14, 0))) {
+        return Shift.MORNING;
+    }
+
+    if (time.isBefore(LocalTime.of(22, 0))) {
+        return Shift.AFTERNOON;
+    }
+
+    return Shift.NIGHT;
+}
 }
