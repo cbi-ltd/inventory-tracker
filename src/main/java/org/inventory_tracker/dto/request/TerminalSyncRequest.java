@@ -10,7 +10,7 @@ import lombok.Setter;
 public class TerminalSyncRequest {
 
     @NotBlank(message = "Terminal ID is required")
-    private String terminalId;
+    private String tid;
 
     @NotBlank(message = "Terminal serial number is required")
     private String terminalSerialNumber;

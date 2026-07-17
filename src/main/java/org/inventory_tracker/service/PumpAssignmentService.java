@@ -114,7 +114,7 @@ public class PumpAssignmentService {
         return pumpAssignmentMapper.toResponse(saved);
     }
 
-        @Transactional(readOnly = true)
+    @Transactional(readOnly = true)
     public PumpAssignmentResponse getPumpCurrentAssignment(Long attendantId) {
 
         PumpAssignment assignment =
@@ -164,4 +164,11 @@ public class PumpAssignmentService {
                         )
         );
     }
+
+        @Transactional(readOnly = true)
+        public List<PumpAssignmentResponse> getAllAssignments() {
+
+                return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
+                                .findAllByOrderByAssignmentDateDescShiftAsc());
+        }
 }

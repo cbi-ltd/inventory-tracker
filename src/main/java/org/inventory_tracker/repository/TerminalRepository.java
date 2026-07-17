@@ -9,20 +9,20 @@ import java.util.List;
 @Repository
 public interface TerminalRepository extends JpaRepository<Terminal, Long> {
 
-    Optional<Terminal> findByTerminalId(String terminalId);
+    Optional<Terminal> findByTid(String tid);
 
     Optional<Terminal> findByTerminalSerialNumber(
             String terminalSerialNumber
     );
 
-    boolean existsByTerminalId(String terminalId);
+    boolean existsByTid(String tid);
 
     boolean existsByTerminalSerialNumber(
             String terminalSerialNumber
     );
 
 
-    List<Terminal> findAllByOrderByTerminalIdAsc();
+    List<Terminal> findAllByOrderByTidAsc();
 
-    List<Terminal> findByActiveTrueOrderByTerminalIdAsc();
+    List<Terminal> findByActiveTrueOrderByTidAsc();
 }

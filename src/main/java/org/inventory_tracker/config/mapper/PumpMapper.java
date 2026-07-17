@@ -30,7 +30,7 @@ public interface PumpMapper {
     @Mapping(source = "product.id", target = "productId")
     @Mapping(source = "product.name", target = "productName")
     @Mapping(source = "defaultTerminal.id", target = "defaultTerminalDbId")
-    @Mapping(source = "defaultTerminal.terminalId", target = "terminalId")
+    @Mapping(source = "defaultTerminal.tid", target = "tid")
     @Mapping(source = "defaultTerminal.terminalSerialNumber", target = "terminalSerialNumber")
     PumpResponse toResponse(Pump pump);
 

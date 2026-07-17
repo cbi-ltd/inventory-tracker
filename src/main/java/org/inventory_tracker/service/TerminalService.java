@@ -31,8 +31,8 @@ public class TerminalService {
                         request.getTerminalSerialNumber());
 
         if (serialMatch.isPresent()
-                && !serialMatch.get().getTerminalId()
-                .equals(request.getTerminalId())) {
+                && !serialMatch.get().getTid()
+                .equals(request.getTid())) {
 
             throw new DuplicateResourceException(
                     "Terminal serial number already belongs to another terminal."
@@ -40,10 +40,10 @@ public class TerminalService {
         }
 
         Terminal terminal = terminalRepository
-                .findByTerminalId(request.getTerminalId())
+                .findByTid(request.getTid())
                 .orElseGet(() -> terminalMapper.toEntity(request));
 
-        terminal.setTerminalId(request.getTerminalId());
+        terminal.setTid(request.getTid());
         terminal.setTerminalSerialNumber(request.getTerminalSerialNumber());
         terminal.setManufacturer(request.getManufacturer());
         terminal.setModel(request.getModel());
@@ -58,10 +58,10 @@ public class TerminalService {
     }
 
     @Transactional(readOnly = true)
-    public TerminalResponse getTerminalByTerminalId(String terminalId) {
+    public TerminalResponse getTerminalByTid(String tid) {
 
         Terminal terminal =
-                terminalRepository.findByTerminalId(terminalId)
+                terminalRepository.findByTid(tid)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Terminal not found"));
@@ -87,7 +87,7 @@ public class TerminalService {
     public List<TerminalResponse> getAllTerminals() {
 
         return terminalMapper.toResponseList(
-                terminalRepository.findAllByOrderByTerminalIdAsc()
+                terminalRepository.findAllByOrderByTidAsc()
         );
     }
 
@@ -95,7 +95,7 @@ public class TerminalService {
     public List<TerminalResponse> getActiveTerminals() {
 
         return terminalMapper.toResponseList(
-                terminalRepository.findByActiveTrueOrderByTerminalIdAsc()
+                terminalRepository.findByActiveTrueOrderByTidAsc()
         );
     }
 

@@ -24,7 +24,7 @@ public class PumpAssignmentResponse {
     private String attendantName;
     private String username;
     private Long terminalDbId;
-    private String terminalId;
+    private String tid;
     private String terminalSerialNumber;
     // private String actualTerminalId;
     // private String actualTerminalSerialNumber;

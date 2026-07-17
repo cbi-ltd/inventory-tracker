@@ -48,4 +48,8 @@ public interface PumpAssignmentRepository
     long countByPumpIdAndActiveTrue(Long pumpId);
 
     Optional<PumpAssignment> findFirstByAttendantIdAndActiveTrue(Long attendantId);
+
+    List<PumpAssignment> findAllByOrderByAssignmentDateDescShiftAsc();
+
+    
 }

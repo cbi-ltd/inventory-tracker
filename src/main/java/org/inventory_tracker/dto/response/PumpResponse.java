@@ -21,7 +21,7 @@ public class PumpResponse {
 
     private Long defaultTerminalDbId;
 
-    private String terminalId;
+    private String tid;
 
     private String terminalSerialNumber;
 

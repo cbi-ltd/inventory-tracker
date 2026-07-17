@@ -45,7 +45,7 @@ public class PumpAuditResponse {
 
     private Long terminalDbId;
 
-    private Long terminalId;
+    private Long tid;
 
     private String terminalSerialNumber;
 

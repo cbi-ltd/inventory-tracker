@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.inventory_tracker.dto.request.AssignPumpRequest;
 import org.inventory_tracker.dto.request.ChangeTerminalAssignmentRequest;
+import org.inventory_tracker.dto.response.ProductResponse;
 import org.inventory_tracker.dto.response.PumpAssignmentResponse;
 import org.inventory_tracker.service.PumpAssignmentService;
 import org.springframework.http.HttpStatus;
@@ -125,6 +126,23 @@ public class PumpAssignmentController {
                                 response
                         )
                 );
-                }
         }
+
+        @GetMapping
+        public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>> getAllAssignments() {
+
+                List<PumpAssignmentResponse> response = pumpAssignmentService.getAllAssignments();
+                int count = response.size();
+
+                return ResponseEntity.ok(
+                        new ApiSuccessResponse<>(
+                                LocalDateTime.now(),
+                                HttpStatus.OK.value(),
+                                "Assignments retrieved successfully",
+                                count,
+                                response
+                        )
+                );
+        }
+}
 

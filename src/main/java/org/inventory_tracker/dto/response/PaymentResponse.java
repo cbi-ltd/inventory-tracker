@@ -1,5 +1,4 @@
-package org.inventory_tracker.integration.cams.dto;
-
+package org.inventory_tracker.dto.response;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -11,9 +10,13 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-public class CamsPaymentDTO {
+public class PaymentResponse {
 
-    private String transactionReference;
+    private Long id;
+
+    private String paymentNumber;
+
+    private Long saleId;
 
     private String saleNumber;
 
@@ -23,9 +26,13 @@ public class CamsPaymentDTO {
 
     private PaymentStatus paymentStatus;
 
+    private String transactionReference;
+
     private String rrn;
 
     private String stan;
+
+    private Long terminalId;
 
     private String terminalSerialNumber;
 
@@ -42,4 +49,8 @@ public class CamsPaymentDTO {
     private String responseMessage;
 
     private LocalDateTime paymentTime;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 }

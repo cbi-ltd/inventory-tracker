@@ -22,6 +22,7 @@ public class TerminalController {
 
     private final TerminalService terminalService;
 
+    //this endpoint should eventually be secured so only your CAMS integration (or an internal service account) can invoke it
     @PostMapping("/sync")
     public ResponseEntity<ApiSuccessResponse<TerminalResponse>>
     syncTerminal(
@@ -40,14 +41,14 @@ public class TerminalController {
         );
     }
 
-    @GetMapping("/{terminalId}")
+    @GetMapping("/{tid}")
     public ResponseEntity<ApiSuccessResponse<TerminalResponse>>
-    getTerminalByTerminalId(
-            @PathVariable String terminalId) {
+    getTerminalByTid(
+            @PathVariable String tid) {
 
         TerminalResponse response =
-                terminalService.getTerminalByTerminalId(
-                        terminalId);
+                terminalService.getTerminalByTid(
+                        tid);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
