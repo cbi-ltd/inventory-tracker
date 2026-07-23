@@ -6,7 +6,6 @@ import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.service.PaymentService;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController

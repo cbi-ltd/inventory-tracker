@@ -2,11 +2,18 @@ package org.inventory_tracker.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 @Getter
 @Setter
 @Entity
@@ -41,4 +48,7 @@ public class ProductPriceHistory extends BaseEntity {
 
     @Column(nullable = false)
     private LocalDateTime changedAt;
+
+    @Column(nullable = false)
+    private BigDecimal priceDifference;
 }

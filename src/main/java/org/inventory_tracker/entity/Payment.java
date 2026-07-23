@@ -2,13 +2,20 @@ package org.inventory_tracker.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+
+
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Getter
 @Setter
 @Entity
@@ -33,6 +40,18 @@ public class Payment extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentMethod paymentMethod;
+
+    private LocalDateTime paidAt;
+    private String payerName;
+    private String payerAccountNumber;
+    private String payerBank;
+    private String narration;
+    private String processor;
+
+    @Column(unique = true)
+    private String gatewayReference;
+
+    private String gatewayTransactionReference;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

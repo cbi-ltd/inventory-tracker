@@ -11,7 +11,11 @@ import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
 import org.inventory_tracker.exception.BadRequestException;
+import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
+import org.inventory_tracker.integration.cams.PendingPayment.PendingTransfer;
+import org.inventory_tracker.integration.cams.PendingPayment.PendingTransferService;
+import org.inventory_tracker.integration.cams.dto.CamsPaymentNotification;
 import org.inventory_tracker.repository.PaymentRepository;
 import org.inventory_tracker.repository.SaleRepository;
 import org.inventory_tracker.repository.TerminalRepository;
@@ -20,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.time.LocalDateTime;
 import java.util.UUID;
+
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +35,7 @@ public class PaymentService {
     private final PaymentMapper paymentMapper;
     private final SaleRepository saleRepository;
     private final TerminalRepository terminalRepository;
+    private final PendingTransferService pendingTransferService;
 
     @Transactional
     public PaymentResponse recordCashPayment(Long saleId) {
@@ -57,6 +63,23 @@ public class PaymentService {
         payment = paymentRepository.save(payment);
 
         return paymentMapper.toResponse(payment);
+    }
+
+    @Transactional
+    public PaymentResponse processCamsPayment(CamsPaymentNotification notification, PendingTransfer pendingTransfer) {
+        Sale sale = saleRepository.findBySaleNumber(pendingTransfer.getSaleNumber())
+                            .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
+
+        paymentRepository.findByGatewayReference(notification.getRequestReference())
+                    .ifPresent(payment -> { throw new DuplicateResourceException("Payment has already been processed."); });
+
+        Terminal terminal = terminalRepository.findByTid(notification.getDeviceSerial())
+                                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found."));
+
+        // Sale sale = saleRepository.findFirstByTerminalIdAndSaleStatusOrderByCreatedAtAsc(terminal.getId(), SaleStatus.PENDING)
+        //                 .orElseThrow(() ->  new ResourceNotFoundException("Pending sale not found."));
+
+        return createPaymentFromCamsNotification(sale, notification, terminal, pendingTransfer);
     }
 
     @Transactional
@@ -232,6 +255,43 @@ public class PaymentService {
         if (payment.getPaymentStatus() == PaymentStatus.SUCCESS) {
             throw new BadRequestException("Successful payments cannot be cancelled.");
         }
+    }
+
+    private PaymentResponse createPaymentFromCamsNotification(Sale sale, CamsPaymentNotification notification, Terminal terminal, PendingTransfer pendingTransfer) {
+
+        Payment payment = Payment.builder()
+                .paymentNumber(generatePaymentNumber())
+                .sale(sale)
+                // .paymentMethod(PaymentMethod.TRANSFER)
+                .paymentStatus(PaymentStatus.SUCCESS)
+                .gatewayReference(notification.getRequestReference())
+                .gatewayTransactionReference(notification.getSessionId())
+                .amount(notification.getAmount())
+                .paidAt(notification.getPaymentTime())
+                .payerName(notification.getPayerName())
+                .payerAccountNumber(notification.getPayerAccountNumber())
+                .payerBank(notification.getPayerBankName())
+                .paymentMethod(notification.getPaymentMethod())
+                .terminal(terminal)
+                .gatewayTransactionReference(notification.getSessionId())
+                .outletId(notification.getOutletId())
+                .narration(notification.getNarration())
+                .processor("CAMS")
+                .build();
+
+        // String tid = payment.getTerminal().getTid(); for now TID also contains DEVICE-SERIAL
+        String deviceSerial = payment.getTerminal().getTerminalSerialNumber();
+        Payment savedPayment = paymentRepository.save(payment);
+
+        sale.setPaymentMethod(PaymentMethod.TRANSFER);
+        sale.setPaymentStatus(PaymentStatus.SUCCESS);
+        sale.setSaleStatus(SaleStatus.COMPLETED);
+        sale.setPaidAt(notification.getPaymentTime());
+        sale.setTransactionReference(notification.getRequestReference());
+
+        saleRepository.save(sale);
+        pendingTransferService.delete(pendingTransfer);
+        return paymentMapper.toResponse(savedPayment);
     }
 
 }

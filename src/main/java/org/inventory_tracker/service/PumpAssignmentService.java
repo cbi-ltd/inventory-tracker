@@ -171,4 +171,51 @@ public class PumpAssignmentService {
                 return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
                                 .findAllByOrderByAssignmentDateDescShiftAsc());
         }
+
+        @Transactional(readOnly = true)
+        public PumpAssignmentResponse getAssignmentById(Long assignmentId) {
+
+                PumpAssignment assignment = pumpAssignmentRepository.findById(assignmentId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Pump assignment not found"));
+
+                return pumpAssignmentMapper.toResponse(assignment);
+        }
+
+        @Transactional(readOnly = true)
+        public List<PumpAssignmentResponse> getAssignmentsByStation(Long stationId) {
+                if (!stationRepository.existsById(stationId)) { throw new ResourceNotFoundException("Station not found");}
+                
+                return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
+                                                .findByStationIdOrderByAssignmentDateDescShiftAsc(stationId));
+        }
+
+        @Transactional(readOnly = true)
+        public List<PumpAssignmentResponse> getAssignmentsByPump(Long pumpId) {
+                if (!pumpRepository.existsById(pumpId)) { throw new ResourceNotFoundException("Pump not found");}
+
+                return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
+                                        .findByPumpIdOrderByAssignmentDateDescShiftAsc(pumpId));
+        }
+
+        @Transactional(readOnly = true)
+        public PumpAssignmentResponse getCurrentPumpAssignment(Long pumpId) {
+                PumpAssignment assignment = pumpAssignmentRepository.findByPumpIdAndActiveTrue(pumpId)
+                                        .orElseThrow(() -> new ResourceNotFoundException("Pump has no active assignment."));
+
+                return pumpAssignmentMapper.toResponse(assignment);
+        }
+
+        @Transactional(readOnly = true)
+        public List<PumpAssignmentResponse> getAssignmentsByDate(LocalDate assignmentDate) {
+
+                return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
+                                .findByAssignmentDateOrderByStation_NameAscPump_PumpNumberAsc(assignmentDate));
+        }
+
+        @Transactional(readOnly = true)
+        public List<PumpAssignmentResponse> getAssignmentsByShift(Shift shift) {
+
+                return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
+                                .findByShiftOrderByAssignmentDateDescStation_NameAscPump_PumpNumberAsc(shift));
+        }
 }

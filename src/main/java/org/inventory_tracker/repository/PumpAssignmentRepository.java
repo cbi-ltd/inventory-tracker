@@ -51,5 +51,13 @@ public interface PumpAssignmentRepository
 
     List<PumpAssignment> findAllByOrderByAssignmentDateDescShiftAsc();
 
-    
+    List<PumpAssignment> findByStationIdOrderByAssignmentDateDescShiftAsc(Long stationId);
+
+    List<PumpAssignment> findByPumpIdOrderByAssignmentDateDescShiftAsc(Long pumpId);
+
+    Optional<PumpAssignment> findByPumpIdAndActiveTrue(Long pumpId);
+
+    List<PumpAssignment> findByAssignmentDateOrderByStation_NameAscPump_PumpNumberAsc(LocalDate assignmentDate);
+
+    List<PumpAssignment> findByShiftOrderByAssignmentDateDescStation_NameAscPump_PumpNumberAsc(Shift shift);
 }

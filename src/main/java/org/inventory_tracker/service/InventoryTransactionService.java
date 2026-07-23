@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 
 
@@ -42,74 +43,32 @@ public class InventoryTransactionService {
 
         validateQuantity(quantity);
 
-        StationInventory stationInventory =
-                stationInventoryRepository
-                        .findById(stationInventoryId)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Station inventory not found"));
-
+        StationInventory stationInventory = stationInventoryRepository.findById(stationInventoryId)
+                                        .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
         Station station = stationInventory.getStation();
 
-        BigDecimal balanceBefore =
-                stationInventory.getCurrentQuantity();
-
+        BigDecimal balanceBefore = stationInventory.getCurrentQuantity();
         validateTransaction(balanceBefore, quantity, transactionType);
 
-        BigDecimal balanceAfter =
-                calculateNewBalance(
-                        balanceBefore,
-                        quantity,
-                        transactionType
-                );
-
-        /*
-         * Persist latest inventory balance.
-         */
+        BigDecimal balanceAfter = calculateNewBalance(balanceBefore, quantity, transactionType);
         stationInventory.setCurrentQuantity(balanceAfter);
 
         stationInventoryRepository.save(stationInventory);
 
-        /*
-         * Create immutable ledger record.
-         */
-        InventoryTransaction transaction =
-                new InventoryTransaction();
-
-        transaction.setStationInventory(
-                stationInventory);
-
-        transaction.setStation(
-                stationInventory.getStation());
-
-        transaction.setProduct(
-                stationInventory.getProduct());
-
-        transaction.setTransactionType(
-                transactionType);
-
+        InventoryTransaction transaction = new InventoryTransaction();
+        transaction.setStationInventory(stationInventory);
+        transaction.setStation(stationInventory.getStation());
+        transaction.setProduct(stationInventory.getProduct());
+        transaction.setTransactionType(transactionType);
         transaction.setQuantity(quantity);
-
-        transaction.setBalanceBeforeTransaction(
-                balanceBefore);
-
-        transaction.setBalanceAfterTransaction(
-                balanceAfter);
-
+        transaction.setBalanceBeforeTransaction(balanceBefore);
+        transaction.setBalanceAfterTransaction(balanceAfter);
         transaction.setRemarks(remarks);
-
         transaction.setReferenceNumber(referenceNumber);
+        transaction.setBusinessDate(ShiftUtil.businessDate(station.getTimeZone()));
+        transaction.setTransactionTime(LocalDateTime.now(station.getTimeZone()));
 
-        transaction.setBusinessDate(
-                ShiftUtil.businessDate(
-                        station.getTimeZone()));
-
-        transaction.setTransactionTime(
-                LocalDateTime.now(
-                        station.getTimeZone()));
-
-        return inventoryTransactionRepository
-                .save(transaction);
+        return inventoryTransactionRepository.save(transaction);
     }
 
         /**

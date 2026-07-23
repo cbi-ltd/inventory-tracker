@@ -27,17 +27,13 @@ public interface ProductPriceHistoryRepository
             Long productId
     );
 
-    List<ProductPriceHistory>
-    findByBusinessDateOrderByChangedAtDesc(
+    List<ProductPriceHistory>findByBusinessDateOrderByChangedAtDesc(
             LocalDate businessDate
     );
 
-    List<ProductPriceHistory>
-    findByBusinessDateBetweenOrderByChangedAtDesc(
-            LocalDate startDate,
-            LocalDate endDate
-    );
+    List<ProductPriceHistory>findByBusinessDateBetweenOrderByChangedAtDesc(LocalDate startDate, LocalDate endDate);
 
-    List<ProductPriceHistory>
-    findAllByOrderByChangedAtDesc();
+    List<ProductPriceHistory>findAllByOrderByChangedAtDesc();
+
+    List<ProductPriceHistory> findByChangedByOrderByChangedAtDesc(String changedBy);
 }

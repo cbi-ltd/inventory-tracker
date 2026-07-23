@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.config.mapper.StationInventoryMapper;
 import org.inventory_tracker.dto.request.CreateStationInventoryRequest;
 import org.inventory_tracker.dto.response.StationInventoryResponse;
+import org.inventory_tracker.dto.request.ChangeSellingPriceRequest;
 import org.inventory_tracker.entity.Station;
 import org.inventory_tracker.entity.StationInventory;
 import org.inventory_tracker.repository.StationInventoryRepository;
@@ -16,6 +17,7 @@ import org.inventory_tracker.entity.ProductPriceHistory;
 import org.inventory_tracker.repository.ProductPriceHistoryRepository;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
+import org.inventory_tracker.exception.BadRequestException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import org.inventory_tracker.dto.request.UpdateStationInventoryRequest;
@@ -34,6 +36,42 @@ public class StationInventoryService {
     private final ProductRepository productRepository;
 
     private final ProductPriceHistoryRepository priceHistoryRepository;
+
+
+        @Transactional
+        public StationInventoryResponse changeSellingPrice(ChangeSellingPriceRequest request) {
+
+                StationInventory inventory = stationInventoryRepository.findById(request.getStationInventoryId())
+                                                .orElseThrow(() ->new ResourceNotFoundException("Station inventory not found"));
+
+                BigDecimal oldPrice = inventory.getSellingPrice();
+
+                if (oldPrice.compareTo(request.getNewSellingPrice()) == 0) {
+                        throw new BadRequestException("The new selling price is the same as the current selling price.");
+                }
+
+                inventory.setSellingPrice(request.getNewSellingPrice());
+
+                StationInventory updatedInventory = stationInventoryRepository.save(inventory);
+
+                Station station = updatedInventory.getStation();
+
+                ProductPriceHistory history = ProductPriceHistory.builder()
+
+                        .station(station)
+                        .product(updatedInventory.getProduct())
+                        .oldPrice(oldPrice)
+                        .newPrice(request.getNewSellingPrice())
+                        .changedBy(request.getChangedBy())
+                        .reason(request.getReason())
+                        .businessDate(ShiftUtil.businessDate(station.getTimeZone()))
+                        .changedAt(LocalDateTime.now(station.getTimeZone()))
+                        .build();
+
+                priceHistoryRepository.save(history);
+
+                return stationInventoryMapper.toResponse(updatedInventory);
+        }
 
     @Transactional
     public StationInventoryResponse createStationInventory(

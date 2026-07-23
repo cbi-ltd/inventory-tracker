@@ -1,6 +1,5 @@
 package org.inventory_tracker.dto.common;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -10,7 +9,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
 public class ApiSuccessResponse<T> {
 
@@ -30,5 +28,13 @@ public class ApiSuccessResponse<T> {
         this.message = message;
         this.data = data;
         this.recordCount = null;
+    }
+
+    public ApiSuccessResponse(LocalDateTime timestamp, int status, String message, Integer recordCount, T data) {
+        this.timestamp = timestamp;
+        this.status = status;
+        this.message = message;
+        this.data = data;
+        this.recordCount = recordCount;
     }
 }

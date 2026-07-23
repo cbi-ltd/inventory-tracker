@@ -34,6 +34,8 @@ public class Product {
         return productType != null ? productType.getDescription() : null;
     }
 
+    
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UnitOfMeasure unitOfMeasure;

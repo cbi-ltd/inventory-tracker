@@ -73,6 +73,8 @@ public class Sale extends BaseEntity {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal netAmount;
 
+    private LocalDateTime paidAt;
+
     @Column(nullable = false)
     private Boolean inventoryUpdated = false;
 

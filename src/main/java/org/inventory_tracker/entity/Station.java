@@ -1,7 +1,6 @@
 package org.inventory_tracker.entity;
 
 import java.time.ZoneId;
-
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,6 +17,9 @@ public class Station extends BaseEntity {
 
     @Column(nullable = false, unique = true)
     private String code;
+
+    @Column(nullable = false, unique = true)
+    private String virtualAccountNumber;
 
     @Column(nullable = false)
     private String name;

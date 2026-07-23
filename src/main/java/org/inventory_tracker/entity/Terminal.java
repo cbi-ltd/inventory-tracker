@@ -15,7 +15,7 @@ public class Terminal extends BaseEntity {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String tid;
+    private String tid; //FOR NOW, SAVE SERIAL-NUMBER INTO THIS
 
     @Column(nullable = false, unique = true)
     private String terminalSerialNumber;

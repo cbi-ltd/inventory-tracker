@@ -15,61 +15,36 @@ public final class ShiftUtil {
     // }
 
     public static Shift currentShift() {
-
         LocalTime now = LocalTime.now();
+        if (now.isBefore(LocalTime.of(6, 0))) { return Shift.OVERNIGHT; }
 
-        if (now.isBefore(LocalTime.of(6, 0))) {
-            return Shift.OVERNIGHT;
-        }
+        if (now.isBefore(LocalTime.of(14, 0))) { return Shift.MORNING; }
 
-        if (now.isBefore(LocalTime.of(14, 0))) {
-            return Shift.MORNING;
-        }
-
-        if (now.isBefore(LocalTime.of(22, 0))) {
-            return Shift.AFTERNOON;
-        }
+        if (now.isBefore(LocalTime.of(22, 0))) { return Shift.AFTERNOON; }
 
         return Shift.NIGHT;
     }
 
     public static Shift currentShift(ZoneId zoneId) {
-
         LocalTime now = LocalTime.now(zoneId);
+        if (now.isBefore(LocalTime.of(6, 0))) { return Shift.OVERNIGHT; }
 
-        if (now.isBefore(LocalTime.of(6, 0))) {
-            return Shift.OVERNIGHT;
-        }
+        if (now.isBefore(LocalTime.of(14, 0))) { return Shift.MORNING; }
 
-        if (now.isBefore(LocalTime.of(14, 0))) {
-            return Shift.MORNING;
-        }
-
-        if (now.isBefore(LocalTime.of(22, 0))) {
-            return Shift.AFTERNOON;
-        }
+        if (now.isBefore(LocalTime.of(22, 0))) { return Shift.AFTERNOON; }
 
         return Shift.NIGHT;
     }
 
-    public static LocalDate businessDate(ZoneId zoneId) {
-        return LocalDate.now(zoneId);
-    }
+    public static LocalDate businessDate(ZoneId zoneId) { return LocalDate.now(zoneId); }
 
     public static Shift determineShift(LocalTime time) {
+        if (time.isBefore(LocalTime.of(6, 0))) { return Shift.OVERNIGHT; }
 
-    if (time.isBefore(LocalTime.of(6, 0))) {
-        return Shift.OVERNIGHT;
+        if (time.isBefore(LocalTime.of(14, 0))) { return Shift.MORNING; }
+
+        if (time.isBefore(LocalTime.of(22, 0))) { return Shift.AFTERNOON; }
+
+        return Shift.NIGHT;
     }
-
-    if (time.isBefore(LocalTime.of(14, 0))) {
-        return Shift.MORNING;
-    }
-
-    if (time.isBefore(LocalTime.of(22, 0))) {
-        return Shift.AFTERNOON;
-    }
-
-    return Shift.NIGHT;
-}
 }

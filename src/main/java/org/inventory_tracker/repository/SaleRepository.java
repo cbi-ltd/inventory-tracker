@@ -1,6 +1,7 @@
 package org.inventory_tracker.repository;
 
 
+import org.inventory_tracker.entity.Payment;
 import org.inventory_tracker.entity.Sale;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
@@ -50,6 +51,8 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
     List<Sale> findByPaymentStatusOrderByBusinessDateDescSaleTimeDesc(
             PaymentStatus paymentStatus);
 
+   Optional<Sale> findFirstByTerminalIdAndSaleStatusOrderByCreatedAtAsc(Long terminalId, SaleStatus saleStatus);
+
     List<Sale> findByPaymentMethodOrderByBusinessDateDescSaleTimeDesc(
             PaymentMethod paymentMethod);
 
@@ -94,4 +97,4 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
         WHERE s.station.id = :stationId
         """)
     BigDecimal totalQuantityByStation(Long stationId);
-    }
+}

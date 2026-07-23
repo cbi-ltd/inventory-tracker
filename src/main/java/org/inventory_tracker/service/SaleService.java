@@ -11,7 +11,9 @@ import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
+import org.inventory_tracker.integration.cams.PendingPayment.PendingTransferService;
 import org.inventory_tracker.repository.*;
+import org.inventory_tracker.util.ShiftUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -34,96 +36,55 @@ public class SaleService {
     private final ProductRepository productRepository;
     private final StationInventoryRepository stationInventoryRepository;
     private final InventoryTransactionService inventoryTransactionService;
+    private final PendingTransferService pendingTransferService;
 
     @Transactional
     public SaleResponse createSale(CreateSaleRequest request) {
 
-        Station station =
-                stationRepository.findById(request.getStationId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Station not found"));
+        Station station = stationRepository.findById(request.getStationId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Station not found"));
 
-        Pump pump =
-                pumpRepository.findById(request.getPumpId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Pump not found"));
+        Pump pump = pumpRepository.findById(request.getPumpId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Pump not found"));
 
-        Attendant attendant =
-                attendantRepository.findById(request.getAttendantId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Attendant not found"));
+        Attendant attendant = attendantRepository.findById(request.getAttendantId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Attendant not found"));
 
-        Product product =
-                productRepository.findById(request.getProductId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Product not found"));
+        Product product = productRepository.findById(request.getProductId()).orElseThrow(() ->
+                                new ResourceNotFoundException("Product not found"));
 
         Terminal terminal = null;
 
         if (request.getTerminalId() != null) {
-
-            terminal =
-                    terminalRepository.findById(request.getTerminalId())
-                            .orElseThrow(() ->
-                                    new ResourceNotFoundException(
-                                            "Terminal not found"));
+            terminal = terminalRepository.findById(request.getTerminalId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
         }
 
-        StationInventory inventory =
-                stationInventoryRepository
-                        .findByStationIdAndProductId(
-                                station.getId(),
-                                product.getId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Station inventory not found"));
+        StationInventory inventory = stationInventoryRepository.findByStationIdAndProductId(station.getId(), product.getId())
+                                        .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
 
-        if (inventory.getCurrentQuantity()
-                .compareTo(request.getQuantity()) < 0) {
-
-            throw new BadRequestException(
-                    "Insufficient stock available.");
+        if (inventory.getCurrentQuantity().compareTo(request.getQuantity()) < 0) {
+            throw new BadRequestException("Insufficient stock available.");
         }
 
-        Sale sale =
-                saleMapper.toEntity(request);
-
+        Sale sale = saleMapper.toEntity(request);
         sale.setStation(station);
-
         sale.setPump(pump);
-
         sale.setTerminal(terminal);
-
         sale.setAttendant(attendant);
-
         sale.setProduct(product);
-
-        sale.setSaleNumber(generateSaleNumber());
-
+        sale.setSaleNumber(generateSaleNumber(station));
         sale.setReceiptNumber(generateReceiptNumber());
-
         sale.setSaleTime(LocalDateTime.now());
 
-        BigDecimal unitPrice =
-                request.getUnitPrice() != null
-
-                        ? request.getUnitPrice()
-
-                        : inventory.getSellingPrice();
-
+        BigDecimal unitPrice = request.getUnitPrice() != null ? request.getUnitPrice() : inventory.getSellingPrice();
         sale.setUnitPrice(unitPrice);
 
         BigDecimal gross = calculateGrossAmount(request.getQuantity(), unitPrice);
                 // unitPrice.multiply(request.getQuantity());
-
         sale.setGrossAmount(gross);
 
         BigDecimal discount = request.getDiscountAmount() == null ? BigDecimal.ZERO : request.getDiscountAmount();
-
         sale.setDiscountAmount(discount);
 
         // sale.setNetAmount(gross.subtract(discount));
@@ -132,23 +93,14 @@ public class SaleService {
         sale.setInventoryUpdated(false);
 
         switch (request.getPaymentMethod()) {
-
             case CASH -> {
-
-                sale.setPaymentStatus(
-                        PaymentStatus.SUCCESS);
-
-                sale.setSaleStatus(
-                        SaleStatus.PENDING);
+                sale.setPaymentStatus(PaymentStatus.SUCCESS);
+                sale.setSaleStatus(SaleStatus.PENDING);
             }
 
             case CARD, TRANSFER, MIXED -> {
-
-                sale.setPaymentStatus(
-                        PaymentStatus.PENDING);
-
-                sale.setSaleStatus(
-                        SaleStatus.PENDING);
+                sale.setPaymentStatus(PaymentStatus.PENDING);
+                sale.setSaleStatus(SaleStatus.PENDING);
             }
 
             default -> throw new BadRequestException(
@@ -156,11 +108,14 @@ public class SaleService {
         }
 
         sale = saleRepository.save(sale);
+        pendingTransferService.registerPendingTransfer(station.getVirtualAccountNumber(), sale.getSaleNumber(), sale.getNetAmount(), terminal.getTerminalSerialNumber());
+
+        // if(pendingTransferRepository.findByVirtualAccountNumberAndSaleNumber(pendingTransfer.getVirtualAccountNumber(), pendingTransfer.getSaleNumber()) != null){
+        //         notifyFuelFlow(requestRef, externalReference, virtualAccount.get(), amount, jsonNotification);
+        // }
 
         if (sale.getPaymentMethod() == PaymentMethod.CASH) {
-
-            return completeCashSale(
-                    sale.getId());
+            return completeCashSale(sale.getId());
         }
 
         return saleMapper.toResponse(sale);
@@ -415,10 +370,11 @@ public class SaleService {
 
     // }
 
-    // We can use businessDate later (instead of UUID) as they are more user friendly, e.g SAL-20260715-000001
-        private String generateSaleNumber() {
 
-            return "SAL-"
+        private String generateSaleNumber(Station station) {
+            return "FuelFlow-"
+                    + ShiftUtil.businessDate(station.getTimeZone())
+                    + "-"
                     + UUID.randomUUID()
                     .toString()
                     .substring(0, 8)

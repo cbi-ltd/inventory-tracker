@@ -7,11 +7,14 @@ import org.inventory_tracker.dto.request.AssignPumpRequest;
 import org.inventory_tracker.dto.request.ChangeTerminalAssignmentRequest;
 import org.inventory_tracker.dto.response.ProductResponse;
 import org.inventory_tracker.dto.response.PumpAssignmentResponse;
+import org.inventory_tracker.enums.Shift;
 import org.inventory_tracker.service.PumpAssignmentService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -139,6 +142,91 @@ public class PumpAssignmentController {
                                 LocalDateTime.now(),
                                 HttpStatus.OK.value(),
                                 "Assignments retrieved successfully",
+                                count,
+                                response
+                        )
+                );
+        }
+
+        @GetMapping("/{assignmentId}")
+        public ResponseEntity<ApiSuccessResponse<PumpAssignmentResponse>> getAssignmentById(@PathVariable Long assignmentId) {
+                PumpAssignmentResponse response = pumpAssignmentService.getAssignmentById(assignmentId);
+
+                return ResponseEntity.ok(
+                        new ApiSuccessResponse<>(
+                                LocalDateTime.now(),
+                                HttpStatus.OK.value(),
+                                "Assignment retrieved successfully",
+                                1,
+                                response
+                        )
+                );
+        }
+
+        @GetMapping("/station/{stationId}")
+        public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>> getAssignmentsByStation(@PathVariable Long stationId) {
+
+                List<PumpAssignmentResponse> response = pumpAssignmentService.getAssignmentsByStation(stationId);
+
+                return ResponseEntity.ok(
+                        new ApiSuccessResponse<>(
+                                LocalDateTime.now(),
+                                HttpStatus.OK.value(),
+                                "Station assignments retrieved successfully",
+                                response
+                        )
+                );
+        }
+
+        @GetMapping("/pump/{pumpId}")
+        public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>> getAssignmentsByPump(@PathVariable Long pumpId) {
+
+                List<PumpAssignmentResponse> response =
+                        pumpAssignmentService.getAssignmentsByPump(pumpId);
+                int count = response.size();
+
+                return ResponseEntity.ok(
+                        new ApiSuccessResponse<>(
+                                LocalDateTime.now(),
+                                HttpStatus.OK.value(),
+                                "Pump assignments retrieved successfully",
+                                count,
+                                response
+                        )
+                );
+        }
+
+        @GetMapping("/by-date")
+        public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>> getAssignmentsByDate(
+                @RequestParam
+                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+                LocalDate assignmentDate) {
+
+                List<PumpAssignmentResponse> response = pumpAssignmentService.getAssignmentsByDate(assignmentDate);
+                int count = response.size();
+
+                return ResponseEntity.ok(
+                        new ApiSuccessResponse<>(
+                                LocalDateTime.now(),
+                                HttpStatus.OK.value(),
+                                "Assignments retrieved successfully",
+                                count,
+                                response
+                        )
+                );
+        }
+
+        @GetMapping("/shift/{shift}")
+        public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>> getAssignmentsByShift(@PathVariable Shift shift) {
+
+                List<PumpAssignmentResponse> response = pumpAssignmentService.getAssignmentsByShift(shift);
+                int count = response.size();
+
+                return ResponseEntity.ok(
+                        new ApiSuccessResponse<>(
+                                LocalDateTime.now(),
+                                HttpStatus.OK.value(),
+                                "Shift assignments retrieved successfully",
                                 count,
                                 response
                         )
