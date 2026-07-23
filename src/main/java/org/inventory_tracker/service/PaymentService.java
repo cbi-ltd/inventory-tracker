@@ -2,6 +2,8 @@ package org.inventory_tracker.service;
 
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.inventory_tracker.config.mapper.PaymentMapper;
 import org.inventory_tracker.dto.response.PaymentResponse;
 import org.inventory_tracker.entity.Payment;
@@ -13,9 +15,11 @@ import org.inventory_tracker.enums.SaleStatus;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
-import org.inventory_tracker.integration.cams.PendingPayment.PendingTransfer;
-import org.inventory_tracker.integration.cams.PendingPayment.PendingTransferService;
+import org.inventory_tracker.integration.cams.PendingPayment.card.PendingCardPayment;
+import org.inventory_tracker.integration.cams.PendingPayment.transfer.PendingTransfer;
+import org.inventory_tracker.integration.cams.PendingPayment.transfer.PendingTransferService;
 import org.inventory_tracker.integration.cams.dto.CamsPaymentNotification;
+import org.inventory_tracker.integration.cams.dto.CardPaymentNotification;
 import org.inventory_tracker.repository.PaymentRepository;
 import org.inventory_tracker.repository.SaleRepository;
 import org.inventory_tracker.repository.TerminalRepository;
@@ -25,7 +29,7 @@ import java.util.List;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -36,6 +40,7 @@ public class PaymentService {
     private final SaleRepository saleRepository;
     private final TerminalRepository terminalRepository;
     private final PendingTransferService pendingTransferService;
+
 
     @Transactional
     public PaymentResponse recordCashPayment(Long saleId) {
@@ -66,7 +71,7 @@ public class PaymentService {
     }
 
     @Transactional
-    public PaymentResponse processCamsPayment(CamsPaymentNotification notification, PendingTransfer pendingTransfer) {
+    public PaymentResponse processCamsTransferPayment(CamsPaymentNotification notification, PendingTransfer pendingTransfer) {
         Sale sale = saleRepository.findBySaleNumber(pendingTransfer.getSaleNumber())
                             .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
 
@@ -79,7 +84,21 @@ public class PaymentService {
         // Sale sale = saleRepository.findFirstByTerminalIdAndSaleStatusOrderByCreatedAtAsc(terminal.getId(), SaleStatus.PENDING)
         //                 .orElseThrow(() ->  new ResourceNotFoundException("Pending sale not found."));
 
-        return createPaymentFromCamsNotification(sale, notification, terminal, pendingTransfer);
+        return createTransferPaymentFromCamsNotification(sale, notification, terminal, pendingTransfer);
+    }
+
+    @Transactional
+    public PaymentResponse processCamsCardPayment(CardPaymentNotification cardPaymentNotification, PendingCardPayment pendingCardPayment) {
+        Sale sale = saleRepository.findBySaleNumber(pendingCardPayment.getSaleNumber())
+                        .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
+
+        paymentRepository.findByGatewayReference(cardPaymentNotification.getRrn())
+                        .ifPresent(payment -> { throw new DuplicateResourceException("Payment has already been processed."); });
+
+        Terminal terminal = terminalRepository.findByTid(cardPaymentNotification.getTerminalId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found."));
+
+        return createCardPaymentFromCamsNotification(sale, cardPaymentNotification, terminal, pendingCardPayment);
     }
 
     @Transactional
@@ -257,7 +276,7 @@ public class PaymentService {
         }
     }
 
-    private PaymentResponse createPaymentFromCamsNotification(Sale sale, CamsPaymentNotification notification, Terminal terminal, PendingTransfer pendingTransfer) {
+    private PaymentResponse createTransferPaymentFromCamsNotification(Sale sale, CamsPaymentNotification notification, Terminal terminal, PendingTransfer pendingTransfer) {
 
         Payment payment = Payment.builder()
                 .paymentNumber(generatePaymentNumber())
@@ -291,6 +310,37 @@ public class PaymentService {
 
         saleRepository.save(sale);
         pendingTransferService.delete(pendingTransfer);
+        return paymentMapper.toResponse(savedPayment);
+    }
+
+    private PaymentResponse createCardPaymentFromCamsNotification(Sale sale, CardPaymentNotification cardPaymentNotification, Terminal terminal, PendingCardPayment pendingCardPayment) {
+
+        Payment payment = Payment.builder()
+                .paymentNumber(generatePaymentNumber())
+                .sale(sale)
+                .paymentStatus(PaymentStatus.SUCCESS)
+                .paymentMethod(PaymentMethod.CARD)
+                .gatewayReference(cardPaymentNotification.getRrn())
+                .gatewayTransactionReference(cardPaymentNotification.getStan())
+                .amount(cardPaymentNotification.getAmount())
+                .paidAt(cardPaymentNotification.getTransactionTime())
+                .terminal(terminal)
+                // .outletId(cardPaymentNotification.getOutletId())
+                .processor("CAMS")
+                // .authCode(cardPaymentNotification.getAuthCode())
+                // .bankName(cardPaymentNotification.getBankName())
+
+                .build();
+
+        Payment savedPayment = paymentRepository.save(payment);
+
+        sale.setPaymentMethod(PaymentMethod.CARD);
+        sale.setPaymentStatus(PaymentStatus.SUCCESS);
+        sale.setSaleStatus(SaleStatus.COMPLETED);
+        sale.setPaidAt(cardPaymentNotification.getTransactionTime());
+        sale.setTransactionReference(cardPaymentNotification.getRrn());
+
+        saleRepository.save(sale);
         return paymentMapper.toResponse(savedPayment);
     }
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.inventory_tracker.integration.cams.dto.CamsPaymentNotification;
+import org.inventory_tracker.integration.cams.dto.CardPaymentNotification;
 import org.inventory_tracker.integration.cams.service.CamsSignatureValidator;
 import org.inventory_tracker.integration.cams.service.CamsWebhookService;
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
@@ -24,7 +25,7 @@ public class CamsWebhookController {
     private final CamsWebhookService camsWebhookService;
 
 
-    @PostMapping("/payment-notification")
+    @PostMapping("/transfer")
     public ResponseEntity<ApiSuccessResponse<String>> receivePaymentNotification(@RequestBody String payload,
                     @RequestHeader(value = "X-Signature", required = false) String signature) {
 
@@ -40,6 +41,38 @@ public class CamsWebhookController {
             camsWebhookService.processTransferPayment(notification);
 
             return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Payment notification processed successfully", 1, notification.getRequestReference()));
+        } 
+        catch (Exception ex) {
+            log.error("Error processing CAMS payment notification", ex);
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "Unable to process payment notification", 0, null));
+        }
+    }
+
+    // @PostMapping("/card")
+    // public ResponseEntity<ApiSuccessResponse<String>> receiveCardPayment(@RequestBody CardPaymentNotification notification) {
+    //     camsWebhookService.processCardPayment(notification);
+    //     return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Card payment processed successfully", 1, notification.getRrn()));
+    // }
+
+    @PostMapping("/card")
+    public ResponseEntity<ApiSuccessResponse<String>> receiveCardPayment(@RequestBody String payload,
+                    @RequestHeader(value = "X-Signature", required = false) String signature) {
+
+        try {
+            if (!signatureValidator.isValid(payload, signature)) {
+                return ResponseEntity
+                        .status(HttpStatus.UNAUTHORIZED)
+                        .body(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.UNAUTHORIZED.value(),
+                                    "Invalid webhook signature", 0, null));
+            }
+
+            CardPaymentNotification notification = objectMapper.readValue(payload, CardPaymentNotification.class);
+            camsWebhookService.processCardPayment(notification);
+
+            return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Payment notification processed successfully", 1, notification.getRrn()));
         } 
         catch (Exception ex) {
             log.error("Error processing CAMS payment notification", ex);

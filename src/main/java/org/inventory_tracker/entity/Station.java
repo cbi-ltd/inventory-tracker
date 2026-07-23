@@ -18,6 +18,7 @@ public class Station extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String code;
 
+    //Later, generate this automatically via CAMS
     @Column(nullable = false, unique = true)
     private String virtualAccountNumber;
 

@@ -11,7 +11,8 @@ import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
-import org.inventory_tracker.integration.cams.PendingPayment.PendingTransferService;
+import org.inventory_tracker.integration.cams.PendingPayment.card.PendingCardPaymentService;
+import org.inventory_tracker.integration.cams.PendingPayment.transfer.PendingTransferService;
 import org.inventory_tracker.repository.*;
 import org.inventory_tracker.util.ShiftUtil;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class SaleService {
     private final StationInventoryRepository stationInventoryRepository;
     private final InventoryTransactionService inventoryTransactionService;
     private final PendingTransferService pendingTransferService;
+    private final PendingCardPaymentService pendingCardPaymentService;
 
     @Transactional
     public SaleResponse createSale(CreateSaleRequest request) {
@@ -108,11 +110,13 @@ public class SaleService {
         }
 
         sale = saleRepository.save(sale);
-        pendingTransferService.registerPendingTransfer(station.getVirtualAccountNumber(), sale.getSaleNumber(), sale.getNetAmount(), terminal.getTerminalSerialNumber());
 
-        // if(pendingTransferRepository.findByVirtualAccountNumberAndSaleNumber(pendingTransfer.getVirtualAccountNumber(), pendingTransfer.getSaleNumber()) != null){
-        //         notifyFuelFlow(requestRef, externalReference, virtualAccount.get(), amount, jsonNotification);
-        // }
+        switch (request.getPaymentMethod()) {
+                case TRANSFER -> pendingTransferService.registerPendingTransfer(station.getVirtualAccountNumber(), sale.getSaleNumber(), sale.getNetAmount(), terminal.getTerminalSerialNumber());
+                case CARD -> pendingCardPaymentService.register(sale.getSaleNumber(), sale.getNetAmount(),terminal.getTerminalSerialNumber(), terminal.getTid());
+                case CASH ->  {}
+                case MIXED -> {}
+        }
 
         if (sale.getPaymentMethod() == PaymentMethod.CASH) {
             return completeCashSale(sale.getId());

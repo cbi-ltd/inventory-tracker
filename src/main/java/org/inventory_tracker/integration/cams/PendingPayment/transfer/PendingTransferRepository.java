@@ -1,4 +1,4 @@
-package org.inventory_tracker.integration.cams.PendingPayment;
+package org.inventory_tracker.integration.cams.PendingPayment.transfer;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;

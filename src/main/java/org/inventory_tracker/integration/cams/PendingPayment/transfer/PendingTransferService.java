@@ -1,4 +1,4 @@
-package org.inventory_tracker.integration.cams.PendingPayment;
+package org.inventory_tracker.integration.cams.PendingPayment.transfer;
 
 import lombok.RequiredArgsConstructor;
 import java.math.BigDecimal;
