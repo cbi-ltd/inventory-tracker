@@ -71,12 +71,10 @@ public class DeliveryService {
         delivery.setStatus(
                 DeliveryStatus.PENDING);
 
-        /*
-         * These are only populated after the
-         * delivery is physically received.
-         */
         delivery.setBusinessDate(null);
         delivery.setReceivedAt(null);
+        // delivery.setBusinessDate(ShiftUtil.businessDate(stationInventory.getStation().getTimeZone()));
+        // delivery.setReceivedAt(LocalDateTime.now(stationInventory.getStation().getTimeZone()));
 
         Delivery saved =
                 deliveryRepository.save(delivery);

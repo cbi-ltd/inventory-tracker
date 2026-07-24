@@ -56,10 +56,10 @@ public class Delivery extends BaseEntity {
     @Column(nullable = false, precision = 19, scale = 3)
     private BigDecimal quantityDelivered;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private LocalDate businessDate;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private LocalDateTime receivedAt;
 
     @Enumerated(EnumType.STRING)

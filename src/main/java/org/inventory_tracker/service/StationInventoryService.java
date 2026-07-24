@@ -119,9 +119,9 @@ public class StationInventoryService {
         history.setNewPrice(request.getSellingPrice());
         history.setReason("Initial selling price");
         history.setChangedBy("SYSTEM");
-        history.setBusinessDate(
-                ShiftUtil.businessDate(station.getTimeZone()));
+        history.setBusinessDate(ShiftUtil.businessDate(station.getTimeZone()));
         history.setChangedAt(LocalDateTime.now(station.getTimeZone()));
+        history.setPriceDifference(request.getSellingPrice().subtract(history.getOldPrice()));
 
         priceHistoryRepository.save(history);
 
