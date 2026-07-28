@@ -127,12 +127,14 @@ public class DeliveryController {
 
         List<DeliveryResponse> response =
                 deliveryService.getAllDeliveries();
+        int deliveryCount = response.size();
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Deliveries retrieved successfully.",
+                        deliveryCount,
                         response
                 )
         );
@@ -146,12 +148,14 @@ public class DeliveryController {
 
         List<DeliveryResponse> response =
                 deliveryService.getStationDeliveries(stationId);
+        int deliveryCount = response.size();
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Station deliveries retrieved successfully.",
+                        deliveryCount,
                         response
                 )
         );
@@ -163,14 +167,15 @@ public class DeliveryController {
     getProductDeliveries(
             @PathVariable Long productId) {
 
-        List<DeliveryResponse> response =
-                deliveryService.getProductDeliveries(productId);
+        List<DeliveryResponse> response = deliveryService.getProductDeliveries(productId);
+        int deliveryCount = response.size();
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Product deliveries retrieved successfully.",
+                        deliveryCount,
                         response
                 )
         );
@@ -200,10 +205,13 @@ public class DeliveryController {
     @GetMapping("/status/{status}")
     public ResponseEntity<ApiSuccessResponse<List<DeliveryResponse>>>
     getDeliveriesByStatus(
-            @PathVariable DeliveryStatus status) {
+            @PathVariable String status) {
+
+        DeliveryStatus deliveryStatus =
+            DeliveryStatus.valueOf(status.toUpperCase());
 
         List<DeliveryResponse> response =
-                deliveryService.getDeliveriesByStatus(status);
+                deliveryService.getDeliveriesByStatus(deliveryStatus);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
@@ -232,12 +240,15 @@ public class DeliveryController {
                 deliveryService.getDeliveriesBetweenDates(
                         startDate,
                         endDate);
+        
+        int recordCount = response.size();
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Deliveries retrieved successfully.",
+                        recordCount,
                         response
                 )
         );
@@ -264,11 +275,14 @@ public class DeliveryController {
                         startDate,
                         endDate);
 
+        int recordCount = response.size();
+
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Station deliveries retrieved successfully.",
+                        recordCount,
                         response
                 )
         );

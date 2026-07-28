@@ -64,12 +64,10 @@ public class PumpAssignmentService {
                         new ResourceNotFoundException("Attendant not found"));
 
         Pump pump = pumpRepository.findById(request.getPumpId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Pump not found"));
+                        .orElseThrow(() ->new ResourceNotFoundException("Pump not found"));
 
         Station station = stationRepository.findById(request.getStationId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Station not found"));
+                                .orElseThrow(() -> new ResourceNotFoundException("Station not found"));
 
         LocalDate today = ShiftUtil.businessDate(station.getTimeZone());
         Shift currentShift = ShiftUtil.currentShift(station.getTimeZone());
@@ -78,11 +76,7 @@ public class PumpAssignmentService {
         // Shift currentShift = ShiftUtil.currentShift();
 
         pumpAssignmentRepository
-                .findByPumpIdAndAssignmentDateAndShiftAndActiveTrue(
-                        pump.getId(),
-                        today,
-                        currentShift
-                )
+                .findByPumpIdAndAssignmentDateAndShiftAndActiveTrue(pump.getId(), today,currentShift)
                 .ifPresent(existing -> {
                     throw new DuplicateResourceException(
                             "Pump " + pump.getPumpNumber()
@@ -90,18 +84,19 @@ public class PumpAssignmentService {
                     );
                 });
 
-        List<PumpAssignment> activeAssignments =
-                pumpAssignmentRepository
-                        .findAllByAttendantIdAndActiveTrue(attendant.getId());
+        List<PumpAssignment> activeAssignments = pumpAssignmentRepository
+                                                        .findAllByAttendantIdAndActiveTrue(attendant.getId());
 
         if (!activeAssignments.isEmpty()) {
             activeAssignments.forEach(a -> a.setActive(false));
             pumpAssignmentRepository.saveAll(activeAssignments);
         }
 
+        Terminal terminal = (pump.getDefaultTerminal() != null) ? pump.getDefaultTerminal() : terminalRepository.findByTerminalSerialNumber(pump.getTerminalSerialNumber()).get();
+
         PumpAssignment assignment = new PumpAssignment();
         assignment.setPump(pump);
-        assignment.setTerminal(pump.getDefaultTerminal());
+        assignment.setTerminal(terminal);
         assignment.setAttendant(attendant);
         assignment.setStation(station);
         assignment.setAssignmentDate(today);

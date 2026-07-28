@@ -10,22 +10,17 @@ public interface PumpRepository extends JpaRepository<Pump, Long> {
 
     boolean existsByPumpNumber(String pumpNumber);
 
-    boolean existsByPumpNumberAndStation_Id(
-            String pumpNumber,
-            Long stationId
-    );
+    boolean existsByPumpNumberAndStation_Id(String pumpNumber, Long stationId);
 
-    boolean existsByPumpNumberAndStation_IdAndIdNot(String pumpNumber, 
-        Long stationId,
-        Long id);
+    boolean existsByPumpNumberAndStation_IdAndIdNot(String pumpNumber, Long stationId, Long id);
 
     List<Pump> findAllByOrderByPumpNumberAsc();
 
-    List<Pump> findByStation_IdOrderByPumpNumberAsc(
-            Long stationId
-    );
+    List<Pump> findByStation_IdOrderByPumpNumberAsc(Long stationId);
 
     List<Pump> findByActiveTrueOrderByPumpNumberAsc();
+
+    Pump findByTerminalSerialNumber(String terminalSerialNumber);
 
     long countByStationId(Long stationId);
 }

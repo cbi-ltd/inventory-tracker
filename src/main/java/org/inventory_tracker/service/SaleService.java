@@ -18,6 +18,7 @@ import org.inventory_tracker.util.ShiftUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -36,6 +37,7 @@ public class SaleService {
     private final AttendantRepository attendantRepository;
     private final ProductRepository productRepository;
     private final StationInventoryRepository stationInventoryRepository;
+    private final PumpAssignmentRepository pumpAssignmentRepository;
     private final InventoryTransactionService inventoryTransactionService;
     private final PendingTransferService pendingTransferService;
     private final PendingCardPaymentService pendingCardPaymentService;
@@ -43,86 +45,101 @@ public class SaleService {
     @Transactional
     public SaleResponse createSale(CreateSaleRequest request) {
 
-        Station station = stationRepository.findById(request.getStationId())
-                                .orElseThrow(() -> new ResourceNotFoundException("Station not found"));
+        try {
+                Pump pump = pumpRepository.findById(request.getPumpId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Pump not found"));
 
-        Pump pump = pumpRepository.findById(request.getPumpId())
-                        .orElseThrow(() -> new ResourceNotFoundException("Pump not found"));
+                PumpAssignment assignment = pumpAssignmentRepository.findFirstByPumpIdAndActiveTrue(pump.getId())
+                                                .orElseThrow(() ->new ResourceNotFoundException("Pump is not currently assigned."));
 
-        Attendant attendant = attendantRepository.findById(request.getAttendantId())
-                                .orElseThrow(() -> new ResourceNotFoundException("Attendant not found"));
+                Terminal terminal = assignment.getTerminal();
+                Attendant attendant = assignment.getAttendant();
 
-        Product product = productRepository.findById(request.getProductId()).orElseThrow(() ->
-                                new ResourceNotFoundException("Product not found"));
+                Station station = pump.getStation();
+                Product product = pump.getProduct();
 
-        Terminal terminal = null;
+                StationInventory inventory = stationInventoryRepository.findByStationIdAndProductId(station.getId(), product.getId())
+                                                .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
 
-        if (request.getTerminalId() != null) {
-            terminal = terminalRepository.findById(request.getTerminalId())
-                            .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
+                BigDecimal unitPrice = inventory.getUnitPrice();
+                BigDecimal quantity;
+                BigDecimal grossAmount;
+
+                if (request.getQuantity() != null) {
+                        quantity = request.getQuantity();
+                        grossAmount =quantity.multiply(unitPrice);
+                }
+                else {
+                        grossAmount = request.getAmount();
+                        if (unitPrice.compareTo(BigDecimal.ZERO) == 0) { throw new BadRequestException("Unit price cannot be zero."); }
+                        quantity = grossAmount.divide(unitPrice, 3, RoundingMode.HALF_UP);
+                }
+
+                if (inventory.getCurrentQuantity().compareTo(quantity) < 0) {
+                throw new BadRequestException("Insufficient stock available.");
+                }
+
+                Sale sale = saleMapper.toEntity(request);
+                sale.setStation(station);
+                sale.setPump(pump);
+                sale.setTerminal(terminal);
+                sale.setAttendant(attendant);
+                sale.setProduct(product);
+                sale.setSaleNumber(generateSaleNumber(station));
+                sale.setReceiptNumber(generateReceiptNumber());
+                sale.setSaleTime(LocalDateTime.now());
+                sale.setUnitPrice(unitPrice);
+                sale.setQuantity(quantity);
+
+                // BigDecimal gross = calculateGrossAmount(request.getQuantity(), unitPrice);
+                        // unitPrice.multiply(request.getQuantity());
+                sale.setGrossAmount(grossAmount);
+
+                BigDecimal discount = request.getDiscountAmount() == null ? BigDecimal.ZERO : request.getDiscountAmount();
+                sale.setDiscountAmount(discount);
+
+                // sale.setNetAmount(gross.subtract(discount));
+                sale.setNetAmount(calculateNetAmount(grossAmount, discount));
+
+                sale.setInventoryUpdated(false);
+
+                switch (request.getPaymentMethod()) {
+                case CASH -> {
+                        sale.setPaymentStatus(PaymentStatus.SUCCESS);
+                        sale.setSaleStatus(SaleStatus.PENDING);
+                }
+
+                case CARD, TRANSFER, MIXED -> {
+                        sale.setPaymentStatus(PaymentStatus.PENDING);
+                        sale.setSaleStatus(SaleStatus.PENDING);
+                }
+
+                default -> throw new BadRequestException(
+                        "Unsupported payment method.");
+                }
+
+                saleRepository.save(sale);
+
+                switch (request.getPaymentMethod()) {
+                        case TRANSFER -> pendingTransferService.registerPendingTransfer(station.getVirtualAccountNumber(), sale.getSaleNumber(), sale.getNetAmount(), terminal.getTerminalSerialNumber());
+                        case CARD -> pendingCardPaymentService.register(sale.getSaleNumber(), sale.getNetAmount(),terminal.getTerminalSerialNumber(), terminal.getTid());
+                        case CASH ->  {}
+                        case MIXED -> {}
+                }
+
+                if (sale.getPaymentMethod() == PaymentMethod.CASH) {
+                return completeCashSale(sale.getId());
+                }
+
+                return saleMapper.toResponse(sale);
         }
-
-        StationInventory inventory = stationInventoryRepository.findByStationIdAndProductId(station.getId(), product.getId())
-                                        .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
-
-        if (inventory.getCurrentQuantity().compareTo(request.getQuantity()) < 0) {
-            throw new BadRequestException("Insufficient stock available.");
+        catch (ResourceNotFoundException | BadRequestException e) { throw e; } 
+        catch (ArithmeticException e) {
+                throw new BadRequestException("Calculation error during transaction: " + e.getMessage());
+        } 
+        catch (Exception e) {
+                throw new RuntimeException("Failed to process sale due to an internal error: " + e.getMessage(), e);
         }
-
-        Sale sale = saleMapper.toEntity(request);
-        sale.setStation(station);
-        sale.setPump(pump);
-        sale.setTerminal(terminal);
-        sale.setAttendant(attendant);
-        sale.setProduct(product);
-        sale.setSaleNumber(generateSaleNumber(station));
-        sale.setReceiptNumber(generateReceiptNumber());
-        sale.setSaleTime(LocalDateTime.now());
-
-        BigDecimal unitPrice = request.getUnitPrice() != null ? request.getUnitPrice() : inventory.getSellingPrice();
-        sale.setUnitPrice(unitPrice);
-
-        BigDecimal gross = calculateGrossAmount(request.getQuantity(), unitPrice);
-                // unitPrice.multiply(request.getQuantity());
-        sale.setGrossAmount(gross);
-
-        BigDecimal discount = request.getDiscountAmount() == null ? BigDecimal.ZERO : request.getDiscountAmount();
-        sale.setDiscountAmount(discount);
-
-        // sale.setNetAmount(gross.subtract(discount));
-        sale.setNetAmount(calculateNetAmount(gross, discount));
-
-        sale.setInventoryUpdated(false);
-
-        switch (request.getPaymentMethod()) {
-            case CASH -> {
-                sale.setPaymentStatus(PaymentStatus.SUCCESS);
-                sale.setSaleStatus(SaleStatus.PENDING);
-            }
-
-            case CARD, TRANSFER, MIXED -> {
-                sale.setPaymentStatus(PaymentStatus.PENDING);
-                sale.setSaleStatus(SaleStatus.PENDING);
-            }
-
-            default -> throw new BadRequestException(
-                    "Unsupported payment method.");
-        }
-
-        sale = saleRepository.save(sale);
-
-        switch (request.getPaymentMethod()) {
-                case TRANSFER -> pendingTransferService.registerPendingTransfer(station.getVirtualAccountNumber(), sale.getSaleNumber(), sale.getNetAmount(), terminal.getTerminalSerialNumber());
-                case CARD -> pendingCardPaymentService.register(sale.getSaleNumber(), sale.getNetAmount(),terminal.getTerminalSerialNumber(), terminal.getTid());
-                case CASH ->  {}
-                case MIXED -> {}
-        }
-
-        if (sale.getPaymentMethod() == PaymentMethod.CASH) {
-            return completeCashSale(sale.getId());
-        }
-
-        return saleMapper.toResponse(sale);
     }
 
 

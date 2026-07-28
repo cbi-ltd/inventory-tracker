@@ -16,9 +16,7 @@ public interface StationInventoryMapper {
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "currentQuantity", ignore = true)
     @Mapping(target = "active", ignore = true)
-    StationInventory toEntity(
-            CreateStationInventoryRequest request
-    );
+    StationInventory toEntity(CreateStationInventoryRequest request);
 
     @Mapping(source = "station.id", target = "stationId")
     @Mapping(source = "station.name", target = "stationName")
@@ -28,11 +26,7 @@ public interface StationInventoryMapper {
     @Mapping(source = "product.productType", target = "productType")
     @Mapping(source = "product.unitOfMeasure", target = "unit")
 
-    StationInventoryResponse toResponse(
-            StationInventory inventory
-    );
+    StationInventoryResponse toResponse(StationInventory inventory);
 
-    List<StationInventoryResponse> toResponseList(
-            List<StationInventory> inventories
-    );
+    List<StationInventoryResponse> toResponseList(List<StationInventory> inventories);
 }

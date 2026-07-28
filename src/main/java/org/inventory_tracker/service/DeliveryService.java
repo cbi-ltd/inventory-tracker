@@ -231,15 +231,9 @@ public class DeliveryService {
 
 
     @Transactional(readOnly = true)
-    public List<DeliveryResponse> getProductDeliveries(
-            Long productId) {
+    public List<DeliveryResponse> getProductDeliveries(Long productId) {
 
-        return deliveryMapper.toResponseList(
-
-                deliveryRepository
-                        .findByProductIdOrderByBusinessDateDescReceivedAtDesc(
-                                productId
-                        )
+        return deliveryMapper.toResponseList(deliveryRepository.findByProductIdOrderByBusinessDateDescReceivedAtDesc(productId)
                         // .findByProductIdOrderByReceivedAtDesc(
                         //         productId
                         // )
@@ -267,10 +261,7 @@ public class DeliveryService {
 
         return deliveryMapper.toResponseList(
 
-                deliveryRepository
-                        .findByStatusOrderByBusinessDateDescReceivedAtDesc(
-                                status
-                        )
+                deliveryRepository.findByStatusOrderByBusinessDateDescReceivedAtDesc(status)
                         // .findByStatusOrderByReceivedAtDesc(
                         //         status
                         // )

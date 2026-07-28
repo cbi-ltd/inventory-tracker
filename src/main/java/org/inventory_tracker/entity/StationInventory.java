@@ -25,7 +25,7 @@ public class StationInventory extends BaseEntity {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    private BigDecimal unitPrice;
+    private BigDecimal unitPrice = (getSellingPrice() != null) ? getSellingPrice() : BigDecimal.ZERO;
 
     @Column(nullable = false, precision = 19, scale = 3)
     private BigDecimal currentQuantity = BigDecimal.ZERO;

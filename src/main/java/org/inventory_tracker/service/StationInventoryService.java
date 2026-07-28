@@ -142,13 +142,15 @@ public class StationInventoryService {
         BigDecimal oldPrice =
                 inventory.getSellingPrice();
 
-        inventory.setSellingPrice(request.getSellingPrice());
-        inventory.setReorderLevel(request.getReorderLevel());
+        if (request.getUnitPrice() != null) { inventory.setUnitPrice(request.getUnitPrice()); }
+        if (request.getSellingPrice() != null) { inventory.setSellingPrice(request.getSellingPrice()); }
+        if (request.getReorderLevel() != null) { inventory.setReorderLevel(request.getReorderLevel()); }
+        
 
         StationInventory updated =
                 stationInventoryRepository.save(inventory);
 
-        if (oldPrice.compareTo(request.getSellingPrice()) != 0) {
+        if (request.getSellingPrice() != null && oldPrice.compareTo(request.getSellingPrice()) != 0) {
 
             ProductPriceHistory history =
                     new ProductPriceHistory();

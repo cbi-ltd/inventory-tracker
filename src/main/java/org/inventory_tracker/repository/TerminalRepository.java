@@ -11,9 +11,7 @@ public interface TerminalRepository extends JpaRepository<Terminal, Long> {
 
     Optional<Terminal> findByTid(String tid);
 
-    Optional<Terminal> findByTerminalSerialNumber(
-            String terminalSerialNumber
-    );
+    Optional<Terminal> findByTerminalSerialNumber(String terminalSerialNumber);
 
     boolean existsByTid(String tid);
 

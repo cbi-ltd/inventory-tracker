@@ -23,6 +23,7 @@ public interface SaleMapper {
     @Mapping(target = "businessDate", ignore = true)
     @Mapping(target = "saleTime", ignore = true)
     @Mapping(target = "shift", ignore = true)
+    @Mapping(target = "unitPrice", ignore = true)
     @Mapping(target = "grossAmount", ignore = true)
     @Mapping(target = "netAmount", ignore = true)
     @Mapping(target = "paymentStatus", ignore = true)

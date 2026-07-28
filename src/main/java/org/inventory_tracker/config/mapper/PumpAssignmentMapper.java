@@ -25,11 +25,7 @@ public interface PumpAssignmentMapper {
     @Mapping(source = "terminal.tid", target = "tid")
     @Mapping(source = "terminal.terminalSerialNumber", target = "terminalSerialNumber")
 
-    PumpAssignmentResponse toResponse(
-            PumpAssignment assignment
-    );
+    PumpAssignmentResponse toResponse(PumpAssignment assignment);
 
-    List<PumpAssignmentResponse> toResponseList(
-            List<PumpAssignment> assignments
-    );
+    List<PumpAssignmentResponse> toResponseList(List<PumpAssignment> assignments);
 }

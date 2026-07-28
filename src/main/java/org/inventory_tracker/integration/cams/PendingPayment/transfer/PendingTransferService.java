@@ -22,6 +22,7 @@ public class PendingTransferService {
                 .saleNumber(saleNumber)
                 .amount(amount)
                 .deviceSerial(deviceSerial)
+                .tid(deviceSerial)
                 .build();
 
         pendingTransferRepository.save(pendingTransfer);

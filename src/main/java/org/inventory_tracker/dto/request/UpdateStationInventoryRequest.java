@@ -11,11 +11,15 @@ import java.math.BigDecimal;
 @Setter
 public class UpdateStationInventoryRequest {
 
-    @NotNull(message = "Selling price is required")
+    // @NotNull(message = "Selling price is required")
     @DecimalMin(value = "0.00")
     private BigDecimal sellingPrice;
 
-    @NotNull(message = "Reorder level is required")
+    // @NotNull(message = "Unit price is required")
+    @DecimalMin(value = "0.00")
+    private BigDecimal unitPrice;
+
+    // @NotNull(message = "Reorder level is required")
     @DecimalMin(value = "0.00")
     private BigDecimal reorderLevel;
 }
