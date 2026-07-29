@@ -76,7 +76,7 @@ public class SaleService {
                 }
 
                 if (inventory.getCurrentQuantity().compareTo(quantity) < 0) {
-                throw new BadRequestException("Insufficient stock available.");
+                        throw new BadRequestException("Insufficient stock available.");
                 }
 
                 Sale sale = saleMapper.toEntity(request);

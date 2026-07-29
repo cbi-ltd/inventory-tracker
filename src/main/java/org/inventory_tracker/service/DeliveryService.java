@@ -7,6 +7,8 @@ import org.inventory_tracker.entity.Delivery;
 import org.inventory_tracker.enums.DeliveryStatus;
 import org.inventory_tracker.config.mapper.DeliveryMapper;
 import org.inventory_tracker.repository.DeliveryRepository;
+import org.inventory_tracker.dto.request.DeliveryFilterRequest;
+import org.inventory_tracker.entity.DeliverySpecification;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
@@ -33,13 +35,6 @@ public class DeliveryService {
     private final InventoryTransactionService inventoryTransactionService;
 
 
-    /**
-     * Creates a delivery record.
-     *
-     * This DOES NOT increase inventory.
-     * Inventory only increases when receiveDelivery()
-     * is called.
-     */
     public DeliveryResponse createDelivery(
             CreateDeliveryRequest request) {
 
@@ -83,11 +78,6 @@ public class DeliveryService {
     }
 
 
-    /**
-     * Confirms that the tanker has been received.
-     *
-     * This is the point where inventory increases.
-     */
     public DeliveryResponse receiveDelivery(
             Long deliveryId) {
 
@@ -126,14 +116,9 @@ public class DeliveryService {
                 LocalDateTime.now(
                         station.getTimeZone()));
 
-        /*
-         * Save delivery before updating inventory.
-         */
+
         deliveryRepository.save(delivery);
 
-        /*
-         * Create immutable inventory ledger entry.
-         */
         inventoryTransactionService.recordTransaction(
 
                 delivery.getStationInventory().getId(),
@@ -151,9 +136,7 @@ public class DeliveryService {
         return deliveryMapper.toResponse(delivery);
     }
 
-        /**
-     * Cancels a pending delivery.
-     */
+
     public DeliveryResponse cancelDelivery(Long deliveryId) {
 
         Delivery delivery = findDelivery(deliveryId);
@@ -200,6 +183,18 @@ public class DeliveryService {
                                         "Delivery not found."));
 
         return deliveryMapper.toResponse(delivery);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DeliveryResponse> filterDeliveries(DeliveryFilterRequest request) {
+
+        if (request.getStartDate() != null && request.getEndDate() != null
+                && request.getStartDate().isAfter(request.getEndDate())) {
+
+                throw new BadRequestException("Start date cannot be after end date.");
+        }
+
+        return deliveryMapper.toResponseList(deliveryRepository.findAll(DeliverySpecification.filter(request)));
     }
 
 
@@ -275,18 +270,11 @@ public class DeliveryService {
             LocalDate endDate) {
 
         if (startDate.isAfter(endDate)) {
-
-            throw new BadRequestException(
-                    "Start date cannot be after end date.");
+            throw new BadRequestException( "Start date cannot be after end date.");
         }
 
         return deliveryMapper.toResponseList(
-
-                deliveryRepository
-                        .findByBusinessDateBetweenOrderByReceivedAtDesc(
-                                startDate,
-                                endDate
-                        )
+                deliveryRepository.findByBusinessDateBetweenOrderByReceivedAtDesc(startDate, endDate)
         );
     }
 

@@ -20,5 +20,7 @@ public enum InventoryTransactionType {
 
     LOSS,
 
+    DELIVERY_REVERSAL,
+
     RETURN
 }

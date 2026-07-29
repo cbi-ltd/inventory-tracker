@@ -10,9 +10,8 @@ public enum PaymentMethod {
 
     @JsonCreator
     public static PaymentMethod fromString(String value) {
-        if (value == null) {
-            return null;
-        }
+        if (value == null) { return null; }
+        
         try {
             return PaymentMethod.valueOf(value.toUpperCase().trim());
         } catch (IllegalArgumentException e) {

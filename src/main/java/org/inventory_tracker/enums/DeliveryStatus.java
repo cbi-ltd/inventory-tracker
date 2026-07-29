@@ -6,5 +6,9 @@ public enum DeliveryStatus {
 
     RECEIVED,
 
-    CANCELLED
+    CANCELLED,
+
+    IN_TRANSIT,
+
+    REVERSED
 }

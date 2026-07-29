@@ -3,6 +3,7 @@ package org.inventory_tracker.repository;
 import org.inventory_tracker.entity.Delivery;
 import org.inventory_tracker.enums.DeliveryStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
@@ -11,7 +12,7 @@ import java.util.Optional;
 
 
 @Repository
-public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
+public interface DeliveryRepository extends JpaRepository<Delivery, Long>, JpaSpecificationExecutor<Delivery> {
 
     Optional<Delivery> findByDeliveryNumber(String deliveryNumber);
 

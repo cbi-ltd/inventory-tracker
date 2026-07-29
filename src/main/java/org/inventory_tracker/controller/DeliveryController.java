@@ -3,6 +3,7 @@ package org.inventory_tracker.controller;
 
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.inventory_tracker.dto.request.CreateDeliveryRequest;
+import org.inventory_tracker.dto.request.DeliveryFilterRequest;
 import org.inventory_tracker.dto.response.DeliveryResponse;
 import org.inventory_tracker.enums.DeliveryStatus;
 import org.inventory_tracker.service.DeliveryService;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+
 
 @RestController
 @RequiredArgsConstructor
@@ -120,13 +122,53 @@ public class DeliveryController {
         );
     }
 
+//     @GetMapping
+//     public List<DeliveryResponse> filterDeliveries(
 
-    @GetMapping
-    public ResponseEntity<ApiSuccessResponse<List<DeliveryResponse>>>
-    getAllDeliveries() {
+//             @RequestParam(required = false)
+//             String deliveryNumber,
 
-        List<DeliveryResponse> response =
-                deliveryService.getAllDeliveries();
+//             @RequestParam(required = false)
+//             Long stationId,
+
+//             @RequestParam(required = false)
+//             Long productId,
+
+//             @RequestParam(required = false)
+//             Long stationInventoryId,
+
+//             @RequestParam(required = false)
+//             DeliveryStatus status,
+
+//             @RequestParam(required = false)
+//             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+//             LocalDate startDate,
+
+//             @RequestParam(required = false)
+//             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+//             LocalDate endDate
+
+//     ) {
+
+//         DeliveryFilterRequest request = new DeliveryFilterRequest();
+
+//         request.setDeliveryNumber(deliveryNumber);
+//         request.setStationId(stationId);
+//         request.setProductId(productId);
+//         request.setStationInventoryId(stationInventoryId);
+//         request.setStatus(status);
+//         request.setStartDate(startDate);
+//         request.setEndDate(endDate);
+
+//         return deliveryService.filterDeliveries(request);
+//     }
+
+
+   @GetMapping
+   public ResponseEntity<ApiSuccessResponse<List<DeliveryResponse>>>filterDeliveries(
+                @ModelAttribute DeliveryFilterRequest request) {
+
+        List<DeliveryResponse> response = deliveryService.filterDeliveries(request);
         int deliveryCount = response.size();
 
         return ResponseEntity.ok(
@@ -136,9 +178,27 @@ public class DeliveryController {
                         "Deliveries retrieved successfully.",
                         deliveryCount,
                         response
-                )
-        );
+                ));
     }
+
+//     @GetMapping
+//     public ResponseEntity<ApiSuccessResponse<List<DeliveryResponse>>>
+//     getAllDeliveries() {
+
+//         List<DeliveryResponse> response =
+//                 deliveryService.getAllDeliveries();
+//         int deliveryCount = response.size();
+
+//         return ResponseEntity.ok(
+//                 new ApiSuccessResponse<>(
+//                         LocalDateTime.now(),
+//                         HttpStatus.OK.value(),
+//                         "Deliveries retrieved successfully.",
+//                         deliveryCount,
+//                         response
+//                 )
+//         );
+//     }
 
 
     @GetMapping("/station/{stationId}")
