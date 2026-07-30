@@ -4,11 +4,23 @@ package org.inventory_tracker.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.inventory_tracker.dto.request.CreateSaleRequest;
+import org.inventory_tracker.dto.request.PaymentFilterRequest;
+import org.inventory_tracker.entity.specification.PaymentSpecification;
 import org.inventory_tracker.config.mapper.PaymentMapper;
+import org.inventory_tracker.config.mapper.SaleMapper;
 import org.inventory_tracker.dto.response.PaymentResponse;
+import org.inventory_tracker.dto.response.SaleResponse;
+import org.inventory_tracker.entity.Attendant;
 import org.inventory_tracker.entity.Payment;
+import org.inventory_tracker.entity.Product;
+import org.inventory_tracker.entity.Pump;
+import org.inventory_tracker.entity.PumpAssignment;
 import org.inventory_tracker.entity.Sale;
+import org.inventory_tracker.entity.Station;
+import org.inventory_tracker.entity.StationInventory;
 import org.inventory_tracker.entity.Terminal;
+import org.inventory_tracker.enums.InventoryTransactionType;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
@@ -16,16 +28,23 @@ import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.inventory_tracker.integration.cams.PendingPayment.card.PendingCardPayment;
+import org.inventory_tracker.integration.cams.PendingPayment.card.PendingCardPaymentService;
 import org.inventory_tracker.integration.cams.PendingPayment.transfer.PendingTransfer;
 import org.inventory_tracker.integration.cams.PendingPayment.transfer.PendingTransferService;
 import org.inventory_tracker.integration.cams.dto.CamsPaymentNotification;
 import org.inventory_tracker.integration.cams.dto.CardPaymentNotification;
 import org.inventory_tracker.repository.PaymentRepository;
+import org.inventory_tracker.repository.PumpAssignmentRepository;
+import org.inventory_tracker.repository.PumpRepository;
 import org.inventory_tracker.repository.SaleRepository;
+import org.inventory_tracker.repository.StationInventoryRepository;
 import org.inventory_tracker.repository.TerminalRepository;
+import org.inventory_tracker.util.ShiftUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -40,7 +59,13 @@ public class PaymentService {
     private final SaleRepository saleRepository;
     private final TerminalRepository terminalRepository;
     private final PendingTransferService pendingTransferService;
-
+    private final PendingCardPaymentService pendingCardPaymentService;
+    private final SaleService saleService;
+    private final SaleMapper saleMapper;
+    private final StationInventoryRepository stationInventoryRepository;
+    private final InventoryTransactionService inventoryTransactionService;
+    private final PumpRepository pumpRepository;
+    private final PumpAssignmentRepository pumpAssignmentRepository;
 
     @Transactional
     public PaymentResponse recordCashPayment(Long saleId) {
@@ -101,56 +126,216 @@ public class PaymentService {
         return createCardPaymentFromCamsNotification(sale, cardPaymentNotification, terminal, pendingCardPayment);
     }
 
+        @Transactional
+    public SaleResponse createSale(CreateSaleRequest request) {
+
+        try {
+                Pump pump = pumpRepository.findById(request.getPumpId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Pump not found"));
+
+                PumpAssignment assignment = pumpAssignmentRepository.findFirstByPumpIdAndActiveTrue(pump.getId())
+                                                .orElseThrow(() ->new ResourceNotFoundException("Pump is not currently assigned."));
+
+                Terminal terminal = assignment.getTerminal();
+                Attendant attendant = assignment.getAttendant();
+
+                Station station = pump.getStation();
+                Product product = pump.getProduct();
+
+                StationInventory inventory = stationInventoryRepository.findByStationIdAndProductId(station.getId(), product.getId())
+                                                .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
+
+                BigDecimal unitPrice = inventory.getUnitPrice();
+                BigDecimal quantity;
+                BigDecimal grossAmount;
+
+                if (request.getQuantity() != null) {
+                        quantity = request.getQuantity();
+                        grossAmount =quantity.multiply(unitPrice);
+                }
+                else {
+                        grossAmount = request.getAmount();
+                        if (unitPrice.compareTo(BigDecimal.ZERO) == 0) { throw new BadRequestException("Unit price cannot be zero."); }
+                        quantity = grossAmount.divide(unitPrice, 3, RoundingMode.HALF_UP);
+                }
+
+                if (inventory.getCurrentQuantity().compareTo(quantity) < 0) {
+                        throw new BadRequestException("Insufficient stock available.");
+                }
+
+                Sale sale = saleMapper.toEntity(request);
+                sale.setStation(station);
+                sale.setPump(pump);
+                sale.setTerminal(terminal);
+                sale.setAttendant(attendant);
+                sale.setProduct(product);
+                sale.setSaleNumber(generateSaleNumber(station));
+                sale.setReceiptNumber(generateReceiptNumber());
+                sale.setSaleTime(LocalDateTime.now());
+                sale.setUnitPrice(unitPrice);
+                sale.setQuantity(quantity);
+
+                // BigDecimal gross = calculateGrossAmount(request.getQuantity(), unitPrice);
+                        // unitPrice.multiply(request.getQuantity());
+                sale.setGrossAmount(grossAmount);
+
+                BigDecimal discount = request.getDiscountAmount() == null ? BigDecimal.ZERO : request.getDiscountAmount();
+                sale.setDiscountAmount(discount);
+
+                // sale.setNetAmount(gross.subtract(discount));
+                sale.setNetAmount(calculateNetAmount(grossAmount, discount));
+
+                sale.setInventoryUpdated(false);
+
+                switch (request.getPaymentMethod()) {
+                case CASH -> {
+                        sale.setPaymentStatus(PaymentStatus.SUCCESS);
+                        sale.setSaleStatus(SaleStatus.PENDING);
+                }
+
+                case CARD, TRANSFER, MIXED -> {
+                        sale.setPaymentStatus(PaymentStatus.PENDING);
+                        sale.setSaleStatus(SaleStatus.PENDING);
+                }
+
+                default -> throw new BadRequestException(
+                        "Unsupported payment method.");
+                }
+
+                saleRepository.save(sale);
+
+                switch (request.getPaymentMethod()) {
+                        case TRANSFER -> pendingTransferService.registerPendingTransfer(station.getVirtualAccountNumber(), sale.getSaleNumber(), sale.getNetAmount(), terminal.getTerminalSerialNumber());
+                        case CARD -> pendingCardPaymentService.register(sale.getSaleNumber(), sale.getNetAmount(),terminal.getTerminalSerialNumber(), terminal.getTid());
+                        case CASH ->  {}
+                        case MIXED -> {}
+                }
+
+                if (sale.getPaymentMethod() == PaymentMethod.CASH) {
+                        recordCashPayment(sale.getId());
+                        return completeCashSale(sale.getId());
+                }
+
+                return saleMapper.toResponse(sale);
+        }
+        catch (ResourceNotFoundException | BadRequestException e) { throw e; } 
+        catch (ArithmeticException e) {
+                throw new BadRequestException("Calculation error during transaction: " + e.getMessage());
+        } 
+        catch (Exception e) {
+                throw new RuntimeException("Failed to process sale due to an internal error: " + e.getMessage(), e);
+        }
+    }
+
     @Transactional
-    public PaymentResponse recordElectronicPayment(Long saleId, String transactionReference, PaymentMethod paymentMethod,
-                        PaymentStatus paymentStatus, String rrn, String stan, Long terminalId, String merchantId,
-                        String outletId, String authorizationCode, String cardScheme, String responseCode,
-                        String responseMessage, LocalDateTime paymentTime) {
+    public SaleResponse completeSale(Long saleId, String transactionReference, PaymentStatus paymentStatus, LocalDateTime paidAt) {
 
-        validatePaymentMethod(paymentMethod);
-        validatePaymentStatus(paymentStatus);
-        validateDuplicatePayment(transactionReference);
+        Sale sale = saleRepository.findById(saleId).orElseThrow(() -> new ResourceNotFoundException("Sale not found"));
 
-        if (paymentMethod == PaymentMethod.CASH) {
-            throw new BadRequestException("Use recordCashPayment() for cash payments.");
+        if (sale.getInventoryUpdated()) { return saleMapper.toResponse(sale); }
+
+        StationInventory inventory = stationInventoryRepository.findByStationIdAndProductId(sale.getStation().getId(), sale.getProduct().getId())
+                                                .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
+
+        if (inventory.getCurrentQuantity().compareTo(sale.getQuantity()) < 0) {
+                throw new BadRequestException("Insufficient inventory.");
         }
 
-        Sale sale = saleRepository.findById(saleId).orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
+        Long inventoryId = inventory.getId();
 
-        if (paymentRepository.existsByTransactionReference(transactionReference)) {
-            return paymentMapper.toResponse(paymentRepository.findByTransactionReference(transactionReference).orElseThrow());
+        inventoryTransactionService.recordTransaction(
+                inventoryId,
+                InventoryTransactionType.SALE,
+                sale.getQuantity(),
+                sale.getSaleNumber(),
+                "SALE-" + sale.getSaleNumber());
+
+        sale.setInventoryUpdated(true);
+        sale.setPaymentStatus(paymentStatus);
+        sale.setSaleStatus(SaleStatus.COMPLETED);
+        sale.setTransactionReference(transactionReference);
+        sale.setPaidAt(paidAt);
+
+        saleRepository.save(sale);
+        return saleMapper.toResponse(sale);
+    }
+
+    @Transactional
+    public SaleResponse completeCashSale(Long saleId) {
+        return completeSale(saleId, saleRepository.findById(saleId).orElseThrow().getSaleNumber(), PaymentStatus.SUCCESS, LocalDateTime.now());
+    }
+
+    // @Transactional
+    // public PaymentResponse recordElectronicPayment(Long saleId, String transactionReference, PaymentMethod paymentMethod,
+    //                     PaymentStatus paymentStatus, String rrn, String stan, Long terminalId, String merchantId,
+    //                     String outletId, String authorizationCode, String cardScheme, String responseCode,
+    //                     String responseMessage, LocalDateTime paymentTime) {
+
+    //     validatePaymentMethod(paymentMethod);
+    //     validatePaymentStatus(paymentStatus);
+    //     validateDuplicatePayment(transactionReference);
+
+    //     if (paymentMethod == PaymentMethod.CASH) {
+    //         throw new BadRequestException("Use recordCashPayment() for cash payments.");
+    //     }
+
+    //     Sale sale = saleRepository.findById(saleId).orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
+
+    //     if (paymentRepository.existsByTransactionReference(transactionReference)) {
+    //         return paymentMapper.toResponse(paymentRepository.findByTransactionReference(transactionReference).orElseThrow());
+    //     }
+
+    //     Terminal terminal = null;
+
+    //     if (terminalId != null) {
+    //         terminal = terminalRepository.findById(terminalId).orElseThrow(() -> new ResourceNotFoundException("Terminal not found."));
+    //     }
+
+    //     validateTerminal(terminal, paymentMethod);
+
+    //     Payment payment = new Payment();
+    //     payment.setPaymentNumber(generatePaymentNumber());
+
+    //     payment.setSale(sale);
+    //     payment.setAmount(sale.getNetAmount());
+    //     payment.setPaymentMethod(paymentMethod);
+    //     payment.setPaymentStatus(paymentStatus);
+    //     payment.setTransactionReference(transactionReference);
+    //     payment.setRrn(rrn);
+    //     payment.setStan(stan);
+    //     payment.setTerminal(terminal);
+    //     payment.setMerchantId(merchantId);
+    //     payment.setOutletId(outletId);
+    //     payment.setAuthorizationCode(authorizationCode);
+    //     payment.setCardScheme(cardScheme);
+    //     payment.setResponseCode(responseCode);
+    //     payment.setResponseMessage(responseMessage);
+    //     payment.setPaymentTime(paymentTime != null ? paymentTime : LocalDateTime.now());
+
+    //     validateAmount(sale, payment);
+    //     payment = paymentRepository.save(payment);
+    //     return paymentMapper.toResponse(payment);
+    // }
+
+    @Transactional(readOnly = true)
+    public List<PaymentResponse> filterPayments(PaymentFilterRequest request) {
+
+        if (request.getMinAmount() != null
+                && request.getMaxAmount() != null
+                && request.getMinAmount().compareTo(request.getMaxAmount()) > 0) {
+
+            throw new BadRequestException("Minimum amount cannot be greater than maximum amount.");
         }
 
-        Terminal terminal = null;
+        if (request.getStartDate() != null
+                && request.getEndDate() != null
+                && request.getStartDate().isAfter(request.getEndDate())) {
 
-        if (terminalId != null) {
-            terminal = terminalRepository.findById(terminalId).orElseThrow(() -> new ResourceNotFoundException("Terminal not found."));
+            throw new BadRequestException("Start date cannot be after end date.");
         }
 
-        validateTerminal(terminal, paymentMethod);
-
-        Payment payment = new Payment();
-        payment.setPaymentNumber(generatePaymentNumber());
-
-        payment.setSale(sale);
-        payment.setAmount(sale.getNetAmount());
-        payment.setPaymentMethod(paymentMethod);
-        payment.setPaymentStatus(paymentStatus);
-        payment.setTransactionReference(transactionReference);
-        payment.setRrn(rrn);
-        payment.setStan(stan);
-        payment.setTerminal(terminal);
-        payment.setMerchantId(merchantId);
-        payment.setOutletId(outletId);
-        payment.setAuthorizationCode(authorizationCode);
-        payment.setCardScheme(cardScheme);
-        payment.setResponseCode(responseCode);
-        payment.setResponseMessage(responseMessage);
-        payment.setPaymentTime(paymentTime != null ? paymentTime : LocalDateTime.now());
-
-        validateAmount(sale, payment);
-        payment = paymentRepository.save(payment);
-        return paymentMapper.toResponse(payment);
+        return paymentRepository.findAll(PaymentSpecification.filter(request))
+                    .stream().map(paymentMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
@@ -298,17 +483,16 @@ public class PaymentService {
                 .processor("CAMS")
                 .build();
 
-        // String tid = payment.getTerminal().getTid(); for now TID also contains DEVICE-SERIAL
-        String deviceSerial = payment.getTerminal().getTerminalSerialNumber();
         Payment savedPayment = paymentRepository.save(payment);
-
         sale.setPaymentMethod(PaymentMethod.TRANSFER);
-        sale.setPaymentStatus(PaymentStatus.SUCCESS);
-        sale.setSaleStatus(SaleStatus.COMPLETED);
-        sale.setPaidAt(notification.getPaymentTime());
-        sale.setTransactionReference(notification.getRequestReference());
+
+        // sale.setPaymentStatus(PaymentStatus.SUCCESS);
+        // sale.setSaleStatus(SaleStatus.COMPLETED);
+        // sale.setPaidAt(notification.getPaymentTime());
+        // sale.setTransactionReference(notification.getRequestReference());
 
         saleRepository.save(sale);
+        completeSale(sale.getId(), notification.getRequestReference(), PaymentStatus.SUCCESS, notification.getPaymentTime());
         pendingTransferService.delete(pendingTransfer);
         return paymentMapper.toResponse(savedPayment);
     }
@@ -335,13 +519,40 @@ public class PaymentService {
         Payment savedPayment = paymentRepository.save(payment);
 
         sale.setPaymentMethod(PaymentMethod.CARD);
-        sale.setPaymentStatus(PaymentStatus.SUCCESS);
-        sale.setSaleStatus(SaleStatus.COMPLETED);
-        sale.setPaidAt(cardPaymentNotification.getTransactionTime());
-        sale.setTransactionReference(cardPaymentNotification.getRrn());
+        // sale.setPaymentStatus(PaymentStatus.SUCCESS);
+        // sale.setSaleStatus(SaleStatus.COMPLETED);
+        // sale.setPaidAt(cardPaymentNotification.getTransactionTime());
+        // sale.setTransactionReference(cardPaymentNotification.getRrn());
 
         saleRepository.save(sale);
+        completeSale(sale.getId(), cardPaymentNotification.getRrn(), PaymentStatus.SUCCESS, cardPaymentNotification.getTransactionTime());
+        pendingCardPaymentService.consume(terminal.getTid(), cardPaymentNotification.getAmount());
         return paymentMapper.toResponse(savedPayment);
     }
+
+            private String generateSaleNumber(Station station) {
+            return "FuelFlow-"
+                    + ShiftUtil.businessDate(station.getTimeZone())
+                    + "-"
+                    + UUID.randomUUID()
+                    .toString()
+                    .substring(0, 8)
+                    .toUpperCase();
+        }
+
+        private String generateReceiptNumber() {
+
+                    return "RCP-"
+                            + UUID.randomUUID()
+                            .toString()
+                            .substring(0, 8)
+                            .toUpperCase();
+        }
+
+
+        private BigDecimal calculateNetAmount(BigDecimal grossAmount, BigDecimal discount) {
+            if (discount == null) { discount = BigDecimal.ZERO; }
+            return grossAmount.subtract(discount);
+        }
 
 }

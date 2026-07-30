@@ -27,12 +27,6 @@ public class InventoryTransactionService {
     private final StationInventoryRepository stationInventoryRepository;
     private final InventoryTransactionRepository inventoryTransactionRepository;
 
-    /**
-     * Records a stock movement and updates the running inventory balance.
-     *
-     * This is the ONLY method in the application allowed to mutate
-     * StationInventory.currentQuantity.
-     */
     public InventoryTransaction recordTransaction(
             Long stationInventoryId,
             InventoryTransactionType transactionType,
@@ -71,9 +65,6 @@ public class InventoryTransactionService {
         return inventoryTransactionRepository.save(transaction);
     }
 
-        /**
-     * Ensures a transaction will not produce an invalid inventory balance.
-     */
     private void validateTransaction(
             BigDecimal currentBalance,
             BigDecimal quantity,
@@ -93,9 +84,7 @@ public class InventoryTransactionService {
     }
 
 
-    /**
-     * Computes the new running inventory balance.
-     */
+
     // private BigDecimal calculateNewBalance(
     //         BigDecimal currentBalance,
     //         BigDecimal quantity,
@@ -155,9 +144,6 @@ public class InventoryTransactionService {
 }
 
 
-    /**
-     * Transactions that increase stock.
-     */
     private boolean isInboundTransaction(
             InventoryTransactionType transactionType
     ) {
@@ -168,6 +154,7 @@ public class InventoryTransactionService {
                     DELIVERY,
                     TRANSFER_IN,
                     RETURN,
+                    DELIVERY_REVERSAL,
                     ADJUSTMENT_IN -> true;
 
             default -> false;
@@ -175,9 +162,6 @@ public class InventoryTransactionService {
     }
 
 
-    /**
-     * Transactions that reduce stock.
-     */
     private boolean isOutboundTransaction(
             InventoryTransactionType transactionType
     ) {
@@ -186,6 +170,7 @@ public class InventoryTransactionService {
 
             case SALE,
                     TRANSFER_OUT,
+                    DELIVERY_REVERSAL,
                     LOSS,
                     ADJUSTMENT_OUT -> true;
 

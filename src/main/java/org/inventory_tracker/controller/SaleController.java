@@ -7,6 +7,7 @@ import org.inventory_tracker.dto.response.SaleResponse;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
+import org.inventory_tracker.service.PaymentService;
 import org.inventory_tracker.service.SaleService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,6 +22,7 @@ import java.util.List;
 public class SaleController {
 
     private final SaleService saleService;
+    private final PaymentService paymentService;
 
     @PostMapping
     public SaleResponse createSale(
@@ -28,14 +30,14 @@ public class SaleController {
             @RequestBody
             CreateSaleRequest request) {
 
-        return saleService.createSale(request);
+        return paymentService.createSale(request);
     }
 
     @PostMapping("/{saleId}/complete-cash")
     public SaleResponse completeCashSale(
             @PathVariable Long saleId) {
 
-        return saleService.completeCashSale(saleId);
+        return paymentService.completeCashSale(saleId);
     }
 
     @PutMapping("/{saleId}/cancel")

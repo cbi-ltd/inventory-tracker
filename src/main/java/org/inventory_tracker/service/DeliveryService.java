@@ -8,11 +8,12 @@ import org.inventory_tracker.enums.DeliveryStatus;
 import org.inventory_tracker.config.mapper.DeliveryMapper;
 import org.inventory_tracker.repository.DeliveryRepository;
 import org.inventory_tracker.dto.request.DeliveryFilterRequest;
-import org.inventory_tracker.entity.DeliverySpecification;
+import org.inventory_tracker.dto.request.ReverseDeliveryRequest;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.inventory_tracker.entity.StationInventory;
+import org.inventory_tracker.entity.specification.DeliverySpecification;
 import org.inventory_tracker.repository.StationInventoryRepository;
 import org.inventory_tracker.enums.InventoryTransactionType;
 import org.inventory_tracker.entity.Station;
@@ -21,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -195,6 +197,39 @@ public class DeliveryService {
         }
 
         return deliveryMapper.toResponseList(deliveryRepository.findAll(DeliverySpecification.filter(request)));
+    }
+
+    @Transactional
+    public DeliveryResponse reverseDelivery(Long deliveryId, ReverseDeliveryRequest request) {
+
+        Delivery delivery = deliveryRepository.findById(deliveryId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Delivery not found."));
+
+        if (delivery.getStatus() != DeliveryStatus.RECEIVED) {
+                throw new BadRequestException("Only received deliveries can be reversed.");
+        }
+
+        StationInventory inventory = delivery.getStationInventory();
+        BigDecimal availableStock = inventory.getCurrentQuantity();
+
+        if (availableStock.compareTo(delivery.getQuantityDelivered()) < 0) {
+                throw new BadRequestException("Delivery cannot be reversed because some or all of the stock has already been consumed.");
+        }
+
+        inventoryTransactionService.recordTransaction(
+                inventory.getId(),
+                InventoryTransactionType.DELIVERY_REVERSAL,
+                delivery.getQuantityDelivered(),
+                request.getReason(),
+                delivery.getDeliveryNumber()
+
+        );
+
+        delivery.setStatus(DeliveryStatus.REVERSED);
+        delivery.setReversedAt(LocalDateTime.now(delivery.getStation().getTimeZone()));
+        delivery.setReversalReason(request.getReason());
+        deliveryRepository.save(delivery);
+        return deliveryMapper.toResponse(delivery);
     }
 
 

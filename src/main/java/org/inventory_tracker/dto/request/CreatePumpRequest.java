@@ -2,12 +2,15 @@ package org.inventory_tracker.dto.request;
 
 import lombok.Getter;
 import lombok.Setter;
+
+import org.inventory_tracker.util.ValidTerminalInfo;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 
 @Getter
 @Setter
+@ValidTerminalInfo
 public class CreatePumpRequest {
 
     @NotBlank(message = "Pump number is required")

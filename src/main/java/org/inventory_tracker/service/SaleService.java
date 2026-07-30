@@ -5,7 +5,6 @@ import org.inventory_tracker.config.mapper.SaleMapper;
 import org.inventory_tracker.dto.request.CreateSaleRequest;
 import org.inventory_tracker.dto.response.SaleResponse;
 import org.inventory_tracker.entity.*;
-import org.inventory_tracker.enums.InventoryTransactionType;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
@@ -31,154 +30,185 @@ import java.util.List;
 public class SaleService {
     private final SaleRepository saleRepository;
     private final SaleMapper saleMapper;
-    private final StationRepository stationRepository;
     private final PumpRepository pumpRepository;
-    private final TerminalRepository terminalRepository;
-    private final AttendantRepository attendantRepository;
-    private final ProductRepository productRepository;
     private final StationInventoryRepository stationInventoryRepository;
     private final PumpAssignmentRepository pumpAssignmentRepository;
-    private final InventoryTransactionService inventoryTransactionService;
     private final PendingTransferService pendingTransferService;
     private final PendingCardPaymentService pendingCardPaymentService;
 
-    @Transactional
-    public SaleResponse createSale(CreateSaleRequest request) {
+//     @Transactional
+//     public SaleResponse createSale(CreateSaleRequest request) {
 
-        try {
-                Pump pump = pumpRepository.findById(request.getPumpId())
-                                .orElseThrow(() -> new ResourceNotFoundException("Pump not found"));
+//         try {
+//                 Pump pump = pumpRepository.findById(request.getPumpId())
+//                                 .orElseThrow(() -> new ResourceNotFoundException("Pump not found"));
 
-                PumpAssignment assignment = pumpAssignmentRepository.findFirstByPumpIdAndActiveTrue(pump.getId())
-                                                .orElseThrow(() ->new ResourceNotFoundException("Pump is not currently assigned."));
+//                 PumpAssignment assignment = pumpAssignmentRepository.findFirstByPumpIdAndActiveTrue(pump.getId())
+//                                                 .orElseThrow(() ->new ResourceNotFoundException("Pump is not currently assigned."));
 
-                Terminal terminal = assignment.getTerminal();
-                Attendant attendant = assignment.getAttendant();
+//                 Terminal terminal = assignment.getTerminal();
+//                 Attendant attendant = assignment.getAttendant();
 
-                Station station = pump.getStation();
-                Product product = pump.getProduct();
+//                 Station station = pump.getStation();
+//                 Product product = pump.getProduct();
 
-                StationInventory inventory = stationInventoryRepository.findByStationIdAndProductId(station.getId(), product.getId())
-                                                .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
+//                 StationInventory inventory = stationInventoryRepository.findByStationIdAndProductId(station.getId(), product.getId())
+//                                                 .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
 
-                BigDecimal unitPrice = inventory.getUnitPrice();
-                BigDecimal quantity;
-                BigDecimal grossAmount;
+//                 BigDecimal unitPrice = inventory.getUnitPrice();
+//                 BigDecimal quantity;
+//                 BigDecimal grossAmount;
 
-                if (request.getQuantity() != null) {
-                        quantity = request.getQuantity();
-                        grossAmount =quantity.multiply(unitPrice);
-                }
-                else {
-                        grossAmount = request.getAmount();
-                        if (unitPrice.compareTo(BigDecimal.ZERO) == 0) { throw new BadRequestException("Unit price cannot be zero."); }
-                        quantity = grossAmount.divide(unitPrice, 3, RoundingMode.HALF_UP);
-                }
+//                 if (request.getQuantity() != null) {
+//                         quantity = request.getQuantity();
+//                         grossAmount =quantity.multiply(unitPrice);
+//                 }
+//                 else {
+//                         grossAmount = request.getAmount();
+//                         if (unitPrice.compareTo(BigDecimal.ZERO) == 0) { throw new BadRequestException("Unit price cannot be zero."); }
+//                         quantity = grossAmount.divide(unitPrice, 3, RoundingMode.HALF_UP);
+//                 }
 
-                if (inventory.getCurrentQuantity().compareTo(quantity) < 0) {
-                        throw new BadRequestException("Insufficient stock available.");
-                }
+//                 if (inventory.getCurrentQuantity().compareTo(quantity) < 0) {
+//                         throw new BadRequestException("Insufficient stock available.");
+//                 }
 
-                Sale sale = saleMapper.toEntity(request);
-                sale.setStation(station);
-                sale.setPump(pump);
-                sale.setTerminal(terminal);
-                sale.setAttendant(attendant);
-                sale.setProduct(product);
-                sale.setSaleNumber(generateSaleNumber(station));
-                sale.setReceiptNumber(generateReceiptNumber());
-                sale.setSaleTime(LocalDateTime.now());
-                sale.setUnitPrice(unitPrice);
-                sale.setQuantity(quantity);
+//                 Sale sale = saleMapper.toEntity(request);
+//                 sale.setStation(station);
+//                 sale.setPump(pump);
+//                 sale.setTerminal(terminal);
+//                 sale.setAttendant(attendant);
+//                 sale.setProduct(product);
+//                 sale.setSaleNumber(generateSaleNumber(station));
+//                 sale.setReceiptNumber(generateReceiptNumber());
+//                 sale.setSaleTime(LocalDateTime.now());
+//                 sale.setUnitPrice(unitPrice);
+//                 sale.setQuantity(quantity);
 
-                // BigDecimal gross = calculateGrossAmount(request.getQuantity(), unitPrice);
-                        // unitPrice.multiply(request.getQuantity());
-                sale.setGrossAmount(grossAmount);
+//                 // BigDecimal gross = calculateGrossAmount(request.getQuantity(), unitPrice);
+//                         // unitPrice.multiply(request.getQuantity());
+//                 sale.setGrossAmount(grossAmount);
 
-                BigDecimal discount = request.getDiscountAmount() == null ? BigDecimal.ZERO : request.getDiscountAmount();
-                sale.setDiscountAmount(discount);
+//                 BigDecimal discount = request.getDiscountAmount() == null ? BigDecimal.ZERO : request.getDiscountAmount();
+//                 sale.setDiscountAmount(discount);
 
-                // sale.setNetAmount(gross.subtract(discount));
-                sale.setNetAmount(calculateNetAmount(grossAmount, discount));
+//                 // sale.setNetAmount(gross.subtract(discount));
+//                 sale.setNetAmount(calculateNetAmount(grossAmount, discount));
 
-                sale.setInventoryUpdated(false);
+//                 sale.setInventoryUpdated(false);
 
-                switch (request.getPaymentMethod()) {
-                case CASH -> {
-                        sale.setPaymentStatus(PaymentStatus.SUCCESS);
-                        sale.setSaleStatus(SaleStatus.PENDING);
-                }
+//                 switch (request.getPaymentMethod()) {
+//                 case CASH -> {
+//                         sale.setPaymentStatus(PaymentStatus.SUCCESS);
+//                         sale.setSaleStatus(SaleStatus.PENDING);
+//                 }
 
-                case CARD, TRANSFER, MIXED -> {
-                        sale.setPaymentStatus(PaymentStatus.PENDING);
-                        sale.setSaleStatus(SaleStatus.PENDING);
-                }
+//                 case CARD, TRANSFER, MIXED -> {
+//                         sale.setPaymentStatus(PaymentStatus.PENDING);
+//                         sale.setSaleStatus(SaleStatus.PENDING);
+//                 }
 
-                default -> throw new BadRequestException(
-                        "Unsupported payment method.");
-                }
+//                 default -> throw new BadRequestException(
+//                         "Unsupported payment method.");
+//                 }
 
-                saleRepository.save(sale);
+//                 saleRepository.save(sale);
 
-                switch (request.getPaymentMethod()) {
-                        case TRANSFER -> pendingTransferService.registerPendingTransfer(station.getVirtualAccountNumber(), sale.getSaleNumber(), sale.getNetAmount(), terminal.getTerminalSerialNumber());
-                        case CARD -> pendingCardPaymentService.register(sale.getSaleNumber(), sale.getNetAmount(),terminal.getTerminalSerialNumber(), terminal.getTid());
-                        case CASH ->  {}
-                        case MIXED -> {}
-                }
+//                 switch (request.getPaymentMethod()) {
+//                         case TRANSFER -> pendingTransferService.registerPendingTransfer(station.getVirtualAccountNumber(), sale.getSaleNumber(), sale.getNetAmount(), terminal.getTerminalSerialNumber());
+//                         case CARD -> pendingCardPaymentService.register(sale.getSaleNumber(), sale.getNetAmount(),terminal.getTerminalSerialNumber(), terminal.getTid());
+//                         case CASH ->  {}
+//                         case MIXED -> {}
+//                 }
 
-                if (sale.getPaymentMethod() == PaymentMethod.CASH) {
-                return completeCashSale(sale.getId());
-                }
+//                 if (sale.getPaymentMethod() == PaymentMethod.CASH) {
+//                         recordCashPayment(sale.getId());
+//                         return completeCashSale(sale.getId());
+//                 }
 
-                return saleMapper.toResponse(sale);
-        }
-        catch (ResourceNotFoundException | BadRequestException e) { throw e; } 
-        catch (ArithmeticException e) {
-                throw new BadRequestException("Calculation error during transaction: " + e.getMessage());
-        } 
-        catch (Exception e) {
-                throw new RuntimeException("Failed to process sale due to an internal error: " + e.getMessage(), e);
-        }
-    }
+//                 return saleMapper.toResponse(sale);
+//         }
+//         catch (ResourceNotFoundException | BadRequestException e) { throw e; } 
+//         catch (ArithmeticException e) {
+//                 throw new BadRequestException("Calculation error during transaction: " + e.getMessage());
+//         } 
+//         catch (Exception e) {
+//                 throw new RuntimeException("Failed to process sale due to an internal error: " + e.getMessage(), e);
+//         }
+//     }
+
+//     @Transactional
+//     public SaleResponse completeSale(Long saleId, String transactionReference, PaymentStatus paymentStatus, LocalDateTime paidAt) {
+
+//         Sale sale = saleRepository.findById(saleId).orElseThrow(() -> new ResourceNotFoundException("Sale not found"));
+
+//         if (sale.getInventoryUpdated()) { return saleMapper.toResponse(sale); }
+
+//         StationInventory inventory = stationInventoryRepository.findByStationIdAndProductId(sale.getStation().getId(), sale.getProduct().getId())
+//                                                 .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
+
+//         if (inventory.getCurrentQuantity().compareTo(sale.getQuantity()) < 0) {
+//                 throw new BadRequestException("Insufficient inventory.");
+//         }
+
+//         Long inventoryId = inventory.getId();
+
+//         inventoryTransactionService.recordTransaction(
+//                 inventoryId,
+//                 InventoryTransactionType.SALE,
+//                 sale.getQuantity(),
+//                 sale.getSaleNumber(),
+//                 "SALE-" + sale.getSaleNumber());
+
+//         sale.setInventoryUpdated(true);
+//         sale.setPaymentStatus(paymentStatus);
+//         sale.setSaleStatus(SaleStatus.COMPLETED);
+//         sale.setTransactionReference(transactionReference);
+//         sale.setPaidAt(paidAt);
+
+//         saleRepository.save(sale);
+//         return saleMapper.toResponse(sale);
+//     }
 
 
-    @Transactional
-    public SaleResponse completeCashSale(Long saleId) {
 
-        Sale sale =
-                saleRepository.findById(saleId)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Sale not found"));
 
-        if (sale.getInventoryUpdated()) { return saleMapper.toResponse(sale); }
+//     @Transactional
+//     public SaleResponse completeCashSale(Long saleId) {
 
-        StationInventory inventory =
-                stationInventoryRepository
-                        .findByStationIdAndProductId(
-                                sale.getStation().getId(),
-                                sale.getProduct().getId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Station inventory not found"));
+//         Sale sale =
+//                 saleRepository.findById(saleId)
+//                         .orElseThrow(() ->
+//                                 new ResourceNotFoundException(
+//                                         "Sale not found"));
 
-        Long inventoryId = getStationInventoryId(sale.getStation().getId(), sale.getProduct().getId());
+//         if (sale.getInventoryUpdated()) { return saleMapper.toResponse(sale); }
 
-        if (inventory.getCurrentQuantity().compareTo(sale.getQuantity()) < 0) {
-            throw new BadRequestException("Insufficient inventory.");
-        }
+//         StationInventory inventory =
+//                 stationInventoryRepository
+//                         .findByStationIdAndProductId(
+//                                 sale.getStation().getId(),
+//                                 sale.getProduct().getId())
+//                         .orElseThrow(() ->
+//                                 new ResourceNotFoundException(
+//                                         "Station inventory not found"));
 
-        inventoryTransactionService.recordTransaction(inventoryId, InventoryTransactionType.SALE, sale.getQuantity(), sale.getSaleNumber(), "SALE" + sale.getSaleNumber());
+//         Long inventoryId = getStationInventoryId(sale.getStation().getId(), sale.getProduct().getId());
 
-        sale.setInventoryUpdated(true);
-        sale.setPaymentStatus(PaymentStatus.SUCCESS);
-        sale.setSaleStatus(SaleStatus.COMPLETED);
-        sale.setTransactionReference(sale.getSaleNumber());
+//         if (inventory.getCurrentQuantity().compareTo(sale.getQuantity()) < 0) {
+//             throw new BadRequestException("Insufficient inventory.");
+//         }
 
-        saleRepository.save(sale);
-        return saleMapper.toResponse(sale);
-    }
+//         inventoryTransactionService.recordTransaction(inventoryId, InventoryTransactionType.SALE, sale.getQuantity(), sale.getSaleNumber(), "SALE" + sale.getSaleNumber());
+
+//         sale.setInventoryUpdated(true);
+//         sale.setPaymentStatus(PaymentStatus.SUCCESS);
+//         sale.setSaleStatus(SaleStatus.COMPLETED);
+//         sale.setTransactionReference(sale.getSaleNumber());
+
+//         saleRepository.save(sale);
+//         return saleMapper.toResponse(sale);
+//     }
 
     @Transactional(readOnly = true)
     public SaleResponse getSaleById(Long id) {
@@ -387,38 +417,34 @@ public class SaleService {
                 saleRepository.save(sale));
     }
 
-    // public SaleResponse completeElectronicSale(String transactionReference, Payment payment){
 
-    // }
+        // private String generateSaleNumber(Station station) {
+        //     return "FuelFlow-"
+        //             + ShiftUtil.businessDate(station.getTimeZone())
+        //             + "-"
+        //             + UUID.randomUUID()
+        //             .toString()
+        //             .substring(0, 8)
+        //             .toUpperCase();
+        // }
 
+        // private String generateReceiptNumber() {
 
-        private String generateSaleNumber(Station station) {
-            return "FuelFlow-"
-                    + ShiftUtil.businessDate(station.getTimeZone())
-                    + "-"
-                    + UUID.randomUUID()
-                    .toString()
-                    .substring(0, 8)
-                    .toUpperCase();
-        }
+        //             return "RCP-"
+        //                     + UUID.randomUUID()
+        //                     .toString()
+        //                     .substring(0, 8)
+        //                     .toUpperCase();
+        // }
 
-        private String generateReceiptNumber() {
+        // private BigDecimal calculateGrossAmount(BigDecimal quantity, BigDecimal unitPrice) {
+        //     return quantity.multiply(unitPrice);
+        // }
 
-                    return "RCP-"
-                            + UUID.randomUUID()
-                            .toString()
-                            .substring(0, 8)
-                            .toUpperCase();
-        }
-
-        private BigDecimal calculateGrossAmount(BigDecimal quantity, BigDecimal unitPrice) {
-            return quantity.multiply(unitPrice);
-        }
-
-        private BigDecimal calculateNetAmount(BigDecimal grossAmount, BigDecimal discount) {
-            if (discount == null) { discount = BigDecimal.ZERO; }
-            return grossAmount.subtract(discount);
-        }
+        // private BigDecimal calculateNetAmount(BigDecimal grossAmount, BigDecimal discount) {
+        //     if (discount == null) { discount = BigDecimal.ZERO; }
+        //     return grossAmount.subtract(discount);
+        // }
 
         private Long getStationInventoryId(Long stationId, Long productId) {
 

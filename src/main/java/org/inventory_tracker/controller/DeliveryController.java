@@ -4,6 +4,7 @@ package org.inventory_tracker.controller;
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.inventory_tracker.dto.request.CreateDeliveryRequest;
 import org.inventory_tracker.dto.request.DeliveryFilterRequest;
+import org.inventory_tracker.dto.request.ReverseDeliveryRequest;
 import org.inventory_tracker.dto.response.DeliveryResponse;
 import org.inventory_tracker.enums.DeliveryStatus;
 import org.inventory_tracker.service.DeliveryService;
@@ -28,11 +29,9 @@ public class DeliveryController {
 
     @PostMapping
     public ResponseEntity<ApiSuccessResponse<DeliveryResponse>>
-    createDelivery(
-            @Valid @RequestBody CreateDeliveryRequest request) {
+    createDelivery(@Valid @RequestBody CreateDeliveryRequest request) {
 
-        DeliveryResponse response =
-                deliveryService.createDelivery(request);
+        DeliveryResponse response = deliveryService.createDelivery(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(
@@ -47,12 +46,9 @@ public class DeliveryController {
 
 
     @PatchMapping("/{id}/receive")
-    public ResponseEntity<ApiSuccessResponse<DeliveryResponse>>
-    receiveDelivery(
-            @PathVariable Long id) {
+    public ResponseEntity<ApiSuccessResponse<DeliveryResponse>>receiveDelivery(@PathVariable Long id) {
 
-        DeliveryResponse response =
-                deliveryService.receiveDelivery(id);
+        DeliveryResponse response = deliveryService.receiveDelivery(id);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
@@ -179,6 +175,23 @@ public class DeliveryController {
                         deliveryCount,
                         response
                 ));
+    }
+
+    @PatchMapping("/{id}/reverse")
+    public ResponseEntity<ApiSuccessResponse<DeliveryResponse>>reverseDelivery(@PathVariable Long id,
+                @Valid
+                @RequestBody ReverseDeliveryRequest request) {
+
+        DeliveryResponse response = deliveryService.reverseDelivery(id, request);
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Delivery reversed successfully.",
+                        response
+                )
+        );
     }
 
 //     @GetMapping

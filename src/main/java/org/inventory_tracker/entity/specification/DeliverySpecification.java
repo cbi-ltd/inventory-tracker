@@ -1,8 +1,9 @@
-package org.inventory_tracker.entity;
+package org.inventory_tracker.entity.specification;
 
 
 import jakarta.persistence.criteria.Predicate;
 import org.inventory_tracker.dto.request.DeliveryFilterRequest;
+import org.inventory_tracker.entity.Delivery;
 import org.springframework.data.jpa.domain.Specification;
 import java.util.ArrayList;
 import java.util.List;

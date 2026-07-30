@@ -14,6 +14,6 @@ public class AssignPumpRequest {
     @NotNull(message = "Pump ID is required")
     private Long pumpId;
 
-    @NotNull(message = "Station ID is required")
+    // @NotNull(message = "Station ID is required")
     private Long stationId;
 }

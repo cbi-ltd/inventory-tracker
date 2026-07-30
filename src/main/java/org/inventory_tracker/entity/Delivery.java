@@ -66,6 +66,14 @@ public class Delivery extends BaseEntity {
     @Column(nullable = false)
     private DeliveryStatus status;
 
+    private LocalDateTime reversedAt;
+
+    private String reversalReason;
+
+//     @ManyToOne
+//     @JoinColumn(name = "reversed_by")
+//     private Attendant reversedBy;
+
     @Column(length = 500)
     private String remarks;
 }
