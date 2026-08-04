@@ -6,6 +6,7 @@ import org.inventory_tracker.entity.Sale;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
+import org.inventory_tracker.enums.Shift;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -97,4 +98,33 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
         WHERE s.station.id = :stationId
         """)
     BigDecimal totalQuantityByStation(Long stationId);
+
+    @Query("""
+select coalesce(sum(s.quantity),0)
+from Sale s
+where s.pump.id = :pumpId
+and s.businessDate = :businessDate
+and s.shift = :shift
+and s.saleStatus = org.inventory_tracker.enums.SaleStatus.COMPLETED
+""")
+BigDecimal sumQuantityByPumpAndBusinessDateAndShift(
+
+        Long pumpId,
+        LocalDate businessDate,
+        Shift shift);
+
+        @Query("""
+select coalesce(sum(s.netAmount),0)
+from Sale s
+where s.pump.id = :pumpId
+and s.businessDate = :businessDate
+and s.shift = :shift
+and s.saleStatus = org.inventory_tracker.enums.SaleStatus.COMPLETED
+""")
+BigDecimal sumNetAmountByPumpAndBusinessDateAndShift(
+
+        Long pumpId,
+        LocalDate businessDate,
+        Shift shift);
 }
+

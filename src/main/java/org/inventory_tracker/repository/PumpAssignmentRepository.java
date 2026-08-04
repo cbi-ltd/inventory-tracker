@@ -17,22 +17,13 @@ public interface PumpAssignmentRepository
             Shift shift
     );
 
-    Optional<PumpAssignment> findByAttendantIdAndActiveTrue(
-            Long attendantId
-    );
+    Optional<PumpAssignment> findByAttendantIdAndActiveTrue(Long attendantId);
 
-    List<PumpAssignment> findByAttendantIdOrderByAssignmentDateDesc(
-            Long attendantId
-    );
+    List<PumpAssignment> findByAttendantIdOrderByAssignmentDateDesc(Long attendantId);
 
-    List<PumpAssignment> findByStationIdAndAssignmentDateOrderByPump_PumpNumberAsc(
-            Long stationId,
-            LocalDate assignmentDate
-    );
+    List<PumpAssignment> findByStationIdAndAssignmentDateOrderByPump_PumpNumberAsc(Long stationId, LocalDate assignmentDate);
 
-    List<PumpAssignment> findByAssignmentDate(
-            LocalDate assignmentDate
-    );
+    List<PumpAssignment> findByAssignmentDate(LocalDate assignmentDate);
 
     List<PumpAssignment> findByStationId(Long stationId);
 
@@ -46,6 +37,14 @@ public interface PumpAssignmentRepository
     long countByPumpId(Long pumpId);
 
     long countByPumpIdAndActiveTrue(Long pumpId);
+
+    Optional<PumpAssignment> findByTerminal_TerminalSerialNumberAndAssignmentDateAndShiftAndActiveTrue(String terminalSerialNumber, LocalDate assignmentDate, Shift shift);
+
+    Optional<PumpAssignment> findFirstByTerminalIdAndActiveTrueOrderByAssignmentDateDesc(Long terminalId);
+
+    Optional<PumpAssignment> findFirstByTerminal_TerminalSerialNumberAndActiveTrueOrderByAssignmentDateDesc(String terminalSerialNumber);
+    
+    Optional<PumpAssignment>findByTerminalIdAndAssignmentDateAndShiftAndActiveTrue(Long terminalId, LocalDate assignmentDate, Shift shift);
 
     Optional<PumpAssignment> findFirstByAttendantIdAndActiveTrue(Long attendantId);
 

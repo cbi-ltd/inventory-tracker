@@ -16,6 +16,7 @@ import org.inventory_tracker.entity.Payment;
 import org.inventory_tracker.entity.Product;
 import org.inventory_tracker.entity.Pump;
 import org.inventory_tracker.entity.PumpAssignment;
+import org.inventory_tracker.entity.PumpAudit;
 import org.inventory_tracker.entity.Sale;
 import org.inventory_tracker.entity.Station;
 import org.inventory_tracker.entity.StationInventory;
@@ -35,6 +36,7 @@ import org.inventory_tracker.integration.cams.dto.CamsPaymentNotification;
 import org.inventory_tracker.integration.cams.dto.CardPaymentNotification;
 import org.inventory_tracker.repository.PaymentRepository;
 import org.inventory_tracker.repository.PumpAssignmentRepository;
+import org.inventory_tracker.repository.PumpAuditRepository;
 import org.inventory_tracker.repository.PumpRepository;
 import org.inventory_tracker.repository.SaleRepository;
 import org.inventory_tracker.repository.StationInventoryRepository;
@@ -66,6 +68,7 @@ public class PaymentService {
     private final InventoryTransactionService inventoryTransactionService;
     private final PumpRepository pumpRepository;
     private final PumpAssignmentRepository pumpAssignmentRepository;
+    private final PumpAuditRepository pumpAuditRepository;
 
     @Transactional
     public PaymentResponse recordCashPayment(Long saleId) {
@@ -145,18 +148,19 @@ public class PaymentService {
                 StationInventory inventory = stationInventoryRepository.findByStationIdAndProductId(station.getId(), product.getId())
                                                 .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
 
-                BigDecimal unitPrice = inventory.getUnitPrice();
+                BigDecimal costPerUnit = inventory.getCostPerUnit();
+                BigDecimal sellingPrice = inventory.getSellingPrice();
                 BigDecimal quantity;
                 BigDecimal grossAmount;
 
                 if (request.getQuantity() != null) {
                         quantity = request.getQuantity();
-                        grossAmount =quantity.multiply(unitPrice);
+                        grossAmount =quantity.multiply(sellingPrice);
                 }
                 else {
                         grossAmount = request.getAmount();
-                        if (unitPrice.compareTo(BigDecimal.ZERO) == 0) { throw new BadRequestException("Unit price cannot be zero."); }
-                        quantity = grossAmount.divide(unitPrice, 3, RoundingMode.HALF_UP);
+                        if (sellingPrice.compareTo(BigDecimal.ZERO) == 0) { throw new BadRequestException("Selling price cannot be zero."); }
+                        quantity = grossAmount.divide(sellingPrice, 3, RoundingMode.HALF_UP);
                 }
 
                 if (inventory.getCurrentQuantity().compareTo(quantity) < 0) {
@@ -172,11 +176,11 @@ public class PaymentService {
                 sale.setSaleNumber(generateSaleNumber(station));
                 sale.setReceiptNumber(generateReceiptNumber());
                 sale.setSaleTime(LocalDateTime.now());
-                sale.setUnitPrice(unitPrice);
+                sale.setSellingPrice(sellingPrice);
                 sale.setQuantity(quantity);
 
-                // BigDecimal gross = calculateGrossAmount(request.getQuantity(), unitPrice);
-                        // unitPrice.multiply(request.getQuantity());
+                // BigDecimal gross = calculateGrossAmount(request.getQuantity(), costPerUnit);
+                        // costPerUnit.multiply(request.getQuantity());
                 sale.setGrossAmount(grossAmount);
 
                 BigDecimal discount = request.getDiscountAmount() == null ? BigDecimal.ZERO : request.getDiscountAmount();
@@ -257,6 +261,7 @@ public class PaymentService {
         sale.setPaidAt(paidAt);
 
         saleRepository.save(sale);
+        updateCurrentPumpAudit(sale);
         return saleMapper.toResponse(sale);
     }
 
@@ -553,6 +558,25 @@ public class PaymentService {
         private BigDecimal calculateNetAmount(BigDecimal grossAmount, BigDecimal discount) {
             if (discount == null) { discount = BigDecimal.ZERO; }
             return grossAmount.subtract(discount);
+        }
+
+        @Transactional
+        private void updateCurrentPumpAudit(Sale sale) {
+            PumpAssignment assignment = pumpAssignmentRepository
+                            .findByPumpIdAndAssignmentDateAndShiftAndActiveTrue(
+                                    sale.getPump().getId(),
+                                    sale.getBusinessDate(),
+                                    ShiftUtil.currentShift(sale.getStation().getTimeZone()))
+                            .orElseThrow(() -> new ResourceNotFoundException("Pump assignment not found"));
+
+            PumpAudit audit = pumpAuditRepository.findByPumpAssignment_Id(assignment.getId())
+                                    .orElseThrow(() -> new ResourceNotFoundException("Pump audit not found"));
+
+            BigDecimal newClosing = audit.getClosingReading().add(sale.getQuantity());
+
+            audit.setClosingReading(newClosing);
+            audit.setTotalDispensed(newClosing.subtract(audit.getOpeningReading()));
+            pumpAuditRepository.save(audit);
         }
 
 }

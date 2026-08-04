@@ -5,13 +5,13 @@ import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.inventory_tracker.dto.request.TerminalSyncRequest;
 import org.inventory_tracker.dto.response.TerminalResponse;
+import org.inventory_tracker.entity.PosSessionResponse;
 import org.inventory_tracker.service.TerminalService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.inventory_tracker.util.PosSession;
 import jakarta.validation.Valid;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -21,6 +21,7 @@ import java.util.List;
 public class TerminalController {
 
     private final TerminalService terminalService;
+    private final PosSession posSessionService;
 
     //this endpoint should eventually be secured so only your CAMS integration (or an internal service account) can invoke it
     @PostMapping("/sync")
@@ -118,5 +119,24 @@ public class TerminalController {
                 )
         );
     }
+
+
+    @GetMapping("/session")
+    public ResponseEntity<ApiSuccessResponse<PosSessionResponse>>getPosSession(
+            @RequestParam(required = false) Long terminalId,
+            @RequestParam(required = false) String terminalSerialNumber) {
+
+        PosSessionResponse response = posSessionService.getPosSession(terminalId, terminalSerialNumber);
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "POS session loaded successfully.",
+                        response
+                ));
+    }
+
+
 
 }

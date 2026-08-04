@@ -21,6 +21,10 @@ public class CreateDeliveryRequest {
     @NotNull(message = "Station inventory is required")
     private Long stationInventoryId;
 
+    @NotNull
+    @DecimalMin("0.001")
+    private BigDecimal costPerUnit;
+
     @NotNull(message = "Quantity is required")
     @DecimalMin(value = "0.001")
     private BigDecimal quantityDelivered;

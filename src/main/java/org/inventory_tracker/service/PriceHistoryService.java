@@ -1,17 +1,21 @@
 package org.inventory_tracker.service;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.inventory_tracker.config.mapper.ProductPriceHistoryMapper;
+import org.inventory_tracker.dto.request.ProductPriceHistoryFilterRequest;
 import org.inventory_tracker.dto.response.ProductPriceHistoryResponse;
 import org.inventory_tracker.entity.ProductPriceHistory;
+import org.inventory_tracker.entity.specification.PriceHistorySpecification;
 import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.repository.ProductPriceHistoryRepository;
 import org.inventory_tracker.repository.ProductRepository;
 import org.inventory_tracker.repository.StationRepository;
-
+import org.springframework.data.domain.Sort;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -25,10 +29,27 @@ public class PriceHistoryService {
     private final ProductRepository productRepository;
 
 
-    @Transactional(readOnly = true)
-    public List<ProductPriceHistoryResponse> getAllPriceHistory() {
+    // @Transactional(readOnly = true)
+    // public List<ProductPriceHistoryResponse> getAllPriceHistory() {
 
-        return productPriceHistoryMapper.toResponseList(productPriceHistoryRepository.findAllByOrderByChangedAtDesc());
+    //     return productPriceHistoryMapper.toResponseList(productPriceHistoryRepository.findAllByOrderByChangedAtDesc());
+    // }
+
+    @Transactional(readOnly = true)
+    public List<ProductPriceHistoryResponse> filterPriceHistory(ProductPriceHistoryFilterRequest request) {
+
+            if (request.getStartDate() != null && request.getEndDate() != null && request.getStartDate().isAfter(request.getEndDate())) {
+                throw new BadRequestException("Start date cannot be after end date.");
+            }
+
+            Specification<ProductPriceHistory> specification =
+                    PriceHistorySpecification.filter(request);
+
+            return productPriceHistoryRepository
+                    .findAll(specification, Sort.by(Sort.Direction.DESC, "changedAt"))
+                    .stream()
+                    .map(productPriceHistoryMapper::toResponse)
+                    .toList();
     }
 
     @Transactional(readOnly = true)

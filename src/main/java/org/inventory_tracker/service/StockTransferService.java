@@ -57,18 +57,12 @@ public class StockTransferService {
                                 new ResourceNotFoundException(
                                         "Destination inventory not found."));
 
-        /*
-         * Source and destination cannot be the same inventory.
-         */
         if (sourceInventory.getId().equals(destinationInventory.getId())) {
 
             throw new BadRequestException(
                     "Source and destination inventory cannot be the same.");
         }
 
-        /*
-         * Only inventories of the same product can be transferred.
-         */
         Product sourceProduct = sourceInventory.getProduct();
         Product destinationProduct = destinationInventory.getProduct();
 
@@ -78,9 +72,6 @@ public class StockTransferService {
                     "Stock transfers can only occur between inventories of the same product.");
         }
 
-        /*
-         * Quantity validation.
-         */
         if (request.getQuantityTransferred() == null
                 || request.getQuantityTransferred().compareTo(BigDecimal.ZERO) <= 0) {
 
@@ -88,9 +79,6 @@ public class StockTransferService {
                     "Transfer quantity must be greater than zero.");
         }
 
-        /*
-         * Ensure source has sufficient stock.
-         */
         if (sourceInventory.getCurrentQuantity()
                 .compareTo(request.getQuantityTransferred()) < 0) {
 
@@ -122,24 +110,19 @@ public class StockTransferService {
         /*
          * Snapshot pricing.
          */
-        transfer.setUnitPrice(sourceInventory.getUnitPrice());
+        transfer.setUnitPrice(sourceInventory.getCostPerUnit());
 
         transfer.setTotalValueTransferred(
                 transfer.getUnitPrice()
                         .multiply(request.getQuantityTransferred()));
 
-        /*
-         * Balance snapshots are populated
-         * when the transfer is completed.
-         */
+
         transfer.setSourceBalanceBeforeTransfer(null);
         transfer.setSourceBalanceAfterTransfer(null);
         transfer.setDestinationBalanceBeforeTransfer(null);
         transfer.setDestinationBalanceAfterTransfer(null);
 
-        StockTransfer saved =
-                stockTransferRepository.save(transfer);
-
+        StockTransfer saved = stockTransferRepository.save(transfer);
         return stockTransferMapper.toResponse(saved);
     }
 

@@ -19,7 +19,7 @@ public class PumpAuditResponse {
 
     private Long pumpId;
 
-    private Integer pumpNumber;
+    private String pumpNumber;
 
     private BigDecimal openingReading;
 

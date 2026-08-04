@@ -6,12 +6,15 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
+import org.inventory_tracker.dto.request.ProductPriceHistoryFilterRequest;
 import org.inventory_tracker.dto.response.ProductPriceHistoryResponse;
 import org.inventory_tracker.service.PriceHistoryService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/product-price-history")
@@ -20,23 +23,38 @@ public class ProductPriceHistoryController {
 
     private final PriceHistoryService priceHistoryService;
 
-    @GetMapping
-    public ResponseEntity<ApiSuccessResponse<List<ProductPriceHistoryResponse>>> getAllPriceHistory() {
+//     @GetMapping
+//     public ResponseEntity<ApiSuccessResponse<List<ProductPriceHistoryResponse>>> getAllPriceHistory() {
 
-        List<ProductPriceHistoryResponse> response =
-                priceHistoryService.getAllPriceHistory();
+//         List<ProductPriceHistoryResponse> response =
+//                 priceHistoryService.getAllPriceHistory();
 
-        int count = response.size();
+//         int count = response.size();
+
+//         return ResponseEntity.ok(
+//                 new ApiSuccessResponse<>(
+//                         LocalDateTime.now(),
+//                         HttpStatus.OK.value(),
+//                         "Product price history retrieved successfully",
+//                         count,
+//                         response
+//                 )
+//         );
+//     }
+
+    @PostMapping("/filter")
+    public ResponseEntity<ApiSuccessResponse<List<ProductPriceHistoryResponse>>>
+    filterPriceHistory(@Valid @RequestBody ProductPriceHistoryFilterRequest request) {
+
+        List<ProductPriceHistoryResponse> response = priceHistoryService.filterPriceHistory(request);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
-                        "Product price history retrieved successfully",
-                        count,
+                        "Price history retrieved successfully.",
                         response
-                )
-        );
+                ));
     }
 
 

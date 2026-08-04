@@ -2,6 +2,7 @@ package org.inventory_tracker.repository;
 
 import org.inventory_tracker.entity.ProductPriceHistory;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
@@ -9,7 +10,7 @@ import java.util.List;
 
 @Repository
 public interface ProductPriceHistoryRepository
-        extends JpaRepository<ProductPriceHistory, Long> {
+        extends JpaRepository<ProductPriceHistory, Long>, JpaSpecificationExecutor<ProductPriceHistory> {
 
     List<ProductPriceHistory>
     findByStationIdOrderByChangedAtDesc(

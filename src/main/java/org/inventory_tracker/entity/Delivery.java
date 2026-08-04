@@ -12,39 +12,26 @@ import org.inventory_tracker.enums.DeliveryStatus;
 @Getter
 @Setter
 @Entity
-@Table(
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = "deliveryNumber")
-        }
-)
+@Table(uniqueConstraints = { @UniqueConstraint(columnNames = "deliveryNumber")})
 public class Delivery extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Business document number.
-     */
     @Column(nullable = false, unique = true)
     private String deliveryNumber;
 
-    /**
-     * Supplier delivering the product.
-     */
     @Column(nullable = false)
     private String supplierName;
 
-    /**
-     * Inventory receiving the stock.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "station_inventory_id", nullable = false)
     private StationInventory stationInventory;
 
-    /**
-     * Convenience references for reporting.
-     */
+    @Column(nullable = false, precision = 19, scale = 3, columnDefinition = "numeric(19,3) default 0.000")
+    private BigDecimal costPerUnit;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "station_id", nullable = false)
     private Station station;

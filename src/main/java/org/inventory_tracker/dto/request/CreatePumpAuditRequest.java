@@ -16,8 +16,8 @@ public class CreatePumpAuditRequest {
     @NotNull(message = "Pump assignment is required")
     private Long pumpAssignmentId;
 
-    @NotNull(message = "Opening meter reading is required")
-    private Double openingMeterReading;
+    // @NotNull(message = "Opening meter reading is required")
+    // private Double openingMeterReading;
 
     private String remarks;
 

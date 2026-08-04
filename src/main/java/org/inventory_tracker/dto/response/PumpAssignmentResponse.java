@@ -26,9 +26,6 @@ public class PumpAssignmentResponse {
     private Long terminalDbId;
     private String tid;
     private String terminalSerialNumber;
-    // private String actualTerminalId;
-    // private String actualTerminalSerialNumber;
-
     private LocalDate assignmentDate;
 
     private Shift shift;

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.math.BigDecimal;
 import org.inventory_tracker.dto.request.UpdateStationInventoryRequest;
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
 
@@ -174,6 +175,23 @@ public class StationInventoryController {
                         HttpStatus.OK.value(),
                         "Inventory deactivated successfully",
                         response
+                )
+        );
+    }
+
+    @GetMapping("/station/{stationId}/product/{productId}/price")
+    public ResponseEntity<ApiSuccessResponse<BigDecimal>>getCurrentSellingPrice(
+            @PathVariable Long stationId,
+            @PathVariable Long productId) {
+
+        BigDecimal price = stationInventoryService.getCurrentSellingPrice(stationId, productId);
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Current selling price retrieved successfully",
+                        price
                 )
         );
     }

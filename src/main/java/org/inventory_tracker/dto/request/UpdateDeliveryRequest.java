@@ -14,6 +14,9 @@ public class UpdateDeliveryRequest {
     @NotBlank(message = "Supplier name is required")
     private String supplierName;
 
+    @DecimalMin("0.001")
+    private BigDecimal costPerUnit;
+
     @NotNull(message = "Quantity is required")
     @DecimalMin(value = "0.001")
     private BigDecimal quantityDelivered;

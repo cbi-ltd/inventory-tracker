@@ -51,13 +51,10 @@ public class StationInventoryService {
                 }
 
                 inventory.setSellingPrice(request.getNewSellingPrice());
-
                 StationInventory updatedInventory = stationInventoryRepository.save(inventory);
-
                 Station station = updatedInventory.getStation();
 
                 ProductPriceHistory history = ProductPriceHistory.builder()
-
                         .station(station)
                         .product(updatedInventory.getProduct())
                         .oldPrice(oldPrice)
@@ -69,36 +66,26 @@ public class StationInventoryService {
                         .build();
 
                 priceHistoryRepository.save(history);
-
                 return stationInventoryMapper.toResponse(updatedInventory);
         }
 
     @Transactional
-    public StationInventoryResponse createStationInventory(
-            CreateStationInventoryRequest request) {
+    public StationInventoryResponse createStationInventory(CreateStationInventoryRequest request) {
 
         if (stationInventoryRepository.existsByStationIdAndProductId(
                 request.getStationId(),
                 request.getProductId())) {
 
-            throw new DuplicateResourceException(
-                    "Inventory already exists for this product at the station.");
+            throw new DuplicateResourceException("Inventory already exists for this product at the station.");
         }
 
-        Station station =
-                stationRepository.findById(request.getStationId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Station not found"));
+        Station station = stationRepository.findById(request.getStationId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Station not found"));
 
-        Product product =
-                productRepository.findById(request.getProductId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Product not found"));
+        Product product = productRepository.findById(request.getProductId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
-        StationInventory inventory =
-                stationInventoryMapper.toEntity(request);
+        StationInventory inventory = stationInventoryMapper.toEntity(request);
 
         inventory.setStation(station);
         inventory.setProduct(product);
@@ -107,11 +94,8 @@ public class StationInventoryService {
         inventory.setReorderLevel(request.getReorderLevel());
         inventory.setActive(true);
 
-        StationInventory saved =
-                stationInventoryRepository.save(inventory);
-
-        ProductPriceHistory history =
-                new ProductPriceHistory();
+        StationInventory saved = stationInventoryRepository.save(inventory);
+        ProductPriceHistory history =new ProductPriceHistory();
 
         history.setStation(station);
         history.setProduct(product);
@@ -124,37 +108,26 @@ public class StationInventoryService {
         history.setPriceDifference(request.getSellingPrice().subtract(history.getOldPrice()));
 
         priceHistoryRepository.save(history);
-
         return stationInventoryMapper.toResponse(saved);
     }
 
     @Transactional
-    public StationInventoryResponse updateStationInventory(
-            Long id,
-            UpdateStationInventoryRequest request) {
+    public StationInventoryResponse updateStationInventory(Long id, UpdateStationInventoryRequest request) {
 
-        StationInventory inventory =
-                stationInventoryRepository.findById(id)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Inventory not found"));
+        StationInventory inventory = stationInventoryRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Inventory not found"));
 
-        BigDecimal oldPrice =
-                inventory.getSellingPrice();
+        BigDecimal oldPrice = inventory.getSellingPrice();
 
-        if (request.getUnitPrice() != null) { inventory.setUnitPrice(request.getUnitPrice()); }
+        if (request.getCostPerUnit() != null) { inventory.setCostPerUnit(request.getCostPerUnit()); }
         if (request.getSellingPrice() != null) { inventory.setSellingPrice(request.getSellingPrice()); }
         if (request.getReorderLevel() != null) { inventory.setReorderLevel(request.getReorderLevel()); }
         
 
-        StationInventory updated =
-                stationInventoryRepository.save(inventory);
+        StationInventory updated = stationInventoryRepository.save(inventory);
 
         if (request.getSellingPrice() != null && oldPrice.compareTo(request.getSellingPrice()) != 0) {
-
-            ProductPriceHistory history =
-                    new ProductPriceHistory();
-
+            ProductPriceHistory history = new ProductPriceHistory();
             history.setStation(updated.getStation());
             history.setProduct(updated.getProduct());
 
@@ -162,17 +135,10 @@ public class StationInventoryService {
             history.setNewPrice(request.getSellingPrice());
 
             history.setReason("Price updated");
-
             history.setChangedBy("SYSTEM");
 
-            history.setBusinessDate(
-                    ShiftUtil.businessDate(
-                            updated.getStation().getTimeZone()));
-
-            history.setChangedAt(
-                    LocalDateTime.now(
-                            updated.getStation().getTimeZone()));
-
+            history.setBusinessDate(ShiftUtil.businessDate(updated.getStation().getTimeZone()));
+            history.setChangedAt(LocalDateTime.now(updated.getStation().getTimeZone()));
             priceHistoryRepository.save(history);
         }
 
@@ -181,95 +147,66 @@ public class StationInventoryService {
 
     @Transactional(readOnly = true)
     public StationInventoryResponse getInventoryById(Long id) {
-
-        StationInventory inventory =
-                stationInventoryRepository.findById(id)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Inventory not found"));
+        StationInventory inventory = stationInventoryRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Inventory not found"));
 
         return stationInventoryMapper.toResponse(inventory);
     }
 
     @Transactional(readOnly = true)
-    public List<StationInventoryResponse> getStationInventory(
-            Long stationId) {
-
+    public List<StationInventoryResponse> getStationInventory(Long stationId) {
         if (!stationRepository.existsById(stationId)) {
-            throw new ResourceNotFoundException(
-                    "Station not found");
+            throw new ResourceNotFoundException("Station not found");
         }
 
         return stationInventoryMapper.toResponseList(
-
-                stationInventoryRepository
-                        .findByStationIdOrderByProduct_NameAsc(
-                                stationId)
-        );
+                stationInventoryRepository.findByStationIdOrderByProduct_NameAsc(stationId));
     }
 
     @Transactional(readOnly = true)
     public List<StationInventoryResponse> getAllInventories() {
-
-        return stationInventoryMapper.toResponseList(
-
-                stationInventoryRepository
-                        .findAllByOrderByStation_NameAscProduct_NameAsc()
-        );
+        return stationInventoryMapper.toResponseList(stationInventoryRepository
+                        .findAllByOrderByStation_NameAscProduct_NameAsc());
     }
 
     @Transactional(readOnly = true)
     public List<StationInventoryResponse> getActiveInventories() {
-
-        return stationInventoryMapper.toResponseList(
-
-                stationInventoryRepository
-                        .findByActiveTrueOrderByStation_NameAsc()
-        );
+        return stationInventoryMapper.toResponseList(stationInventoryRepository.findByActiveTrueOrderByStation_NameAsc());
     }
 
     @Transactional
     public StationInventoryResponse activateInventory(Long id) {
-
-        StationInventory inventory =
-                stationInventoryRepository.findById(id)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Inventory not found"));
+        StationInventory inventory = stationInventoryRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Inventory not found"));
 
         if (Boolean.TRUE.equals(inventory.getActive())) {
-
-            throw new DuplicateResourceException(
-                    "Inventory is already active");
+            throw new DuplicateResourceException("Inventory is already active");
         }
 
         inventory.setActive(true);
-
-        return stationInventoryMapper.toResponse(
-
-                stationInventoryRepository.save(inventory));
+        return stationInventoryMapper.toResponse(stationInventoryRepository.save(inventory));
     }
 
     @Transactional
     public StationInventoryResponse deactivateInventory(Long id) {
 
-        StationInventory inventory =
-                stationInventoryRepository.findById(id)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Inventory not found"));
+        StationInventory inventory = stationInventoryRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Inventory not found"));
 
         if (Boolean.FALSE.equals(inventory.getActive())) {
-
-            throw new DuplicateResourceException(
-                    "Inventory is already inactive");
+            throw new DuplicateResourceException("Inventory is already inactive");
         }
 
         inventory.setActive(false);
+        return stationInventoryMapper.toResponse(stationInventoryRepository.save(inventory));
+    }
 
-        return stationInventoryMapper.toResponse(
+    @Transactional(readOnly = true)
+    public BigDecimal getCurrentSellingPrice(Long stationId, Long productId) {
+        StationInventory inventory = stationInventoryRepository.findByStationIdAndProductId(stationId,productId)
+                                        .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
 
-                stationInventoryRepository.save(inventory));
+        return inventory.getSellingPrice();
     }
 
 }

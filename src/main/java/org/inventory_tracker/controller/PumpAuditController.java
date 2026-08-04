@@ -2,7 +2,9 @@ package org.inventory_tracker.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.dto.request.CreatePumpAuditRequest;
+import org.inventory_tracker.dto.request.PumpAuditFilterRequest;
 import org.inventory_tracker.dto.response.PumpAuditResponse;
+import org.inventory_tracker.dto.response.ShiftSummaryResponse;
 import org.inventory_tracker.service.PumpAuditService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,20 +43,38 @@ public class PumpAuditController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiSuccessResponse<List<PumpAuditResponse>>> getAllPumpAudits() {
+    public ResponseEntity<ApiSuccessResponse<List<PumpAuditResponse>>> filterPumpAudits(@ModelAttribute PumpAuditFilterRequest request) {
 
-        List<PumpAuditResponse> response =
-                pumpAuditService.getAllPumpAudits();
+        List<PumpAuditResponse> response = pumpAuditService.filterPumpAudits(request);
+        int count = response.size();
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
-                        "Pump audits retrieved successfully",
+                        "Pump audits retrieved successfully.",
+                        count,
                         response
                 )
         );
     }
+
+
+//     @GetMapping
+//     public ResponseEntity<ApiSuccessResponse<List<PumpAuditResponse>>> getAllPumpAudits() {
+
+//         List<PumpAuditResponse> response =
+//                 pumpAuditService.getAllPumpAudits();
+
+//         return ResponseEntity.ok(
+//                 new ApiSuccessResponse<>(
+//                         LocalDateTime.now(),
+//                         HttpStatus.OK.value(),
+//                         "Pump audits retrieved successfully",
+//                         response
+//                 )
+//         );
+//     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiSuccessResponse<PumpAuditResponse>> getPumpAuditById(
@@ -158,5 +178,19 @@ public class PumpAuditController {
                         response
                 )
         );
+    }
+
+    @GetMapping("/shift-summary")
+    public ResponseEntity<ApiSuccessResponse<ShiftSummaryResponse>>
+    getShiftSummary(@RequestParam(required = false) Long terminalId, @RequestParam(required = false)
+            String terminalSerialNumber) {
+
+        ShiftSummaryResponse response = pumpAuditService.getShiftSummary(terminalId, terminalSerialNumber);
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Shift summary retrieved successfully.",
+                        response));
     }
 }

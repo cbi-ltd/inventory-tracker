@@ -62,7 +62,7 @@ public class Sale extends BaseEntity {
     private BigDecimal quantity;
 
     @Column(nullable = false, precision = 19, scale = 2)
-    private BigDecimal unitPrice;
+    private BigDecimal sellingPrice;
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal grossAmount;
@@ -104,25 +104,14 @@ public class Sale extends BaseEntity {
 
     @PrePersist
     public void prePersist() {
+        if (saleTime == null) { saleTime = LocalDateTime.now(); }
 
-        if (saleTime == null) {
-            saleTime = LocalDateTime.now();
-        }
+        if (businessDate == null) { businessDate = saleTime.toLocalDate(); }
 
-        if (businessDate == null) {
-            businessDate = saleTime.toLocalDate();
-        }
+        if (shift == null) { shift = ShiftUtil.determineShift(saleTime.toLocalTime()).name(); }
 
-        if (shift == null) {
-            shift = ShiftUtil.determineShift(saleTime.toLocalTime()).name();
-        }
+        if (discountAmount == null) { discountAmount = BigDecimal.ZERO; }
 
-        if (discountAmount == null) {
-            discountAmount = BigDecimal.ZERO;
-        }
-
-        if (grossAmount != null && netAmount == null) {
-            netAmount = grossAmount.subtract(discountAmount);
-        }
+        if (grossAmount != null && netAmount == null) { netAmount = grossAmount.subtract(discountAmount); }
     }
 }

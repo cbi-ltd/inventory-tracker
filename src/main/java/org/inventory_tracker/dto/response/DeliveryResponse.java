@@ -30,6 +30,8 @@ public class DeliveryResponse {
 
     private String productName;
 
+    private BigDecimal costPerUnit;
+
     private BigDecimal quantityDelivered;
 
     private DeliveryStatus status;

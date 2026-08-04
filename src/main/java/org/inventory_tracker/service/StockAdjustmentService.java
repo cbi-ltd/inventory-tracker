@@ -71,8 +71,8 @@ public class StockAdjustmentService {
         adjustment.setStationInventory(inventory);
         adjustment.setStation(inventory.getStation());
         adjustment.setProduct(inventory.getProduct());
-        adjustment.setUnitPrice(inventory.getUnitPrice());
-        adjustment.setTotalAdjustmentValue(inventory.getUnitPrice().multiply(request.getQuantity()));
+        adjustment.setUnitPrice(inventory.getCostPerUnit());
+        adjustment.setTotalAdjustmentValue(inventory.getCostPerUnit().multiply(request.getQuantity()));
 
         InventoryTransaction transaction =
                 inventoryTransactionService.recordTransaction(
@@ -135,8 +135,8 @@ public class StockAdjustmentService {
                 adjustment.setStationInventory(inventory);
                 adjustment.setStation(inventory.getStation());
                 adjustment.setProduct(inventory.getProduct());
-                adjustment.setUnitPrice(inventory.getUnitPrice());
-                adjustment.setTotalAdjustmentValue(inventory.getUnitPrice().multiply(request.getQuantity()));
+                adjustment.setUnitPrice(inventory.getCostPerUnit());
+                adjustment.setTotalAdjustmentValue(inventory.getCostPerUnit().multiply(request.getQuantity()));
 
                 InventoryTransaction transaction =
                         inventoryTransactionService.recordTransaction(

@@ -15,9 +15,9 @@ public class UpdateStationInventoryRequest {
     @DecimalMin(value = "0.00")
     private BigDecimal sellingPrice;
 
-    // @NotNull(message = "Unit price is required")
+    // @NotNull(message = "Cost per unit price is required")
     @DecimalMin(value = "0.00")
-    private BigDecimal unitPrice;
+    private BigDecimal costPerUnit;
 
     // @NotNull(message = "Reorder level is required")
     @DecimalMin(value = "0.00")
