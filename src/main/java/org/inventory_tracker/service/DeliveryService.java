@@ -80,59 +80,36 @@ public class DeliveryService {
     }
 
 
-    public DeliveryResponse receiveDelivery(
-            Long deliveryId) {
-
-        Delivery delivery =
-                deliveryRepository
+    public DeliveryResponse receiveDelivery(Long deliveryId) {
+        Delivery delivery = deliveryRepository
                         .findById(deliveryId)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Delivery not found."));
+                        .orElseThrow(() -> new ResourceNotFoundException("Delivery not found."));
 
-        if (delivery.getStatus() ==
-                DeliveryStatus.RECEIVED) {
-
-            throw new BadRequestException(
-                    "Delivery has already been received.");
+        if (delivery.getStatus() == DeliveryStatus.RECEIVED) {
+            throw new BadRequestException( "Delivery has already been received.");
         }
 
-        if (delivery.getStatus() ==
-                DeliveryStatus.CANCELLED) {
-
-            throw new BadRequestException(
-                    "Cancelled deliveries cannot be received.");
+        if (delivery.getStatus() == DeliveryStatus.CANCELLED) {
+            throw new BadRequestException("Cancelled deliveries cannot be received.");
         }
 
-        Station station =
-                delivery.getStation();
-
-        delivery.setStatus(
-                DeliveryStatus.RECEIVED);
-
-        delivery.setBusinessDate(
-                ShiftUtil.businessDate(
-                        station.getTimeZone()));
-
-        delivery.setReceivedAt(
-                LocalDateTime.now(
-                        station.getTimeZone()));
-
-
+        Station station = delivery.getStation();
+        delivery.setStatus(DeliveryStatus.RECEIVED);
+        delivery.setBusinessDate(ShiftUtil.businessDate(station.getTimeZone()));
+        delivery.setReceivedAt(LocalDateTime.now(station.getTimeZone()));
         deliveryRepository.save(delivery);
 
+        StationInventory inventory = delivery.getStationInventory();
+        inventory.setCurrentQuantity(inventory.getCurrentQuantity().add(delivery.getQuantityDelivered()));
+        inventory.setCostPerUnit(delivery.getCostPerUnit());
+        stationInventoryRepository.save(inventory);
+
         inventoryTransactionService.recordTransaction(
-
                 delivery.getStationInventory().getId(),
-
                 InventoryTransactionType.DELIVERY,
-
                 delivery.getQuantityDelivered(),
-
                 delivery.getRemarks(),
-
                 delivery.getDeliveryNumber()
-
         );
 
         return deliveryMapper.toResponse(delivery);

@@ -7,6 +7,7 @@ import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
 import org.inventory_tracker.util.ShiftUtil;
+import org.inventory_tracker.enums.Shift;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -96,8 +97,9 @@ public class Sale extends BaseEntity {
     @Column(unique = true)
     private String receiptNumber;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String shift;
+    private Shift shift;
 
     @Column(length = 1000)
     private String remarks;
@@ -106,9 +108,9 @@ public class Sale extends BaseEntity {
     public void prePersist() {
         if (saleTime == null) { saleTime = LocalDateTime.now(); }
 
-        if (businessDate == null) { businessDate = saleTime.toLocalDate(); }
+        // if (businessDate == null) { businessDate = saleTime.toLocalDate(); }
 
-        if (shift == null) { shift = ShiftUtil.determineShift(saleTime.toLocalTime()).name(); }
+        // if (shift == null) { shift = ShiftUtil.determineShift(saleTime.toLocalTime()); }
 
         if (discountAmount == null) { discountAmount = BigDecimal.ZERO; }
 

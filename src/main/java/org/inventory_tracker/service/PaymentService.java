@@ -129,7 +129,7 @@ public class PaymentService {
         return createCardPaymentFromCamsNotification(sale, cardPaymentNotification, terminal, pendingCardPayment);
     }
 
-        @Transactional
+    @Transactional
     public SaleResponse createSale(CreateSaleRequest request) {
 
         try {
@@ -177,6 +177,9 @@ public class PaymentService {
                 sale.setReceiptNumber(generateReceiptNumber());
                 sale.setSaleTime(LocalDateTime.now());
                 sale.setSellingPrice(sellingPrice);
+                sale.setShift(assignment.getShift());
+                sale.setBusinessDate(assignment.getAssignmentDate());
+                // sale.setBusinessDate(ShiftUtil.businessDate(station.getTimeZone()));
                 sale.setQuantity(quantity);
 
                 // BigDecimal gross = calculateGrossAmount(request.getQuantity(), costPerUnit);
@@ -566,7 +569,7 @@ public class PaymentService {
                             .findByPumpIdAndAssignmentDateAndShiftAndActiveTrue(
                                     sale.getPump().getId(),
                                     sale.getBusinessDate(),
-                                    ShiftUtil.currentShift(sale.getStation().getTimeZone()))
+                                    sale.getShift())
                             .orElseThrow(() -> new ResourceNotFoundException("Pump assignment not found"));
 
             PumpAudit audit = pumpAuditRepository.findByPumpAssignment_Id(assignment.getId())

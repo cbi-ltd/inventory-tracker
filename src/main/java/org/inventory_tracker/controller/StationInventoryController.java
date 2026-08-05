@@ -190,7 +190,7 @@ public class StationInventoryController {
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
-                        "Current selling price retrieved successfully",
+                        "Current selling price retrieved successfully as " + price,
                         price
                 )
         );
