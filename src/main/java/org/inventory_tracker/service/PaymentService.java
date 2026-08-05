@@ -212,7 +212,7 @@ public class PaymentService {
                 saleRepository.save(sale);
 
                 switch (request.getPaymentMethod()) {
-                        case TRANSFER -> pendingTransferService.registerPendingTransfer(station.getVirtualAccountNumber(), sale.getSaleNumber(), sale.getNetAmount(), terminal.getTerminalSerialNumber());
+                        case TRANSFER -> pendingTransferService.registerPendingTransfer(station.getMerchantAccountNumber(), sale.getSaleNumber(), sale.getNetAmount(), terminal.getTerminalSerialNumber());
                         case CARD -> pendingCardPaymentService.register(sale.getSaleNumber(), sale.getNetAmount(),terminal.getTerminalSerialNumber(), terminal.getTid());
                         case CASH ->  {}
                         case MIXED -> {}

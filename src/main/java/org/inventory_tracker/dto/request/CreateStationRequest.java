@@ -26,5 +26,6 @@ public class CreateStationRequest {
 
     private String email;
 
-    private String virtualAccountNumber;
+    @NotBlank(message = "Merchant account number is required")
+    private String merchantAccountNumber;
 }

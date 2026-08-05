@@ -20,7 +20,7 @@ public class Station extends BaseEntity {
 
     //Later, generate this automatically via CAMS
     @Column(nullable = false, unique = true)
-    private String virtualAccountNumber;
+    private String merchantAccountNumber;
 
     @Column(nullable = false)
     private String name;
