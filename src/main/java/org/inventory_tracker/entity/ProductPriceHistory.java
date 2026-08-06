@@ -45,10 +45,10 @@ public class ProductPriceHistory extends BaseEntity {
 
     @Column(nullable = false)
     private LocalDate businessDate;
-
+    
     @Column(nullable = false)
     private LocalDateTime changedAt;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal priceDifference;
 }

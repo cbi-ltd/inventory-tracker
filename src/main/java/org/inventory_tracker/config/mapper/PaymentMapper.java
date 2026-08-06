@@ -20,6 +20,9 @@ public interface PaymentMapper {
     @Mapping(source = "sale.attendant.fullName", target = "attendantName")
     @Mapping(source = "sale.station.id", target = "stationId")
     @Mapping(source = "sale.station.name", target = "stationName")
+    @Mapping(source = "sale.product.productType", target = "productType")
+    @Mapping(source = "sale.product.unitOfMeasure", target = "unitOfMeasure")
+    @Mapping(source = "sale.sellingPrice", target = "sellingPrice")
     PaymentResponse toResponse(Payment payment);
 
     List<PaymentResponse> toResponseList(List<Payment> payments);

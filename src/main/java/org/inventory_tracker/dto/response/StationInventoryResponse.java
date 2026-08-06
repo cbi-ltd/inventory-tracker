@@ -2,6 +2,9 @@ package org.inventory_tracker.dto.response;
 
 import lombok.*;
 import org.inventory_tracker.enums.ProductType;
+
+import jakarta.persistence.Column;
+
 import java.math.BigDecimal;
 
 

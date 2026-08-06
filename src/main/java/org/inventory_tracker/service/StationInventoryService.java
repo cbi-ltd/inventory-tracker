@@ -137,6 +137,7 @@ public class StationInventoryService {
 
             history.setOldPrice(oldPrice);
             history.setNewPrice(request.getSellingPrice());
+            history.setPriceDifference(request.getSellingPrice().subtract(oldPrice));
 
             history.setReason("Price updated");
             history.setChangedBy("SYSTEM");

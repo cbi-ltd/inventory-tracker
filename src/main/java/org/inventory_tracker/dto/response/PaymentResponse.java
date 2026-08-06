@@ -4,7 +4,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
-
+import org.inventory_tracker.enums.ProductType;
+import org.inventory_tracker.enums.UnitOfMeasure;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -61,6 +62,12 @@ public class PaymentResponse {
     private String pumpNumber;
 
     private String attendantName;
+
+    private ProductType productType;
+
+    private UnitOfMeasure unitOfMeasure;
+
+    private BigDecimal sellingPrice;
 
     private LocalDateTime createdAt;
 

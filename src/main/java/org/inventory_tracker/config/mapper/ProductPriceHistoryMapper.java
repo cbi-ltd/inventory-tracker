@@ -17,9 +17,7 @@ public interface ProductPriceHistoryMapper {
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "businessDate", ignore = true)
     @Mapping(target = "changedAt", ignore = true)
-    ProductPriceHistory toEntity(
-            CreateProductPriceHistoryRequest request
-    );
+    ProductPriceHistory toEntity(CreateProductPriceHistoryRequest request);
 
     @Mapping(source = "station.id", target = "stationId")
     @Mapping(source = "station.name", target = "stationName")
@@ -28,9 +26,7 @@ public interface ProductPriceHistoryMapper {
     @Mapping(source = "product.name", target = "productName")
     @Mapping(source = "product.productType", target = "productType")
 
-    ProductPriceHistoryResponse toResponse(
-            ProductPriceHistory history
-    );
+    ProductPriceHistoryResponse toResponse(ProductPriceHistory history);
 
     List<ProductPriceHistoryResponse> toResponseList(
             List<ProductPriceHistory> histories
