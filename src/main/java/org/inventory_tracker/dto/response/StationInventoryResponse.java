@@ -26,7 +26,7 @@ public class StationInventoryResponse {
 
     private String unit;
 
-    private BigDecimal unitPrice;
+    private BigDecimal costPerUnit;
 
     private BigDecimal currentQuantity;
 

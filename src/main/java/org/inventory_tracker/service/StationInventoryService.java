@@ -19,6 +19,7 @@ import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.inventory_tracker.exception.BadRequestException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import org.inventory_tracker.dto.request.UpdateStationInventoryRequest;
 import org.inventory_tracker.util.ShiftUtil;
@@ -89,10 +90,13 @@ public class StationInventoryService {
 
         inventory.setStation(station);
         inventory.setProduct(product);
-        inventory.setCurrentQuantity(request.getOpeningQuantity());
+        inventory.setCurrentQuantity(request.getCurrentQuantity());
+        inventory.setCostPerUnit(BigDecimal.ZERO);
         inventory.setSellingPrice(request.getSellingPrice());
-        inventory.setReorderLevel(request.getReorderLevel());
         inventory.setActive(true);
+
+        BigDecimal reorderLevel = inventory.getCurrentQuantity().multiply(new BigDecimal("0.20"));
+        inventory.setReorderLevel(reorderLevel.setScale(3, RoundingMode.HALF_UP));
 
         StationInventory saved = stationInventoryRepository.save(inventory);
         ProductPriceHistory history =new ProductPriceHistory();

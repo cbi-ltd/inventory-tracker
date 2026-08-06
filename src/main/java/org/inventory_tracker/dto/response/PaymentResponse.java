@@ -34,6 +34,10 @@ public class PaymentResponse {
 
     private Long terminalId;
 
+    private Long stationId;
+
+    private String stationName;
+
     private String terminalSerialNumber;
 
     private String merchantId;
@@ -49,6 +53,14 @@ public class PaymentResponse {
     private String responseMessage;
 
     private LocalDateTime paymentTime;
+
+    private BigDecimal quantitySold;
+
+    private String pumpName;
+
+    private String pumpNumber;
+
+    private String attendantName;
 
     private LocalDateTime createdAt;
 

@@ -19,15 +19,17 @@ public class CreateStationInventoryRequest {
     @NotNull(message = "Product is required")
     private Long productId;
 
+    // @NotNull
+    // private BigDecimal costPerUnit;
+
     @NotNull(message = "Selling price is required")
     @DecimalMin(value = "0.00")
     private BigDecimal sellingPrice;
 
-    @NotNull(message = "Reorder level is required")
-    @DecimalMin(value = "0.00")
-    private BigDecimal reorderLevel;
+    // @NotNull(message = "Reorder level is required")
+    // @DecimalMin(value = "0.00")
+    // private BigDecimal reorderLevel;
 
     @DecimalMin(value = "0.00")
-    private BigDecimal openingQuantity =
-            BigDecimal.ZERO;
+    private BigDecimal currentQuantity = BigDecimal.ZERO;
 }
