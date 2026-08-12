@@ -24,7 +24,11 @@ public class Terminal extends BaseEntity {
 
     private String posType;
 
-    // private String macAddress;
+    // @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    // @JoinColumn(name = "merchant_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "merchant_id")
+    private Merchant merchant;
 
     private String manufacturer;
 

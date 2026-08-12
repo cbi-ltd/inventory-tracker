@@ -6,15 +6,18 @@ import org.inventory_tracker.dto.request.AssignPumpRequest;
 import org.inventory_tracker.dto.request.ChangeTerminalAssignmentRequest;
 import org.inventory_tracker.dto.response.PumpAssignmentResponse;
 import org.inventory_tracker.entity.Attendant;
+import org.inventory_tracker.entity.Merchant;
 import org.inventory_tracker.entity.Pump;
 import org.inventory_tracker.entity.PumpAssignment;
 import org.inventory_tracker.entity.Station;
 import org.inventory_tracker.entity.Terminal;
+import org.inventory_tracker.entity.security.MerchantContext;
 import org.inventory_tracker.repository.AttendantRepository;
 import org.inventory_tracker.repository.PumpRepository;
 import org.inventory_tracker.repository.PumpAssignmentRepository;
 import org.inventory_tracker.repository.StationRepository;
 import org.inventory_tracker.enums.Shift;
+import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.inventory_tracker.util.ShiftUtil;
@@ -39,15 +42,27 @@ public class PumpAssignmentService {
     @Transactional
     public PumpAssignmentResponse changeTerminalAssignment(Long assignmentId,
         ChangeTerminalAssignmentRequest request) {
-
-        PumpAssignment assignment =
-                pumpAssignmentRepository.findById(assignmentId)
+        Merchant merchant = getAuthenticatedMerchant();
+        PumpAssignment assignment = pumpAssignmentRepository.findById(assignmentId)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Pump assignment not found"));
+        if (!assignment.getStation().getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Pump assignment not found");
+        }
 
+        Pump pump = assignment.getPump();
         Terminal terminal = terminalRepository.findById(request.getTerminalId())
                                 .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
+
+        boolean terminalBelongsToPump = (pump.getDefaultTerminal() != null
+                                                && pump.getDefaultTerminal().getId().equals(terminal.getId())) ||
+                                        (pump.getTerminalSerialNumber() != null
+                                                && pump.getTerminalSerialNumber().equals(terminal.getTerminalSerialNumber()));
+
+        if (!terminalBelongsToPump) {
+                throw new ResourceNotFoundException("Terminal not found");
+        }
 
         assignment.setTerminal(terminal);
         PumpAssignment updated = pumpAssignmentRepository.save(assignment);
@@ -58,22 +73,32 @@ public class PumpAssignmentService {
         
     @Transactional
     public PumpAssignmentResponse assignPumpToAttendant(AssignPumpRequest request) {
+        Merchant merchant = getAuthenticatedMerchant();
+        
+        Station station = stationRepository.findById(request.getStationId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Station not found"));
 
+        if (!station.getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Station not found");
+        }
+        
         Attendant attendant = attendantRepository.findById(request.getAttendantId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Attendant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Attendant not found"));
+
+        if (!attendant.getStation().getId().equals(station.getId())) {
+                throw new BadRequestException("Attendant does not belong to this station");
+        }
+
 
         Pump pump = pumpRepository.findById(request.getPumpId())
                         .orElseThrow(() ->new ResourceNotFoundException("Pump not found"));
 
-        Station station = stationRepository.findById(request.getStationId())
-                                .orElseThrow(() -> new ResourceNotFoundException("Station not found"));
-
+        if (!pump.getStation().getId().equals(station.getId())) {
+                throw new BadRequestException("Pump does not belong to this station");
+        }
+                        
         LocalDate today = ShiftUtil.businessDate(station.getTimeZone());
         Shift currentShift = ShiftUtil.currentShift(station.getTimeZone());
-        
-        // LocalDate today = LocalDate.now();
-        // Shift currentShift = ShiftUtil.currentShift();
 
         pumpAssignmentRepository
                 .findByPumpIdAndAssignmentDateAndShiftAndActiveTrue(pump.getId(), today,currentShift)
@@ -92,8 +117,18 @@ public class PumpAssignmentService {
             pumpAssignmentRepository.saveAll(activeAssignments);
         }
 
-        Terminal terminal = (pump.getDefaultTerminal() != null) ? pump.getDefaultTerminal() : terminalRepository.findByTerminalSerialNumber(pump.getTerminalSerialNumber()).get();
+        Terminal terminal = (pump.getDefaultTerminal() != null) ? pump.getDefaultTerminal() : terminalRepository.findByTerminalSerialNumber(pump.getTerminalSerialNumber())
+                                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
 
+        boolean terminalBelongsToPump = (pump.getDefaultTerminal() != null
+                                                && pump.getDefaultTerminal().getId().equals(terminal.getId())) ||
+                                        (pump.getTerminalSerialNumber() != null
+                                                && pump.getTerminalSerialNumber().equals(terminal.getTerminalSerialNumber()));
+
+        if (!terminalBelongsToPump) {
+                throw new ResourceNotFoundException("Terminal not found");
+        }
+                         
         PumpAssignment assignment = new PumpAssignment();
         assignment.setPump(pump);
         assignment.setTerminal(terminal);
@@ -103,114 +138,137 @@ public class PumpAssignmentService {
         assignment.setShift(currentShift);
         assignment.setActive(true);
 
-        PumpAssignment saved =
-                pumpAssignmentRepository.save(assignment);
-
+        PumpAssignment saved = pumpAssignmentRepository.save(assignment);
         return pumpAssignmentMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public PumpAssignmentResponse getPumpCurrentAssignment(Long attendantId) {
+        Merchant merchant = getAuthenticatedMerchant();
+        PumpAssignment assignment = pumpAssignmentRepository.findByAttendantIdAndActiveTrue(attendantId)
+                                        .orElseThrow(() -> new ResourceNotFoundException("No active pump assignment found."));
 
-        PumpAssignment assignment =
-                pumpAssignmentRepository
-                        .findByAttendantIdAndActiveTrue(
-                                attendantId)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "No active pump assignment found."
-                                ));
-
-        return pumpAssignmentMapper.toResponse(
-                assignment);
+        if (!assignment.getStation().getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("No active pump assignment found.");
+        }
+                                
+        return pumpAssignmentMapper.toResponse(assignment);
      }
 
      @Transactional(readOnly = true)
      public List<PumpAssignmentResponse> getAttendantPumpAssignmentHistory(Long attendantId) {
-
-        if (!attendantRepository.existsById(attendantId)) {
-                throw new ResourceNotFoundException(
-                        "Attendant not found");
+        Merchant merchant = getAuthenticatedMerchant();
+        Attendant attendant = attendantRepository.findById(attendantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Attendant not found"));
+        
+        if (!attendant.getStation().getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Attendant not found");
         }
 
-        return pumpAssignmentMapper.toResponseList(
-
-                pumpAssignmentRepository
-                        .findByAttendantIdOrderByAssignmentDateDesc(
-                                attendantId
-                        )
-        );
+        return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
+                        .findByAttendantIdOrderByAssignmentDateDesc(attendantId));
      }
 
     @Transactional(readOnly = true)
     public List<PumpAssignmentResponse> getTodayPumpAssignments(Long stationId) {
-
-        if (!stationRepository.existsById(stationId)) {
-                throw new ResourceNotFoundException(
-                        "Station not found");
+        Merchant merchant = getAuthenticatedMerchant();
+        Station station = stationRepository.findById(stationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Station not found"));
+        
+        if (!station.getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Station not found");
         }
 
-        return pumpAssignmentMapper.toResponseList(
-
-                pumpAssignmentRepository
-                        .findByStationIdAndAssignmentDateOrderByPump_PumpNumberAsc(
-                                stationId,
-                                LocalDate.now()
-                        )
-        );
+        LocalDate today = ShiftUtil.businessDate(station.getTimeZone());
+        return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
+                        .findByStationIdAndAssignmentDateOrderByPump_PumpNumberAsc(stationId,today));
     }
 
-        @Transactional(readOnly = true)
-        public List<PumpAssignmentResponse> getAllAssignments() {
+    @Transactional(readOnly = true)
+    public List<PumpAssignmentResponse> getAllAssignments() {
+        Merchant merchant = getAuthenticatedMerchant();
+        return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
+                    .findByStation_Merchant_IdOrderByAssignmentDateDescShiftAsc(merchant.getId()));
+    }
 
-                return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
-                                .findAllByOrderByAssignmentDateDescShiftAsc());
-        }
-
-        @Transactional(readOnly = true)
-        public PumpAssignmentResponse getAssignmentById(Long assignmentId) {
-
-                PumpAssignment assignment = pumpAssignmentRepository.findById(assignmentId)
+    @Transactional(readOnly = true)
+    public PumpAssignmentResponse getAssignmentById(Long assignmentId) {
+        Merchant merchant = getAuthenticatedMerchant();
+        PumpAssignment assignment = pumpAssignmentRepository.findById(assignmentId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Pump assignment not found"));
-
-                return pumpAssignmentMapper.toResponse(assignment);
+        
+        if (!assignment.getStation().getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Pump assignment not found");
         }
 
-        @Transactional(readOnly = true)
-        public List<PumpAssignmentResponse> getAssignmentsByStation(Long stationId) {
-                if (!stationRepository.existsById(stationId)) { throw new ResourceNotFoundException("Station not found");}
+        return pumpAssignmentMapper.toResponse(assignment);
+    }
+
+   @Transactional(readOnly = true)
+   public List<PumpAssignmentResponse> getAssignmentsByStation(Long stationId) {
+       Merchant merchant = getAuthenticatedMerchant();
+        Station station = stationRepository.findById(stationId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Station not found"));
+      
+        if (!station.getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Station not found");
+        }
+
+        return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
+                                     .findByStationIdOrderByAssignmentDateDescShiftAsc(stationId));
+   }
+
+   @Transactional(readOnly = true)
+   public List<PumpAssignmentResponse> getAssignmentsByPump(Long pumpId) {
+        Merchant merchant = getAuthenticatedMerchant();
+        Pump pump = pumpRepository.findById(pumpId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Pump not found"));
                 
-                return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
-                                                .findByStationIdOrderByAssignmentDateDescShiftAsc(stationId));
+        if (!pump.getStation().getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Pump not found");
         }
 
-        @Transactional(readOnly = true)
-        public List<PumpAssignmentResponse> getAssignmentsByPump(Long pumpId) {
-                if (!pumpRepository.existsById(pumpId)) { throw new ResourceNotFoundException("Pump not found");}
-
-                return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
+        return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
                                         .findByPumpIdOrderByAssignmentDateDescShiftAsc(pumpId));
+   }
+
+   @Transactional(readOnly = true)
+   public PumpAssignmentResponse getCurrentPumpAssignment(Long pumpId) {
+        Merchant merchant = getAuthenticatedMerchant();
+        Pump pump = pumpRepository.findById(pumpId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Pump not found"));
+                
+        if (!pump.getStation().getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Pump not found");
         }
 
-        @Transactional(readOnly = true)
-        public PumpAssignmentResponse getCurrentPumpAssignment(Long pumpId) {
-                PumpAssignment assignment = pumpAssignmentRepository.findByPumpIdAndActiveTrue(pumpId)
+        PumpAssignment assignment = pumpAssignmentRepository.findByPumpIdAndActiveTrue(pumpId)
                                         .orElseThrow(() -> new ResourceNotFoundException("Pump has no active assignment."));
 
-                return pumpAssignmentMapper.toResponse(assignment);
-        }
+        return pumpAssignmentMapper.toResponse(assignment);
+   }
 
-        @Transactional(readOnly = true)
-        public List<PumpAssignmentResponse> getAssignmentsByDate(LocalDate assignmentDate) {
+   @Transactional(readOnly = true)
+   public List<PumpAssignmentResponse> getAssignmentsByDate(LocalDate assignmentDate) {
+        Merchant merchant = getAuthenticatedMerchant();
+        return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
+                                .findByStation_Merchant_IdAndAssignmentDateOrderByStation_NameAscPump_PumpNumberAsc(merchant.getId(), assignmentDate));
+   }
+
+   @Transactional(readOnly = true)
+   public List<PumpAssignmentResponse> getAssignmentsByShift(Shift shift) {
+        Merchant merchant = getAuthenticatedMerchant();
 
                 return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
-                                .findByAssignmentDateOrderByStation_NameAscPump_PumpNumberAsc(assignmentDate));
-        }
+                                .findByStation_Merchant_IdAndShiftOrderByAssignmentDateDescStation_NameAscPump_PumpNumberAsc(merchant.getId(), shift));
+   }
 
-        @Transactional(readOnly = true)
-        public List<PumpAssignmentResponse> getAssignmentsByShift(Shift shift) {
-
-                return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
-                                .findByShiftOrderByAssignmentDateDescStation_NameAscPump_PumpNumberAsc(shift));
+   private Merchant getAuthenticatedMerchant() {
+        Merchant merchant = MerchantContext.getCurrentMerchant();
+        if (merchant == null) {
+                throw new ResourceNotFoundException("Merchant is not authenticated");
         }
+        return merchant;
+   }
 }

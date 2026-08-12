@@ -23,23 +23,11 @@ public class ProductService {
 
     @Transactional
     public ProductResponse createProduct(CreateProductRequest request) {
-
         productRepository.findByNameIgnoreCase(request.getName())
-        .ifPresent(product -> {
-            throw new DuplicateResourceException(
-                    "Product already exists");
-        });
+                                .ifPresent(product -> { throw new DuplicateResourceException("Product already exists"); });
 
-        // if (productRepository.existsByNameIgnoreCase(request.getName())) {
-        //     throw new DuplicateResourceException(
-        //             "Product already exists");
-        // }
-
-        Product product =
-                productMapper.toEntity(request);
-
+        Product product = productMapper.toEntity(request);
         if(request.getDescription() == null || request.getDescription().isBlank()){ product.setDescription(product.getProductDescription()); }
-
         Product saved = productRepository.save(product);
 
         return productMapper.toResponse(saved);
@@ -55,19 +43,6 @@ public class ProductService {
                                         "Product not found"));
 
         productMapper.updateProductFromDto(request, product);
-
-        // if (!product.getName().equalsIgnoreCase(request.getName())
-        //         && productRepository.existsByNameIgnoreCase(request.getName())) {
-
-        //     throw new DuplicateResourceException(
-        //             "Product already exists");
-        // }
-
-        // product.setName(request.getName());
-        // product.setProductType(request.getProductType());
-        // product.setUnitOfMeasure(request.getUnitOfMeasure());
-        // product.setDescription(request.getDescription());
-
         Product updated = productRepository.save(product);
 
         return productMapper.toResponse(updated);

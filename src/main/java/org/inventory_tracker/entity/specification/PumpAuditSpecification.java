@@ -1,20 +1,35 @@
 package org.inventory_tracker.entity.specification;
 
 
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import org.inventory_tracker.dto.request.PumpAuditFilterRequest;
+import org.inventory_tracker.entity.Merchant;
+import org.inventory_tracker.entity.PumpAssignment;
 import org.inventory_tracker.entity.PumpAudit;
+import org.inventory_tracker.entity.Station;
 import org.springframework.data.jpa.domain.Specification;
 import java.util.ArrayList;
 import java.util.List;
 
 public class PumpAuditSpecification {
 
-    public static Specification<PumpAudit> filter(PumpAuditFilterRequest request) {
+    public static Specification<PumpAudit> filter(PumpAuditFilterRequest request, Long merchantId) {
 
         return (root, query, cb) -> {
 
             List<Predicate> predicates = new ArrayList<>();
+
+            Join<PumpAudit, PumpAssignment> assignment =
+                root.join("pumpAssignment");
+
+            Join<PumpAssignment, Station> station =
+                assignment.join("station");
+
+            Join<Station, Merchant> merchant =
+                station.join("merchant");
+
+           predicates.add(cb.equal(merchant.get("id"), merchantId));
 
             if (request.getId() != null) {
                 predicates.add(

@@ -1,9 +1,11 @@
 package org.inventory_tracker.entity.specification;
 
-
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import org.inventory_tracker.dto.request.DeliveryFilterRequest;
 import org.inventory_tracker.entity.Delivery;
+import org.inventory_tracker.entity.Merchant;
+import org.inventory_tracker.entity.Station;
 import org.springframework.data.jpa.domain.Specification;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,11 +15,17 @@ public class DeliverySpecification {
     private DeliverySpecification() {
     }
 
-    public static Specification<Delivery> filter(DeliveryFilterRequest request) {
+    public static Specification<Delivery> filter(DeliveryFilterRequest request, Long merchantId) {
 
         return (root, query, cb) -> {
 
             List<Predicate> predicates = new ArrayList<>();
+
+            Join<Delivery, Station> station = root.join("station");
+
+            Join<Station, Merchant> merchant = station.join("merchant");
+
+            predicates.add(cb.equal(merchant.get("id"), merchantId));
 
             if (request.getDeliveryNumber() != null &&
                     !request.getDeliveryNumber().isBlank()) {

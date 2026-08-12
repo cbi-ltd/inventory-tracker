@@ -8,14 +8,16 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-public interface PumpAssignmentRepository
-        extends JpaRepository<PumpAssignment, Long> {
+public interface PumpAssignmentRepository extends JpaRepository<PumpAssignment, Long> {
+    List<PumpAssignment> findByStation_Merchant_IdAndAssignmentDateOrderByPump_PumpNumberAsc(Long merchantId, LocalDate assignmentDate);
 
-    Optional<PumpAssignment> findByPumpIdAndAssignmentDateAndShiftAndActiveTrue(
-            Long pumpId,
-            LocalDate assignmentDate,
-            Shift shift
-    );
+    List<PumpAssignment>findByStation_Merchant_IdAndShiftOrderByAssignmentDateDescStation_NameAscPump_PumpNumberAsc(Long merchantId, Shift shift);
+    
+    List<PumpAssignment>findByStation_Merchant_IdAndAssignmentDateOrderByStation_NameAscPump_PumpNumberAsc(Long merchantId, LocalDate assignmentDate);
+    
+    List<PumpAssignment>findByStation_Merchant_IdOrderByAssignmentDateDescShiftAsc(Long merchantId);
+
+    Optional<PumpAssignment> findByPumpIdAndAssignmentDateAndShiftAndActiveTrue(Long pumpId, LocalDate assignmentDate, Shift shift);
 
     Optional<PumpAssignment> findByAttendantIdAndActiveTrue(Long attendantId);
 
@@ -30,6 +32,7 @@ public interface PumpAssignmentRepository
     List<PumpAssignment> findAllByAttendantIdAndActiveTrue(Long attendantId);
 
     long countByStationIdAndActiveTrue(Long stationId);
+
     long countByPumpStationIdAndActiveTrue(Long stationId);
 
     long countByActiveTrue();
@@ -55,6 +58,7 @@ public interface PumpAssignmentRepository
     List<PumpAssignment> findByPumpIdOrderByAssignmentDateDescShiftAsc(Long pumpId);
 
     Optional<PumpAssignment> findByPumpIdAndActiveTrue(Long pumpId);
+    
     Optional<PumpAssignment> findFirstByPumpIdAndActiveTrue(Long pumpId);
 
     List<PumpAssignment> findByAssignmentDateOrderByStation_NameAscPump_PumpNumberAsc(LocalDate assignmentDate);

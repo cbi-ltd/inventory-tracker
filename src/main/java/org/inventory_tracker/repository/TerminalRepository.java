@@ -8,6 +8,13 @@ import java.util.List;
 
 @Repository
 public interface TerminalRepository extends JpaRepository<Terminal, Long> {
+    Optional<Terminal> findByTidAndMerchant_Id(String tid, Long merchantId);
+
+    Optional<Terminal> findByTerminalSerialNumberAndMerchant_Id(String terminalSerialNumber, Long merchantId);
+
+    List<Terminal> findByMerchant_IdOrderByTidAsc(Long merchantId);
+
+    List<Terminal> findByMerchant_IdAndActiveTrueOrderByTidAsc(Long merchantId);
 
     Optional<Terminal> findByTid(String tid);
 
@@ -15,10 +22,7 @@ public interface TerminalRepository extends JpaRepository<Terminal, Long> {
 
     boolean existsByTid(String tid);
 
-    boolean existsByTerminalSerialNumber(
-            String terminalSerialNumber
-    );
-
+    boolean existsByTerminalSerialNumber(String terminalSerialNumber);
 
     List<Terminal> findAllByOrderByTidAsc();
 

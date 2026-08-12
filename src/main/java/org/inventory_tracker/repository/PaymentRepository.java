@@ -14,6 +14,19 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long>, JpaSpecificationExecutor<Payment> {
+    List<Payment> findBySale_Station_Merchant_IdAndPaymentMethodOrderByPaymentTimeDesc(Long merchantId, PaymentMethod paymentMethod);
+    
+    List<Payment> findBySale_Station_Merchant_IdAndPaymentStatusOrderByPaymentTimeDesc(Long merchantId, PaymentStatus paymentStatus);
+
+    @Query("""
+    SELECT p
+    FROM Payment p
+    JOIN p.sale s
+    JOIN s.station st
+    WHERE st.merchant.id = :merchantId
+    ORDER BY p.paymentTime DESC
+    """)
+    List<Payment> findAllByMerchantIdOrderByPaymentTimeDesc(Long merchantId);
 
     Optional<Payment> findByGatewayReference(String gatewayReference);
     

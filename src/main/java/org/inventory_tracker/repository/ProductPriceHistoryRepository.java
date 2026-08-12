@@ -9,28 +9,22 @@ import java.util.List;
 
 
 @Repository
-public interface ProductPriceHistoryRepository
-        extends JpaRepository<ProductPriceHistory, Long>, JpaSpecificationExecutor<ProductPriceHistory> {
+public interface ProductPriceHistoryRepository extends JpaRepository<ProductPriceHistory, Long>, JpaSpecificationExecutor<ProductPriceHistory> {
+    List<ProductPriceHistory>findByChangedByAndStation_Merchant_IdOrderByChangedAtDesc(String changedBy, Long merchantId);
+    
+    List<ProductPriceHistory>findByBusinessDateBetweenAndStation_Merchant_IdOrderByChangedAtDesc(LocalDate startDate, LocalDate endDate, Long merchantId);
+    
+    List<ProductPriceHistory>findByBusinessDateAndStation_Merchant_IdOrderByChangedAtDesc(LocalDate businessDate, Long merchantId);
 
-    List<ProductPriceHistory>
-    findByStationIdOrderByChangedAtDesc(
-            Long stationId
-    );
+    List<ProductPriceHistory>findByProductIdAndStation_Merchant_IdOrderByChangedAtDesc(Long productId, Long merchantId);
+    
+    List<ProductPriceHistory>findByStationIdOrderByChangedAtDesc(Long stationId);
 
-    List<ProductPriceHistory>
-    findByProductIdOrderByChangedAtDesc(
-            Long productId
-    );
+    List<ProductPriceHistory>findByProductIdOrderByChangedAtDesc(Long productId);
 
-    List<ProductPriceHistory>
-    findByStationIdAndProductIdOrderByChangedAtDesc(
-            Long stationId,
-            Long productId
-    );
+    List<ProductPriceHistory>findByStationIdAndProductIdOrderByChangedAtDesc(Long stationId, Long productId);
 
-    List<ProductPriceHistory>findByBusinessDateOrderByChangedAtDesc(
-            LocalDate businessDate
-    );
+    List<ProductPriceHistory>findByBusinessDateOrderByChangedAtDesc(LocalDate businessDate);
 
     List<ProductPriceHistory>findByBusinessDateBetweenOrderByChangedAtDesc(LocalDate startDate, LocalDate endDate);
 

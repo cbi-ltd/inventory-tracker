@@ -1,10 +1,8 @@
 package org.inventory_tracker.repository;
 
 import org.inventory_tracker.entity.StationInventory;
-import org.inventory_tracker.enums.ProductType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,24 +17,25 @@ public interface StationInventoryRepository extends JpaRepository<StationInvento
 //     """)
 //     Optional<StationInventory> findTodayInventory(@Param("outletId") String outletId, @Param("productType") ProductType productType);
 
+    boolean existsByStationIdAndProductIdAndStation_Merchant_Id(Long stationId, Long productId, Long merchantId);
 
-    Optional<StationInventory> findByStationIdAndProductId(
-            Long stationId,
-            Long productId
-    );
+    Optional<StationInventory> findByIdAndStation_Merchant_Id(Long id, Long merchantId);
 
-    boolean existsByStationIdAndProductId(
-            Long stationId,
-            Long productId
-    );
+    Optional<StationInventory> findByStationIdAndProductIdAndStation_Merchant_Id(Long stationId, Long productId, Long merchantId);
 
-    List<StationInventory> findByStationIdOrderByProduct_NameAsc(
-            Long stationId
-    );
+    List<StationInventory> findByStationIdAndStation_Merchant_IdOrderByProduct_NameAsc(Long stationId, Long merchantId);
 
-    List<StationInventory> findByProductIdOrderByStation_NameAsc(
-            Long productId
-    );
+    List<StationInventory> findByStation_Merchant_IdOrderByStation_NameAscProduct_NameAsc(Long merchantId);
+
+    List<StationInventory> findByActiveTrueAndStation_Merchant_IdOrderByStation_NameAsc(Long merchantId);
+
+    Optional<StationInventory> findByStationIdAndProductId(Long stationId, Long productId);
+
+    boolean existsByStationIdAndProductId(Long stationId, Long productId);
+
+    List<StationInventory> findByStationIdOrderByProduct_NameAsc(Long stationId);
+
+    List<StationInventory> findByProductIdOrderByStation_NameAsc(Long productId);
 
     List<StationInventory> findByActiveTrueOrderByStation_NameAsc();
 
