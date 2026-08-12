@@ -26,154 +26,110 @@ public class ReportingController {
     private final ReportingService reportingService;
 
     @GetMapping("/dashboard")
-    public ResponseEntity<ApiSuccessResponse<DashboardResponse>>
-    getDashboard() {
-
-        DashboardResponse response =
-                reportingService.getDashboard();
+    public ResponseEntity<ApiSuccessResponse<DashboardResponse>>getDashboard() {
+        DashboardResponse response = reportingService.getDashboard();
 
         return ResponseEntity.ok(
-
                 new ApiSuccessResponse<>(
-
                         LocalDateTime.now(),
-
                         HttpStatus.OK.value(),
-
                         "Dashboard retrieved successfully.",
-
                         response
                 )
         );
     }
 
     @GetMapping("/executive")
-    public ResponseEntity<ApiSuccessResponse<ExecutiveSummaryResponse>>
-    getExecutiveSummary() {
-
-        ExecutiveSummaryResponse response =
-                reportingService.getExecutiveSummary();
+    public ResponseEntity<ApiSuccessResponse<ExecutiveSummaryResponse>>getExecutiveSummary() {
+        ExecutiveSummaryResponse response = reportingService.getExecutiveSummary();
 
         return ResponseEntity.ok(
-
                 new ApiSuccessResponse<>(
-
                         LocalDateTime.now(),
-
                         HttpStatus.OK.value(),
-
                         "Executive summary retrieved successfully.",
-
                         response
                 )
         );
     }
 
     @GetMapping("/station")
-    public ResponseEntity<ApiSuccessResponse<List<StationReportResponse>>>
-    getStationReport() {
-
-        List<StationReportResponse> response =
-                reportingService.getStationReport();
+    public ResponseEntity<ApiSuccessResponse<List<StationReportResponse>>>getStationReport() {
+        List<StationReportResponse> response = reportingService.getStationReport();
+        int count = response.size();
 
         return ResponseEntity.ok(
-
                 new ApiSuccessResponse<>(
-
                         LocalDateTime.now(),
-
                         HttpStatus.OK.value(),
-
                         "Station report retrieved successfully.",
-
+                        count,
                         response
                 )
         );
     }
 
     @GetMapping("/inventory")
-    public ResponseEntity<ApiSuccessResponse<List<InventoryReportResponse>>>
-    getInventoryReport() {
-
-        List<InventoryReportResponse> response =
-                reportingService.getInventoryReport();
+    public ResponseEntity<ApiSuccessResponse<List<InventoryReportResponse>>>getInventoryReport() {
+        List<InventoryReportResponse> response = reportingService.getInventoryReport();
+        int count = response.size();
 
         return ResponseEntity.ok(
-
                 new ApiSuccessResponse<>(
-
                         LocalDateTime.now(),
-
                         HttpStatus.OK.value(),
-
                         "Inventory report retrieved successfully.",
-
+                        count,
                         response
                 )
         );
     }
 
     @GetMapping("/product")
-    public ResponseEntity<ApiSuccessResponse<List<ProductReportResponse>>>
-    getProductReport() {
-
-        List<ProductReportResponse> response =
-                reportingService.getProductReport();
+    public ResponseEntity<ApiSuccessResponse<List<ProductReportResponse>>>getProductReport() {
+        List<ProductReportResponse> response = reportingService.getProductReport();
+        int count = response.size();
 
         return ResponseEntity.ok(
 
                 new ApiSuccessResponse<>(
-
                         LocalDateTime.now(),
-
                         HttpStatus.OK.value(),
-
                         "Product report retrieved successfully.",
-
+                        count,
                         response
                 )
         );
     }
 
     @GetMapping("/pump")
-    public ResponseEntity<ApiSuccessResponse<List<PumpReportResponse>>>
-    getPumpReport() {
-
-        List<PumpReportResponse> response =
-                reportingService.getPumpReport();
+    public ResponseEntity<ApiSuccessResponse<List<PumpReportResponse>>>getPumpReport() {
+        List<PumpReportResponse> response = reportingService.getPumpReport();
+        int count = response.size();
 
         return ResponseEntity.ok(
-
                 new ApiSuccessResponse<>(
-
                         LocalDateTime.now(),
-
                         HttpStatus.OK.value(),
-
                         "Pump report retrieved successfully.",
-
+                        count,
                         response
                 )
         );
     }
 
     @GetMapping("/attendant")
-    public ResponseEntity<ApiSuccessResponse<List<AttendantReportResponse>>>
-    getAttendantReport() {
-
+    public ResponseEntity<ApiSuccessResponse<List<AttendantReportResponse>>>getAttendantReport() {
         List<AttendantReportResponse> response =
                 reportingService.getAttendantReport();
+        int count = response.size();
 
         return ResponseEntity.ok(
-
                 new ApiSuccessResponse<>(
-
                         LocalDateTime.now(),
-
                         HttpStatus.OK.value(),
-
                         "Attendant report retrieved successfully.",
-
+                        count,
                         response
                 )
         );

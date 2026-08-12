@@ -18,9 +18,6 @@ import org.inventory_tracker.repository.PumpAssignmentRepository;
 import org.inventory_tracker.repository.PumpRepository;
 import org.inventory_tracker.repository.StationInventoryRepository;
 import org.inventory_tracker.repository.StationRepository;
-import org.inventory_tracker.repository.StockAdjustmentRepository;
-import org.inventory_tracker.repository.StockCountRepository;
-import org.inventory_tracker.repository.StockTransferRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -39,9 +36,6 @@ public class ReportingService {
     private final PumpAssignmentRepository pumpAssignmentRepository;
     private final AttendantRepository attendantRepository;
     private final DeliveryRepository deliveryRepository;
-    private final StockTransferRepository stockTransferRepository;
-    private final StockAdjustmentRepository stockAdjustmentRepository;
-    private final StockCountRepository stockCountRepository;
     private final StationInventoryRepository stationInventoryRepository;
 
     public DashboardResponse getDashboard() {
@@ -83,20 +77,20 @@ public class ReportingService {
                                 businessDate)
                 )
 
-                .totalTransfersToday(
-                        stockTransferRepository.countByBusinessDate(
-                                businessDate)
-                )
+                // .totalTransfersToday(
+                //         stockTransferRepository.countByBusinessDate(
+                //                 businessDate)
+                // )
 
-                .totalAdjustmentsToday(
-                        stockAdjustmentRepository.countByBusinessDate(
-                                businessDate)
-                )
+                // .totalAdjustmentsToday(
+                //         stockAdjustmentRepository.countByBusinessDate(
+                //                 businessDate)
+                // )
 
-                .totalStockCountsToday(
-                        stockCountRepository.countByBusinessDate(
-                                businessDate)
-                )
+                // .totalStockCountsToday(
+                //         stockCountRepository.countByBusinessDate(
+                //                 businessDate)
+                // )
 
                 .totalInventoryQuantity(
                         totalInventoryQuantity
@@ -150,17 +144,17 @@ public class ReportingService {
                         deliveryRepository.countByBusinessDate(
                                 businessDate))
 
-                .transfersToday(
-                        stockTransferRepository.countByBusinessDate(
-                                businessDate))
+                // .transfersToday(
+                //         stockTransferRepository.countByBusinessDate(
+                //                 businessDate))
 
-                .adjustmentsToday(
-                        stockAdjustmentRepository.countByBusinessDate(
-                                businessDate))
+                // .adjustmentsToday(
+                //         stockAdjustmentRepository.countByBusinessDate(
+                //                 businessDate))
 
-                .stockCountsToday(
-                        stockCountRepository.countByBusinessDate(
-                                businessDate))
+                // .stockCountsToday(
+                //         stockCountRepository.countByBusinessDate(
+                //                 businessDate))
 
                 .lowStockProducts(
                         stationInventoryRepository
@@ -216,25 +210,25 @@ public class ReportingService {
                                         .countByStationId(
                                                 station.getId()))
 
-                        .transfersIn(
-                                stockTransferRepository
-                                        .countByDestinationStationId(
-                                                station.getId()))
+                        // .transfersIn(
+                        //         stockTransferRepository
+                        //                 .countByDestinationStationId(
+                        //                         station.getId()))
 
-                        .transfersOut(
-                                stockTransferRepository
-                                        .countBySourceStationId(
-                                                station.getId()))
+                        // .transfersOut(
+                        //         stockTransferRepository
+                        //                 .countBySourceStationId(
+                        //                         station.getId()))
 
-                        .adjustments(
-                                stockAdjustmentRepository
-                                        .countByStationId(
-                                                station.getId()))
+                        // .adjustments(
+                        //         stockAdjustmentRepository
+                        //                 .countByStationId(
+                        //                         station.getId()))
 
-                        .stockCounts(
-                                stockCountRepository
-                                        .countByStationId(
-                                                station.getId()))
+                        // .stockCounts(
+                        //         stockCountRepository
+                        //                 .countByStationId(
+                        //                         station.getId()))
 
                         .lowStockProducts(
                                 stationInventoryRepository
@@ -322,11 +316,11 @@ public class ReportingService {
 
                         .deliveries(deliveryRepository.countByProductId(product.getId()))
 
-                        .transfers(stockTransferRepository.countByProductId(product.getId()))
+                        // .transfers(stockTransferRepository.countByProductId(product.getId()))
 
-                        .adjustments(stockAdjustmentRepository.countByProductId(product.getId()))
+                        // .adjustments(stockAdjustmentRepository.countByProductId(product.getId()))
 
-                        .stockCounts(stockCountRepository.countByProductId(product.getId()))
+                        // .stockCounts(stockCountRepository.countByProductId(product.getId()))
 
                         .build())
 
@@ -393,19 +387,16 @@ public class ReportingService {
                             .attendantId(attendant.getId())
                             .username(attendant.getUsername())
                             .fullName(attendant.getFullName())
-                            .stationName(
-                                    attendant.getStation() != null
-                                            ? attendant.getStation().getName()
-                                            : null
-                            )
+                            .stationName(attendant.getStation() != null
+                                            ? attendant.getStation().getName(): null)
                             .assignedPump(assignedPump)
                             .active(attendant.getActive())
                             .completedShifts(0L)
-                            .stockCountsPerformed(stockCountRepository.countByCountedBy(attendant.getUsername()))
-                            .adjustmentsPerformed(stockAdjustmentRepository.countByAdjustedBy(attendant.getUsername()))
+                        //     .stockCountsPerformed(stockCountRepository.countByCountedBy(attendant.getUsername()))
+                        //     .adjustmentsPerformed(stockAdjustmentRepository.countByAdjustedBy(attendant.getUsername()))
                             .deliveriesReceived(0L)
-                            // .deliveriesReceived(deliveryRepository.countByReceivedBy(attendant.getUsername()))
-                            .transfersInitiated(stockTransferRepository.countByInitiatedBy(attendant.getUsername()))
+                        //     .deliveriesReceived(deliveryRepository.countByReceivedBy(attendant.getUsername()))
+                        //     .transfersInitiated(stockTransferRepository.countByInitiatedBy(attendant.getUsername()))
                             .build();
                 })
                 .toList();
