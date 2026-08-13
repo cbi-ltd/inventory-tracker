@@ -5,10 +5,17 @@ import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.inventory_tracker.dto.response.AttendantReportResponse;
 import org.inventory_tracker.dto.response.DashboardResponse;
+import org.inventory_tracker.dto.response.DeliveryReportResponse;
 import org.inventory_tracker.dto.response.ExecutiveSummaryResponse;
 import org.inventory_tracker.dto.response.InventoryReportResponse;
+import org.inventory_tracker.dto.response.InventoryTransactionReportResponse;
+import org.inventory_tracker.dto.response.PaymentReportResponse;
+import org.inventory_tracker.dto.response.PriceHistoryReportResponse;
 import org.inventory_tracker.dto.response.ProductReportResponse;
+import org.inventory_tracker.dto.response.PumpAssignmentReportResponse;
+import org.inventory_tracker.dto.response.PumpAuditReportResponse;
 import org.inventory_tracker.dto.response.PumpReportResponse;
+import org.inventory_tracker.dto.response.SalesReportResponse;
 import org.inventory_tracker.dto.response.StationReportResponse;
 import org.inventory_tracker.service.ReportingService;
 import org.springframework.http.HttpStatus;
@@ -129,6 +136,118 @@ public class ReportingController {
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Attendant report retrieved successfully.",
+                        count,
+                        response
+                )
+        );
+    }
+
+    @GetMapping("/pump-assignment")
+    public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentReportResponse>>> getPumpAssignmentReport() {
+        List<PumpAssignmentReportResponse> response = reportingService.getPumpAssignmentReport();
+        int count = response.size();
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Pump assignment report retrieved successfully.",
+                        count,
+                        response
+                )
+        );
+    }
+
+    @GetMapping("/pump-audit")
+    public ResponseEntity<ApiSuccessResponse<List<PumpAuditReportResponse>>> getPumpAuditReport() {
+        List<PumpAuditReportResponse> response = reportingService.getPumpAuditReport();
+        int count = response.size();
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Pump audit report retrieved successfully.",
+                        count,
+                        response
+                )
+        );
+    }
+
+    @GetMapping("/sales")
+    public ResponseEntity<ApiSuccessResponse<List<SalesReportResponse>>> getSalesReport() {
+        List<SalesReportResponse> response = reportingService.getSalesReport();
+        int count = response.size();
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Sales report retrieved successfully.",
+                        count,
+                        response
+                )
+        );
+    }
+
+    @GetMapping("/delivery")
+    public ResponseEntity<ApiSuccessResponse<List<DeliveryReportResponse>>> getDeliveryReport() {
+        List<DeliveryReportResponse> response = reportingService.getDeliveryReport();
+        int count = response.size();
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Delivery report retrieved successfully.",
+                        count,
+                        response
+                )
+        );
+    }
+
+    @GetMapping("/payment")
+    public ResponseEntity<ApiSuccessResponse<List<PaymentReportResponse>>> getPaymentReport() {
+        List<PaymentReportResponse> response = reportingService.getPaymentReport();
+        int count = response.size();
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Payment report retrieved successfully.",
+                        count,
+                        response
+                )
+        );
+    }
+
+    @GetMapping("/inventory-transaction")
+    public ResponseEntity<ApiSuccessResponse<List<InventoryTransactionReportResponse>>> getInventoryTransactionReport() {
+        List<InventoryTransactionReportResponse> response = reportingService.getInventoryTransactionReport();
+        int count = response.size();
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Inventory transaction report retrieved successfully.",
+                        count,
+                        response
+                )
+        );
+    }
+
+    @GetMapping("/price-history")
+    public ResponseEntity<ApiSuccessResponse<List<PriceHistoryReportResponse>>> getPriceHistoryReport() {
+        List<PriceHistoryReportResponse> response = reportingService.getPriceHistoryReport();
+        int count = response.size();
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Price history report retrieved successfully.",
                         count,
                         response
                 )
