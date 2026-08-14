@@ -2,7 +2,6 @@ package org.inventory_tracker.service;
 
 import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.config.mapper.SaleMapper;
-import org.inventory_tracker.dto.request.CreateSaleRequest;
 import org.inventory_tracker.dto.response.SaleResponse;
 import org.inventory_tracker.entity.*;
 import org.inventory_tracker.enums.PaymentMethod;
@@ -13,14 +12,9 @@ import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.inventory_tracker.integration.cams.PendingPayment.card.PendingCardPaymentService;
 import org.inventory_tracker.integration.cams.PendingPayment.transfer.PendingTransferService;
 import org.inventory_tracker.repository.*;
-import org.inventory_tracker.util.ShiftUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.UUID;
 import java.util.List;
 
 

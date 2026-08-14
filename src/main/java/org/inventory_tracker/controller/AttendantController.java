@@ -1,10 +1,11 @@
 package org.inventory_tracker.controller;
 
 import lombok.RequiredArgsConstructor;
-
+import org.inventory_tracker.security.AuthenticatedUserService;
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.inventory_tracker.dto.request.CreateAttendantRequest;
 import org.inventory_tracker.dto.response.AttendantResponse;
+import org.inventory_tracker.security.MerchantPrincipal;
 import org.inventory_tracker.service.AttendantService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,14 @@ import java.util.List;
 public class AttendantController {
 
     private final AttendantService attendantService;
+    private final AuthenticatedUserService authenticatedUserService;
+
+    @GetMapping("/test-auth")
+    public ResponseEntity<?> testAuthentication() {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+
+        return ResponseEntity.ok(principal);
+    }
 
     @PostMapping
     public ResponseEntity<ApiSuccessResponse<AttendantResponse>> createAttendant(

@@ -1,4 +1,4 @@
-package org.inventory_tracker.dto.response;
+package org.inventory_tracker.dto.response.report;
 
 import lombok.*;
 import java.math.BigDecimal;

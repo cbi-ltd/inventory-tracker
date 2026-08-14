@@ -1,4 +1,4 @@
-package org.inventory_tracker.dto.response;
+package org.inventory_tracker.dto.response.report;
 
 import java.time.LocalDate;
 import lombok.AllArgsConstructor;
