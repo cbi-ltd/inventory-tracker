@@ -9,6 +9,8 @@ public class MerchantPrincipal {
 
     private String merchantId;
 
+    private Long merchantDbId; 
+
     private String role;
 
     private String institutionId;

@@ -10,11 +10,21 @@ import java.util.List;
 
 public class PumpAuditSpecification {
 
-    public static Specification<PumpAudit> filter(PumpAuditFilterRequest request) {
+    public static Specification<PumpAudit> filter(PumpAuditFilterRequest request, Long merchantDbId) {
 
         return (root, query, cb) -> {
 
             List<Predicate> predicates = new ArrayList<>();
+
+                    predicates.add(
+                cb.equal(
+                        root.get("pumpAssignment")
+                                .get("station")
+                                .get("merchant")
+                                .get("id"),
+                        merchantDbId
+                )
+        );
 
             if (request.getId() != null) {
                 predicates.add(

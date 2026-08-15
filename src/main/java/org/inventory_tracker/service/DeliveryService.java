@@ -4,6 +4,7 @@ package org.inventory_tracker.service;
 import org.inventory_tracker.dto.request.CreateDeliveryRequest;
 import org.inventory_tracker.dto.response.DeliveryResponse;
 import org.inventory_tracker.entity.Delivery;
+import org.inventory_tracker.entity.Merchant;
 import org.inventory_tracker.enums.DeliveryStatus;
 import org.inventory_tracker.config.mapper.DeliveryMapper;
 import org.inventory_tracker.repository.DeliveryRepository;
@@ -13,8 +14,11 @@ import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.inventory_tracker.entity.StationInventory;
+// import org.inventory_tracker.entity.security.MerchantContext;
 import org.inventory_tracker.entity.specification.DeliverySpecification;
 import org.inventory_tracker.repository.StationInventoryRepository;
+import org.inventory_tracker.security.AuthenticatedUserService;
+import org.inventory_tracker.security.MerchantPrincipal;
 import org.inventory_tracker.enums.InventoryTransactionType;
 import org.inventory_tracker.entity.Station;
 import org.inventory_tracker.util.ShiftUtil;
@@ -30,59 +34,42 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 @Transactional
 public class DeliveryService {
-
     private final DeliveryRepository deliveryRepository;
     private final StationInventoryRepository stationInventoryRepository;
     private final DeliveryMapper deliveryMapper;
     private final InventoryTransactionService inventoryTransactionService;
+    private final AuthenticatedUserService authenticatedUserService;
 
 
-    public DeliveryResponse createDelivery(
-            CreateDeliveryRequest request) {
-
-        if (deliveryRepository.existsByDeliveryNumber(
-                request.getDeliveryNumber())) {
-
-            throw new DuplicateResourceException(
-                    "Delivery number already exists.");
+    public DeliveryResponse createDelivery(CreateDeliveryRequest request) {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        if (deliveryRepository.existsByDeliveryNumber(request.getDeliveryNumber())) {
+            throw new DuplicateResourceException("Delivery number already exists.");
         }
 
-        StationInventory stationInventory =
-                stationInventoryRepository
-                        .findById(request.getStationInventoryId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Station inventory not found."));
+        StationInventory stationInventory = stationInventoryRepository
+                        .findByIdAndStation_Merchant_Id(request.getStationInventoryId(), principal.getMerchantDbId())
+                        .orElseThrow(() ->new ResourceNotFoundException("Station inventory not found."));
 
-        Delivery delivery =
-                deliveryMapper.toEntity(request);
-
+        Delivery delivery = deliveryMapper.toEntity(request);
         delivery.setStationInventory(stationInventory);
-
-        delivery.setStation(
-                stationInventory.getStation());
-
-        delivery.setProduct(
-                stationInventory.getProduct());
-
-        delivery.setStatus(
-                DeliveryStatus.PENDING);
-
+        delivery.setStation(stationInventory.getStation());
+        delivery.setProduct(stationInventory.getProduct());
+        delivery.setStatus(DeliveryStatus.PENDING);
         delivery.setBusinessDate(null);
         delivery.setReceivedAt(null);
         // delivery.setBusinessDate(ShiftUtil.businessDate(stationInventory.getStation().getTimeZone()));
         // delivery.setReceivedAt(LocalDateTime.now(stationInventory.getStation().getTimeZone()));
 
-        Delivery saved =
-                deliveryRepository.save(delivery);
-
+        Delivery saved = deliveryRepository.save(delivery);
         return deliveryMapper.toResponse(saved);
     }
 
 
     public DeliveryResponse receiveDelivery(Long deliveryId) {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
         Delivery delivery = deliveryRepository
-                        .findById(deliveryId)
+                        .findByIdAndStation_Merchant_Id(deliveryId, principal.getMerchantDbId())
                         .orElseThrow(() -> new ResourceNotFoundException("Delivery not found."));
 
         if (delivery.getStatus() == DeliveryStatus.RECEIVED) {
@@ -100,7 +87,6 @@ public class DeliveryService {
         deliveryRepository.save(delivery);
 
         StationInventory inventory = delivery.getStationInventory();
-        inventory.setCurrentQuantity(inventory.getCurrentQuantity().add(delivery.getQuantityDelivered()));
         inventory.setCostPerUnit(delivery.getCostPerUnit());
         stationInventoryRepository.save(inventory);
 
@@ -117,69 +103,59 @@ public class DeliveryService {
 
 
     public DeliveryResponse cancelDelivery(Long deliveryId) {
-
-        Delivery delivery = findDelivery(deliveryId);
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        Delivery delivery = deliveryRepository.findByIdAndStation_Merchant_Id(deliveryId, principal.getMerchantDbId())
+                .orElseThrow(() -> new ResourceNotFoundException("Delivery not found."));
 
         if (delivery.getStatus() == DeliveryStatus.RECEIVED) {
-
-            throw new BadRequestException(
-                    "Received deliveries cannot be cancelled.");
+            throw new BadRequestException("Received deliveries cannot be cancelled.");
         }
 
         if (delivery.getStatus() == DeliveryStatus.CANCELLED) {
-
-            throw new BadRequestException(
-                    "Delivery has already been cancelled.");
+            throw new BadRequestException("Delivery has already been cancelled.");
         }
 
         delivery.setStatus(DeliveryStatus.CANCELLED);
-
-        Delivery updated =
-                deliveryRepository.save(delivery);
-
+        Delivery updated = deliveryRepository.save(delivery);
         return deliveryMapper.toResponse(updated);
     }
 
 
     @Transactional(readOnly = true)
     public DeliveryResponse getDeliveryById(Long id) {
-
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
         return deliveryMapper.toResponse(
-                findDelivery(id)
+                deliveryRepository.findByIdAndStation_Merchant_Id(id, principal.getMerchantDbId())
+                .orElseThrow(() -> new ResourceNotFoundException("Delivery not found."))
         );
     }
 
 
     @Transactional(readOnly = true)
-    public DeliveryResponse getDeliveryByDeliveryNumber(
-            String deliveryNumber) {
-
-        Delivery delivery =
-                deliveryRepository
-                        .findByDeliveryNumber(deliveryNumber)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Delivery not found."));
+    public DeliveryResponse getDeliveryByDeliveryNumber(String deliveryNumber) {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        Delivery delivery = deliveryRepository.findByDeliveryNumberAndStation_Merchant_Id(deliveryNumber, principal.getMerchantDbId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Delivery not found."));
 
         return deliveryMapper.toResponse(delivery);
     }
 
     @Transactional(readOnly = true)
     public List<DeliveryResponse> filterDeliveries(DeliveryFilterRequest request) {
-
         if (request.getStartDate() != null && request.getEndDate() != null
                 && request.getStartDate().isAfter(request.getEndDate())) {
 
                 throw new BadRequestException("Start date cannot be after end date.");
         }
 
-        return deliveryMapper.toResponseList(deliveryRepository.findAll(DeliverySpecification.filter(request)));
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        return deliveryMapper.toResponseList(deliveryRepository.findAll(DeliverySpecification.filter(request, principal.getMerchantDbId())));
     }
 
     @Transactional
     public DeliveryResponse reverseDelivery(Long deliveryId, ReverseDeliveryRequest request) {
-
-        Delivery delivery = deliveryRepository.findById(deliveryId)
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        Delivery delivery = deliveryRepository.findByIdAndStation_Merchant_Id(deliveryId, principal.getMerchantDbId())
                                 .orElseThrow(() -> new ResourceNotFoundException("Delivery not found."));
 
         if (delivery.getStatus() != DeliveryStatus.RECEIVED) {
@@ -212,119 +188,72 @@ public class DeliveryService {
 
     @Transactional(readOnly = true)
     public List<DeliveryResponse> getAllDeliveries() {
-
-        return deliveryMapper.toResponseList(
-                deliveryRepository.findAllByOrderByBusinessDateDescReceivedAtDesc()
-                //deliveryRepository.findAllByOrderByReceivedAtDesc()
-        );
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        return deliveryMapper.toResponseList(deliveryRepository
+                .findByStation_Merchant_IdOrderByBusinessDateDescReceivedAtDesc(principal.getMerchantDbId()));
     }
 
 
     @Transactional(readOnly = true)
-    public List<DeliveryResponse> getStationDeliveries(
-            Long stationId) {
-
-        return deliveryMapper.toResponseList(
-
-                deliveryRepository
-                        .findByStationIdOrderByBusinessDateDescReceivedAtDesc(
-                                stationId
-                        )
-                        // .findByStationIdOrderByReceivedAtDesc(
-                        //         stationId
-                        // )
-        );
+    public List<DeliveryResponse> getStationDeliveries(Long stationId) {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        return deliveryMapper.toResponseList(deliveryRepository
+                        .findByStation_Merchant_IdAndStation_IdOrderByBusinessDateDescReceivedAtDesc(principal.getMerchantDbId(), stationId));
     }
 
 
     @Transactional(readOnly = true)
     public List<DeliveryResponse> getProductDeliveries(Long productId) {
-
-        return deliveryMapper.toResponseList(deliveryRepository.findByProductIdOrderByBusinessDateDescReceivedAtDesc(productId)
-                        // .findByProductIdOrderByReceivedAtDesc(
-                        //         productId
-                        // )
-        );
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        return deliveryMapper.toResponseList(deliveryRepository.findByStation_Merchant_IdAndProduct_IdOrderByBusinessDateDescReceivedAtDesc(principal.getMerchantDbId(), productId));
     }
 
 
     @Transactional(readOnly = true)
-    public List<DeliveryResponse> getInventoryDeliveries(
-            Long stationInventoryId) {
-
-        return deliveryMapper.toResponseList(
-
-                deliveryRepository
-                        .findByStationInventoryIdOrderByReceivedAtDesc(
-                                stationInventoryId
-                        )
-        );
+    public List<DeliveryResponse> getInventoryDeliveries(Long stationInventoryId) {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        return deliveryMapper.toResponseList(deliveryRepository
+                        .findByStation_Merchant_IdAndStationInventory_IdOrderByReceivedAtDesc(principal.getMerchantDbId(), stationInventoryId));
     }
 
 
     @Transactional(readOnly = true)
-    public List<DeliveryResponse> getDeliveriesByStatus(
-            DeliveryStatus status) {
-
-        return deliveryMapper.toResponseList(
-
-                deliveryRepository.findByStatusOrderByBusinessDateDescReceivedAtDesc(status)
-                        // .findByStatusOrderByReceivedAtDesc(
-                        //         status
-                        // )
-        );
+    public List<DeliveryResponse> getDeliveriesByStatus(DeliveryStatus status) {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        return deliveryMapper.toResponseList(deliveryRepository.findByStation_Merchant_IdAndStatusOrderByBusinessDateDescReceivedAtDesc(principal.getMerchantDbId(), status));
     }
 
 
     @Transactional(readOnly = true)
-    public List<DeliveryResponse> getDeliveriesBetweenDates(
-            LocalDate startDate,
-            LocalDate endDate) {
-
+    public List<DeliveryResponse> getDeliveriesBetweenDates(LocalDate startDate, LocalDate endDate) {
         if (startDate.isAfter(endDate)) {
             throw new BadRequestException( "Start date cannot be after end date.");
         }
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
 
         return deliveryMapper.toResponseList(
-                deliveryRepository.findByBusinessDateBetweenOrderByReceivedAtDesc(startDate, endDate)
+                deliveryRepository.findByStation_Merchant_IdAndBusinessDateBetweenOrderByReceivedAtDesc(principal.getMerchantDbId(), startDate, endDate)
         );
     }
 
 
     @Transactional(readOnly = true)
-    public List<DeliveryResponse> getStationDeliveriesBetweenDates(
-            Long stationId,
-            LocalDate startDate,
-            LocalDate endDate) {
-
+    public List<DeliveryResponse> getStationDeliveriesBetweenDates(Long stationId, LocalDate startDate, LocalDate endDate) {
         if (startDate.isAfter(endDate)) {
-
-            throw new BadRequestException(
-                    "Start date cannot be after end date.");
+            throw new BadRequestException("Start date cannot be after end date.");
         }
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
 
-        return deliveryMapper.toResponseList(
-
-                deliveryRepository
-                        .findByStationIdAndBusinessDateBetweenOrderByReceivedAtDesc(
-                                stationId,
-                                startDate,
-                                endDate
-                        )
-        );
+        return deliveryMapper.toResponseList(deliveryRepository
+                        .findByStation_Merchant_IdAndStation_IdAndBusinessDateBetweenOrderByReceivedAtDesc(principal.getMerchantDbId(), stationId, startDate, endDate));
     }
 
-
-    /**
-     * Helper method for loading deliveries.
-     */
-    private Delivery findDelivery(Long deliveryId) {
-
-        return deliveryRepository
-                .findById(deliveryId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Delivery not found."));
-    }
+    // private Merchant getCurrentMerchant() {
+    //     Merchant merchant = MerchantContext.getCurrentMerchant();
+    //     if (merchant == null) {
+    //             throw new ResourceNotFoundException("Merchant is not authenticated");
+    //     }
+    //     return merchant;
+    // }
 
 }

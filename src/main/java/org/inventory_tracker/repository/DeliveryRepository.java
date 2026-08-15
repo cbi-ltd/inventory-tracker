@@ -13,47 +13,48 @@ import java.util.Optional;
 
 @Repository
 public interface DeliveryRepository extends JpaRepository<Delivery, Long>, JpaSpecificationExecutor<Delivery> {
+    Optional<Delivery> findByIdAndStation_Merchant_Id(Long deliveryId, Long merchantId);
 
+    Optional<Delivery> findByDeliveryNumberAndStation_Merchant_Id(String deliveryNumber, Long merchantId);
+    
+    List<Delivery> findByStation_Merchant_IdOrderByBusinessDateDescReceivedAtDesc(Long merchantId);
+
+    List<Delivery> findByStation_Merchant_IdAndStation_IdOrderByBusinessDateDescReceivedAtDesc(Long merchantId, Long stationId);
+
+    List<Delivery> findByStation_Merchant_IdAndProduct_IdOrderByBusinessDateDescReceivedAtDesc(Long merchantId, Long productId);
+
+    List<Delivery> findByStation_Merchant_IdAndStationInventory_IdOrderByReceivedAtDesc(Long merchantId, Long stationInventoryId);
+
+    List<Delivery> findByStation_Merchant_IdAndStatusOrderByBusinessDateDescReceivedAtDesc(Long merchantId, DeliveryStatus status);
+
+    List<Delivery> findByStation_Merchant_IdAndBusinessDateBetweenOrderByReceivedAtDesc(Long merchantId, LocalDate startDate, LocalDate endDate);
+
+    List<Delivery> findByStation_Merchant_IdAndStation_IdAndBusinessDateBetweenOrderByReceivedAtDesc(Long merchantId, Long stationId, LocalDate startDate, LocalDate endDate);
+    
     Optional<Delivery> findByDeliveryNumber(String deliveryNumber);
 
     boolean existsByDeliveryNumber(String deliveryNumber);
 
-//     List<Delivery> findByStationIdOrderByReceivedAtDesc(
-//             Long stationId
-//     );
-    List<Delivery> findByStationIdOrderByBusinessDateDescReceivedAtDesc(
-            Long stationId
-    );
-//     List<Delivery> findByProductIdOrderByReceivedAtDesc(
-//             Long productId
-//     );
-    List<Delivery> findByProductIdOrderByBusinessDateDescReceivedAtDesc(
-            Long productId
-    );
+    List<Delivery> findByStationIdOrderByReceivedAtDesc(Long stationId);
 
-    List<Delivery> findByStationInventoryIdOrderByReceivedAtDesc(
-            Long stationInventoryId
-    );
+    List<Delivery> findByStationIdOrderByBusinessDateDescReceivedAtDesc(Long stationId);
 
-//     List<Delivery> findByStatusOrderByReceivedAtDesc(
-//             DeliveryStatus status
-//     );
-    List<Delivery> findByStatusOrderByBusinessDateDescReceivedAtDesc(
-            DeliveryStatus status
-    );
+    List<Delivery> findByProductIdOrderByReceivedAtDesc(Long productId);
 
-    List<Delivery> findByBusinessDateBetweenOrderByReceivedAtDesc(
-            LocalDate startDate,
-            LocalDate endDate
-    );
+    List<Delivery> findByProductIdOrderByBusinessDateDescReceivedAtDesc(Long productId);
 
-    List<Delivery> findByStationIdAndBusinessDateBetweenOrderByReceivedAtDesc(
-            Long stationId,
-            LocalDate startDate,
-            LocalDate endDate
-    );
+    List<Delivery> findByStationInventoryIdOrderByReceivedAtDesc(Long stationInventoryId);
 
-//     List<Delivery> findAllByOrderByReceivedAtDesc();
+    List<Delivery> findByStatusOrderByReceivedAtDesc(DeliveryStatus status);
+
+    List<Delivery> findByStatusOrderByBusinessDateDescReceivedAtDesc(DeliveryStatus status);
+
+    List<Delivery> findByBusinessDateBetweenOrderByReceivedAtDesc(LocalDate startDate, LocalDate endDate);
+
+    List<Delivery> findByStationIdAndBusinessDateBetweenOrderByReceivedAtDesc(Long stationId, LocalDate startDate, LocalDate endDate);
+
+    List<Delivery> findAllByOrderByReceivedAtDesc();
+
     List<Delivery> findAllByOrderByBusinessDateDescReceivedAtDesc();
 
     long countByStationId(Long stationId);
@@ -62,5 +63,5 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long>, JpaSp
 
     long countByProductId(Long productId);
 
-//     long countByReceivedBy(String receivedBy);
+    // long countByReceivedBy(String receivedBy);
 }

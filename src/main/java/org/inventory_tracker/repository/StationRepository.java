@@ -2,15 +2,24 @@ package org.inventory_tracker.repository;
 
 import org.inventory_tracker.entity.Station;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
 
 @Repository
-public interface StationRepository
-        extends JpaRepository<Station, Long> {
+public interface StationRepository extends JpaRepository<Station, Long> {
+    Optional<Station> findByIdAndMerchantId(Long stationId, Long MerchantId);
+    
+    List<Station> findByMerchant_IdAndActiveTrueOrderByNameAsc(Long merchantId);
+
+    List<Station> findAllByMerchantId(Long merchantId);
+
+    Optional<Station> findByIdAndMerchant_CamsMerchantId(Long id, String merchantId);
+
+    boolean existsByIdAndMerchant_CamsMerchantId(Long id, String merchantId);
+
+    boolean existsByIdAndMerchant_Id(Long id, Long merchantId);
 
     boolean existsByCodeIgnoreCase(String code);
 

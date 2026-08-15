@@ -26,6 +26,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class CamsAuthenticationFilter extends OncePerRequestFilter {
+
     private final CamsAuthenticationService camsAuthenticationService;
 
     @Override
@@ -37,10 +38,13 @@ public class CamsAuthenticationFilter extends OncePerRequestFilter {
 
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
+        if (authorization == null
+                || !authorization.startsWith("Bearer ")) {
 
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setContentType(
+                    MediaType.APPLICATION_JSON_VALUE);
+
             response.getWriter().write(
                     """
                     {
@@ -54,24 +58,20 @@ public class CamsAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
+            MerchantPrincipal principal =
+                    camsAuthenticationService
+                            .authenticateUser(authorization);
 
-            CamsProfileData profile =camsAuthenticationService.authenticate(authorization);
-
-            MerchantPrincipal principal = MerchantPrincipal.builder()
-                            .merchantId(profile.getUserId())
-                            .institutionId(profile.getInstitutionId())
-                            .role(profile.getProfileType())
-                            .email(profile.getEmail())
-                            .merchantName(profile.getBusinessName())
-                            .build();
-
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
                             principal,
                             null,
                             Collections.emptyList()
                     );
 
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            SecurityContextHolder
+                    .getContext()
+                    .setAuthentication(authentication);
 
             filterChain.doFilter(request, response);
 
@@ -79,9 +79,11 @@ public class CamsAuthenticationFilter extends OncePerRequestFilter {
 
             SecurityContextHolder.clearContext();
 
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.setStatus(
+                    HttpStatus.UNAUTHORIZED.value());
 
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setContentType(
+                    MediaType.APPLICATION_JSON_VALUE);
 
             response.getWriter().write(
                     """

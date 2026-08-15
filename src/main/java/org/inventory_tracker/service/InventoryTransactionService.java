@@ -2,10 +2,14 @@ package org.inventory_tracker.service;
 
 
 import org.inventory_tracker.entity.InventoryTransaction;
+// import org.inventory_tracker.entity.Merchant;
 import org.inventory_tracker.repository.InventoryTransactionRepository;
 import org.inventory_tracker.enums.InventoryTransactionType;
 import org.inventory_tracker.entity.StationInventory;
+// import org.inventory_tracker.entity.security.MerchantContext;
 import org.inventory_tracker.repository.StationInventoryRepository;
+import org.inventory_tracker.security.AuthenticatedUserService;
+import org.inventory_tracker.security.MerchantPrincipal;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.inventory_tracker.entity.Station;
@@ -26,6 +30,7 @@ public class InventoryTransactionService {
 
     private final StationInventoryRepository stationInventoryRepository;
     private final InventoryTransactionRepository inventoryTransactionRepository;
+    private final AuthenticatedUserService authenticatedUserService;
 
     public InventoryTransaction recordTransaction(
             Long stationInventoryId,
@@ -37,9 +42,19 @@ public class InventoryTransactionService {
 
         validateQuantity(quantity);
 
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        if (principal == null) {
+            throw new ResourceNotFoundException("Merchant is not authenticated");
+        }
+
+        // StationInventory stationInventory = stationInventoryRepository.findByIdAndStation_Merchant_Id(stationInventoryId, merchant.getId())
+        //         .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
         StationInventory stationInventory = stationInventoryRepository.findById(stationInventoryId)
                                         .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
         Station station = stationInventory.getStation();
+        if (!station.getMerchant().getId().equals(principal.getMerchantDbId())) {
+            throw new ResourceNotFoundException("Station inventory not found");
+        }
 
         BigDecimal balanceBefore = stationInventory.getCurrentQuantity();
         validateTransaction(balanceBefore, quantity, transactionType);
@@ -121,27 +136,17 @@ public class InventoryTransactionService {
     //                     + transactionType
     //     );
     // }
-    private BigDecimal calculateNewBalance(
-        BigDecimal currentBalance,
-        BigDecimal quantity,
-        InventoryTransactionType transactionType
-) {
+    private BigDecimal calculateNewBalance(BigDecimal currentBalance, BigDecimal quantity, InventoryTransactionType transactionType) {
+        if (isInboundTransaction(transactionType)) {
+            return currentBalance.add(quantity);
+        }
 
-    if (isInboundTransaction(transactionType)) {
+        if (isOutboundTransaction(transactionType)) {
+            return currentBalance.subtract(quantity);
+        }
 
-        return currentBalance.add(quantity);
+        throw new BadRequestException("Unsupported inventory transaction type: "+ transactionType);
     }
-
-    if (isOutboundTransaction(transactionType)) {
-
-        return currentBalance.subtract(quantity);
-    }
-
-    throw new BadRequestException(
-            "Unsupported inventory transaction type: "
-                    + transactionType
-    );
-}
 
 
     private boolean isInboundTransaction(
@@ -154,7 +159,6 @@ public class InventoryTransactionService {
                     DELIVERY,
                     TRANSFER_IN,
                     RETURN,
-                    DELIVERY_REVERSAL,
                     ADJUSTMENT_IN -> true;
 
             default -> false;
@@ -217,5 +221,4 @@ public class InventoryTransactionService {
             );
         }
     }
-
 }

@@ -4,14 +4,14 @@ import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.config.mapper.SaleMapper;
 import org.inventory_tracker.dto.response.SaleResponse;
 import org.inventory_tracker.entity.*;
+// import org.inventory_tracker.entity.security.MerchantContext;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
-import org.inventory_tracker.integration.cams.PendingPayment.card.PendingCardPaymentService;
-import org.inventory_tracker.integration.cams.PendingPayment.transfer.PendingTransferService;
 import org.inventory_tracker.repository.*;
+import org.inventory_tracker.security.AuthenticatedUserService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
@@ -24,11 +24,12 @@ import java.util.List;
 public class SaleService {
     private final SaleRepository saleRepository;
     private final SaleMapper saleMapper;
-    private final PumpRepository pumpRepository;
+    private final StationRepository stationRepository;
     private final StationInventoryRepository stationInventoryRepository;
-    private final PumpAssignmentRepository pumpAssignmentRepository;
-    private final PendingTransferService pendingTransferService;
-    private final PendingCardPaymentService pendingCardPaymentService;
+    private final PumpRepository pumpRepository;
+    private final AttendantRepository attendantRepository;
+    private final AuthenticatedUserService authenticatedUserService;
+
 
 //     @Transactional
 //     public SaleResponse createSale(CreateSaleRequest request) {
@@ -206,209 +207,194 @@ public class SaleService {
 
     @Transactional(readOnly = true)
     public SaleResponse getSaleById(Long id) {
+        Merchant merchant = authenticatedUserService.getCurrentMerchant();
+        // Sale sale = saleRepository.findById(id).map(saleMapper::toResponse)
+        //         .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
+        Sale sale = saleRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
 
-        return saleRepository.findById(id)
+        if (!sale.getStation().getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Sale not found.");
+        }
 
-                .map(saleMapper::toResponse)
-
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Sale not found."));
+        return saleMapper.toResponse(sale);
     }
 
     @Transactional(readOnly = true)
     public SaleResponse getSaleBySaleNumber(String saleNumber) {
+                Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-        return saleRepository.findBySaleNumber(saleNumber).map(saleMapper::toResponse)
-                    .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
+
+        Sale sale = saleRepository.findBySaleNumber(saleNumber)
+            .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
+
+        if (!sale.getStation().getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Sale not found.");
+        }
+
+        return saleMapper.toResponse(sale);
+        // return saleRepository.findBySaleNumber(saleNumber).map(saleMapper::toResponse)
+        //             .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
     }
 
     @Transactional(readOnly = true)
-    public SaleResponse getSaleByTransactionReference(
-            String transactionReference) {
+    public SaleResponse getSaleByTransactionReference(String transactionReference) {
+                Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-        return saleRepository.findByTransactionReference(
-                        transactionReference)
 
-                .map(saleMapper::toResponse)
+        Sale sale = saleRepository.findByTransactionReference(transactionReference)
+            .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
 
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Sale not found."));
+        if (!sale.getStation().getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Sale not found.");
+        }
+
+        return saleMapper.toResponse(sale);
     }
 
     @Transactional(readOnly = true)
     public List<SaleResponse> getAllSales() {
+                Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-        return saleRepository
 
-                .findAllByOrderByBusinessDateDescSaleTimeDesc()
-
-                .stream()
-
-                .map(saleMapper::toResponse)
-
-                .toList();
+        return saleRepository.findByStation_Merchant_IdOrderByBusinessDateDescSaleTimeDesc(merchant.getId())
+                        .stream().map(saleMapper::toResponse).toList();
+        // return saleRepository.findAllByOrderByBusinessDateDescSaleTimeDesc().stream()
+        //                         .map(saleMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public List<SaleResponse> getSalesByStation(Long stationId) {
+                Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-        return saleRepository
 
-                .findByStationIdOrderByBusinessDateDescSaleTimeDesc(
-                        stationId)
+        Station station = stationRepository.findById(stationId)
+            .orElseThrow(() -> new ResourceNotFoundException("Station not found."));
 
-                .stream()
+        if (!station.getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Station not found.");
+        }
 
-                .map(saleMapper::toResponse)
-
-                .toList();
+        return saleRepository.findByStationIdOrderByBusinessDateDescSaleTimeDesc(stationId)
+                                .stream().map(saleMapper::toResponse).toList();
+        // return saleRepository.findByStationIdOrderByBusinessDateDescSaleTimeDesc(stationId)
+        //         .stream().map(saleMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public List<SaleResponse> getSalesByPump(Long pumpId) {
+                Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-        return saleRepository
 
-                .findByPumpIdOrderByBusinessDateDescSaleTimeDesc(
-                        pumpId)
+        Pump pump = pumpRepository.findById(pumpId)
+            .orElseThrow(() -> new ResourceNotFoundException("Pump not found."));
 
-                .stream()
+        if (!pump.getStation().getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Pump not found.");
+        }
 
-                .map(saleMapper::toResponse)
-
-                .toList();
+        return saleRepository.findByPumpIdOrderByBusinessDateDescSaleTimeDesc(pumpId)
+                .stream().map(saleMapper::toResponse).toList();
+        // return saleRepository.findByPumpIdOrderByBusinessDateDescSaleTimeDesc(pumpId)
+        //                         .stream().map(saleMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public List<SaleResponse> getSalesByAttendant(Long attendantId) {
+                Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-        return saleRepository
 
-                .findByAttendantIdOrderByBusinessDateDescSaleTimeDesc(
-                        attendantId)
+        Attendant attendant = attendantRepository.findById(attendantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Attendant not found."));
 
-                .stream()
+        if (!attendant.getStation().getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Attendant not found.");
+        }
 
-                .map(saleMapper::toResponse)
-
-                .toList();
+        return saleRepository.findByAttendantIdOrderByBusinessDateDescSaleTimeDesc(attendantId)
+                .stream().map(saleMapper::toResponse).toList();
+        // return saleRepository.findByAttendantIdOrderByBusinessDateDescSaleTimeDesc(attendantId)
+        //                 .stream().map(saleMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public List<SaleResponse> getSalesByProduct(Long productId) {
+                Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-        return saleRepository
 
-                .findByProductIdOrderByBusinessDateDescSaleTimeDesc(
-                        productId)
-
-                .stream()
-
-                .map(saleMapper::toResponse)
-
-                .toList();
+        return saleRepository.findByProductIdAndStation_Merchant_IdOrderByBusinessDateDescSaleTimeDesc(productId, merchant.getId())
+                .stream().map(saleMapper::toResponse).toList();
+        // return saleRepository.findByProductIdOrderByBusinessDateDescSaleTimeDesc(productId)
+        //         .stream().map(saleMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<SaleResponse> getSalesByPaymentMethod(
-            PaymentMethod paymentMethod) {
+    public List<SaleResponse> getSalesByPaymentMethod(PaymentMethod paymentMethod) {
+                Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-        return saleRepository
 
-                .findByPaymentMethodOrderByBusinessDateDescSaleTimeDesc(
-                        paymentMethod)
-
-                .stream()
-
-                .map(saleMapper::toResponse)
-
-                .toList();
+        return saleRepository.findByPaymentMethodAndStation_Merchant_IdOrderByBusinessDateDescSaleTimeDesc(paymentMethod, merchant.getId())
+                .stream().map(saleMapper::toResponse).toList();
+        // return saleRepository.findByPaymentMethodOrderByBusinessDateDescSaleTimeDesc(paymentMethod)
+        //         .stream().map(saleMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<SaleResponse> getSalesByPaymentStatus(
-            PaymentStatus paymentStatus) {
+    public List<SaleResponse> getSalesByPaymentStatus(PaymentStatus paymentStatus) {
+                Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-        return saleRepository
 
-                .findByPaymentStatusOrderByBusinessDateDescSaleTimeDesc(
-                        paymentStatus)
-
-                .stream()
-
-                .map(saleMapper::toResponse)
-
-                .toList();
+        return saleRepository.findByPaymentStatusAndStation_Merchant_IdOrderByBusinessDateDescSaleTimeDesc(paymentStatus, merchant.getId())
+                .stream().map(saleMapper::toResponse).toList();
+        // return saleRepository.findByPaymentStatusOrderByBusinessDateDescSaleTimeDesc(paymentStatus)
+        //                         .stream().map(saleMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<SaleResponse> getSalesByStatus(
-            SaleStatus saleStatus) {
+    public List<SaleResponse> getSalesByStatus(SaleStatus saleStatus) {
+                Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-        return saleRepository
 
-                .findBySaleStatusOrderByBusinessDateDescSaleTimeDesc(
-                        saleStatus)
-
-                .stream()
-
-                .map(saleMapper::toResponse)
-
-                .toList();
+        return saleRepository.findBySaleStatusAndStation_Merchant_IdOrderByBusinessDateDescSaleTimeDesc(saleStatus, merchant.getId())
+                .stream().map(saleMapper::toResponse).toList();
+        // return saleRepository.findBySaleStatusOrderByBusinessDateDescSaleTimeDesc(saleStatus)
+        //                         .stream().map(saleMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<SaleResponse> getSalesBetweenDates(
-            LocalDate startDate,
-            LocalDate endDate) {
-
+    public List<SaleResponse> getSalesBetweenDates(LocalDate startDate, LocalDate endDate) {
         if (startDate.isAfter(endDate)) {
-
-            throw new BadRequestException(
-                    "Start date cannot be after end date.");
+            throw new BadRequestException("Start date cannot be after end date.");
         }
+                Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-        return saleRepository
 
-                .findByBusinessDateBetween(
-                        startDate,
-                        endDate)
-
-                .stream()
-
-                .map(saleMapper::toResponse)
-
-                .toList();
+        return saleRepository.findByBusinessDateBetweenAndStation_Merchant_IdOrderByBusinessDateDescSaleTimeDesc(startDate, endDate, merchant.getId())
+                        .stream().map(saleMapper::toResponse).toList();
     }
 
     @Transactional
     public SaleResponse cancelSale(Long saleId) {
+                Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
         Sale sale = saleRepository.findById(saleId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Sale not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
+
+        if (!sale.getStation().getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Sale not found.");
+        }
 
         if (sale.getSaleStatus() == SaleStatus.CANCELLED) {
-
-            throw new BadRequestException(
-                    "Sale has already been cancelled.");
+            throw new BadRequestException("Sale has already been cancelled.");
         }
 
         if (sale.getSaleStatus() == SaleStatus.COMPLETED) {
-
-            throw new BadRequestException(
-                    "Completed sales cannot be cancelled. Use a refund or reversal process instead.");
+            throw new BadRequestException("Completed sales cannot be cancelled. Use a refund or reversal process instead.");
         }
 
         sale.setSaleStatus(SaleStatus.CANCELLED);
-
         sale.setPaymentStatus(PaymentStatus.CANCELLED);
-
-        return saleMapper.toResponse(
-                saleRepository.save(sale));
+        return saleMapper.toResponse(saleRepository.save(sale));
     }
 
 
@@ -441,9 +427,26 @@ public class SaleService {
         // }
 
         private Long getStationInventoryId(Long stationId, Long productId) {
+            Merchant merchant = authenticatedUserService.getCurrentMerchant();
+            Station station = stationRepository.findById(stationId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Station not found."));
 
+            if (!station.getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Station not found.");
+            }
+            
             return stationInventoryRepository.findByStationIdAndProductId(stationId, productId)
                     .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found."))
                     .getId();
         }
+
+        // private Merchant getCurrentMerchant() {
+        //         Merchant merchant = MerchantContext.getCurrentMerchant();
+        //         if (merchant == null) {
+        //                 throw new ResourceNotFoundException(
+        //                         "Merchant is not authenticated");
+        //         }
+
+        //         return merchant;
+        // }
 }

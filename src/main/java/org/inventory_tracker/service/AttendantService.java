@@ -5,7 +5,11 @@ import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.dto.request.CreateAttendantRequest;
 import org.inventory_tracker.dto.response.AttendantResponse;
 import org.inventory_tracker.entity.Attendant;
+import org.inventory_tracker.entity.Merchant;
+import org.inventory_tracker.security.*;
+// import org.inventory_tracker.entity.Merchant;
 import org.inventory_tracker.entity.Station;
+// import org.inventory_tracker.entity.security.MerchantContext;
 import org.inventory_tracker.config.mapper.AttendantMapper;
 import org.inventory_tracker.repository.AttendantRepository;
 import org.inventory_tracker.repository.StationRepository;
@@ -22,13 +26,15 @@ public class AttendantService {
     private final AttendantRepository attendantRepository;
     private final StationRepository stationRepository;
     private final AttendantMapper attendantMapper;
+    private final AuthenticatedUserService authenticatedUserService;
     
 
     @Transactional
     public AttendantResponse createAttendant(CreateAttendantRequest request) {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
         if (attendantRepository.existsByUsername(request.getUsername())) { throw new DuplicateResourceException("Username already exists"); }
 
-        Station station = stationRepository.findById(request.getStationId())
+        Station station = stationRepository.findByIdAndMerchant_CamsMerchantId(request.getStationId(), principal.getMerchantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Station not found"));
 
         Attendant attendant = attendantMapper.toEntity(request);
@@ -39,7 +45,8 @@ public class AttendantService {
     }
 
     public AttendantResponse getAttendantById(Long id) {
-        Attendant attendant = attendantRepository.findById(id)
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        Attendant attendant = attendantRepository.findByIdAndStation_Merchant_CamsMerchantId(id, principal.getMerchantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Attendant not found"));
 
         return attendantMapper.toResponse(attendant);
@@ -47,16 +54,15 @@ public class AttendantService {
 
     @Transactional
     public AttendantResponse updateAttendant(Long id, CreateAttendantRequest request) {
-
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
         Attendant attendant =
-                attendantRepository.findById(id)
+                attendantRepository.findByIdAndStation_Merchant_CamsMerchantId(id, principal.getMerchantId())
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Attendant not found"));
 
-        Station station =
-                stationRepository.findById(
-                        request.getStationId())
+        Station station = stationRepository.findByIdAndMerchant_CamsMerchantId(
+                        request.getStationId(), principal.getMerchantId())
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Station not found"));
@@ -74,26 +80,22 @@ public class AttendantService {
         attendant.setFullName(request.getFullName());
         attendant.setStation(station);
 
-        return attendantMapper.toResponse(
-                attendantRepository.save(attendant));
+        return attendantMapper.toResponse(attendantRepository.save(attendant));
     }
 
 
     @Transactional
     public AttendantResponse deactivateAttendant(Long id) {
-
-        Attendant attendant = attendantRepository.findById(id)
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        Attendant attendant = attendantRepository.findByIdAndStation_Merchant_CamsMerchantId(id, principal.getMerchantId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Attendant not found"));
 
         if (Boolean.FALSE.equals(attendant.getActive())) {
-                throw new DuplicateResourceException(
-                        "Attendant is already inactive"
-                );
+                throw new DuplicateResourceException("Attendant is already inactive");
         }
 
         attendant.setActive(false);
-
         Attendant updated = attendantRepository.save(attendant);
 
         return attendantMapper.toResponse(updated);
@@ -102,17 +104,18 @@ public class AttendantService {
 
     @Transactional(readOnly = true)
     public List<AttendantResponse> getAllAttendants() {
-
-        return attendantMapper.toResponseList(
-                attendantRepository.findAllByOrderByFullNameAsc()
-        );
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+         return attendantMapper.toResponseList(
+                attendantRepository.findByStation_Merchant_CamsMerchantIdOrderByFullNameAsc(principal.getMerchantId()));
+        // return attendantMapper.toResponseList(
+        //         attendantRepository.findAllByOrderByFullNameAsc());
     }
 
 
    @Transactional(readOnly = true)
    public List<AttendantResponse> getAttendantsByStation(Long stationId) {
-
-        if (!stationRepository.existsById(stationId)) {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        if (!stationRepository.existsByIdAndMerchant_CamsMerchantId(stationId, principal.getMerchantId())) {
                 throw new ResourceNotFoundException("Station not found");
         }
 
@@ -124,19 +127,18 @@ public class AttendantService {
 
    @Transactional(readOnly = true)
    public List<AttendantResponse> getActiveAttendants() {
-
-        return attendantMapper.toResponseList(
-                attendantRepository.findByActiveTrueOrderByFullNameAsc()
-        );
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        return attendantMapper.toResponseList(attendantRepository.findByStation_Merchant_CamsMerchantIdAndActiveTrueOrderByFullNameAsc(principal.getMerchantId()));
+        // return attendantMapper.toResponseList(
+        //         attendantRepository.findByActiveTrueOrderByFullNameAsc());
    }
 
 
    @Transactional
    public AttendantResponse activateAttendant(Long id) {
-
-        Attendant attendant = attendantRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Attendant not found"));
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        Attendant attendant = attendantRepository.findByIdAndStation_Merchant_CamsMerchantId(id, principal.getMerchantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Attendant not found"));
 
         if (Boolean.TRUE.equals(attendant.getActive())) {
                 throw new DuplicateResourceException(
@@ -145,7 +147,6 @@ public class AttendantService {
         }
 
         attendant.setActive(true);
-
         Attendant updated = attendantRepository.save(attendant);
 
         return attendantMapper.toResponse(updated);

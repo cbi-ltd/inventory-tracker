@@ -1,7 +1,6 @@
 package org.inventory_tracker.repository;
 
 
-import org.inventory_tracker.entity.Payment;
 import org.inventory_tracker.entity.Sale;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
@@ -9,13 +8,23 @@ import org.inventory_tracker.enums.SaleStatus;
 import org.inventory_tracker.enums.Shift;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 public interface SaleRepository extends JpaRepository<Sale, Long> {
+    List<Sale>findByBusinessDateBetweenAndStation_Merchant_IdOrderByBusinessDateDescSaleTimeDesc(LocalDate startDate, LocalDate endDate, Long merchantId);
+    
+    List<Sale>findBySaleStatusAndStation_Merchant_IdOrderByBusinessDateDescSaleTimeDesc(SaleStatus saleStatus, Long merchantId);
+
+    List<Sale>findByPaymentStatusAndStation_Merchant_IdOrderByBusinessDateDescSaleTimeDesc(PaymentStatus paymentStatus, Long merchantId);
+    
+    List<Sale>findByPaymentMethodAndStation_Merchant_IdOrderByBusinessDateDescSaleTimeDesc(PaymentMethod paymentMethod, Long merchantId);
+    
+    List<Sale> findByProductIdAndStation_Merchant_IdOrderByBusinessDateDescSaleTimeDesc(Long productId, Long merchantId);
+    
+    List<Sale> findByStation_Merchant_IdOrderByBusinessDateDescSaleTimeDesc(Long merchantId);
 
     Optional<Sale> findBySaleNumber(String saleNumber);
 

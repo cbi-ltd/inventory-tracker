@@ -18,6 +18,12 @@ public class Station extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String code;
 
+    // @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    // @JoinColumn(name = "merchant_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "merchant_id")
+    private Merchant merchant;
+
     //Later, generate this automatically via CAMS
     @Column(nullable = false, unique = true)
     private String merchantAccountNumber;

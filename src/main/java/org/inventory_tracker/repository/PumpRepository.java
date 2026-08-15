@@ -4,9 +4,15 @@ import org.inventory_tracker.entity.Pump;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PumpRepository extends JpaRepository<Pump, Long> {
+    List<Pump> findByStation_Merchant_IdAndActiveTrueOrderByPumpNumberAsc(Long merchantId);
+
+    List<Pump> findByStation_Merchant_IdOrderByPumpNumberAsc(Long merchantId);
+
+    Optional<Pump> findByIdAndStation_Merchant_Id(Long pumpId, Long merchantId);
 
     boolean existsByPumpNumber(String pumpNumber);
 

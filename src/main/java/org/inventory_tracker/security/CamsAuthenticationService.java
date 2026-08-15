@@ -7,6 +7,8 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.HttpClientErrorException;
 import org.inventory_tracker.dto.response.CamsProfileData;
 import org.inventory_tracker.dto.response.CamsProfileResponse;
+import org.inventory_tracker.entity.Merchant;
+import org.inventory_tracker.service.MerchantService;
 import org.springframework.http.*;
 
 
@@ -15,6 +17,7 @@ import org.springframework.http.*;
 public class CamsAuthenticationService {
 
     private final RestClient camsRestClient;
+    private final MerchantService merchantService;
 
     public CamsProfileData authenticate(String bearerToken) {
 
@@ -108,4 +111,18 @@ public class CamsAuthenticationService {
                     "CAMS profile type is missing.");
         }
     }
+
+        public MerchantPrincipal authenticateUser(String bearerToken) {
+
+            CamsProfileData profile = authenticate(bearerToken);
+
+            Merchant merchant = merchantService.getOrCreateMerchant(profile);
+
+            return MerchantPrincipal.builder()
+                    .merchantId(merchant.getCamsMerchantId())
+                    .merchantDbId(merchant.getId())
+                    .role(merchant.getMerchantRole())
+                    .institutionId(merchant.getInstitutionId())
+                    .build();
+        }
 }

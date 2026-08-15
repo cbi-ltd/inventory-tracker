@@ -3,7 +3,7 @@ package org.inventory_tracker.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
+import org.springframework.data.jpa.domain.Specification;
 import org.inventory_tracker.dto.request.CreateSaleRequest;
 import org.inventory_tracker.dto.request.PaymentFilterRequest;
 import org.inventory_tracker.entity.specification.PaymentSpecification;
@@ -12,6 +12,7 @@ import org.inventory_tracker.config.mapper.SaleMapper;
 import org.inventory_tracker.dto.response.PaymentResponse;
 import org.inventory_tracker.dto.response.SaleResponse;
 import org.inventory_tracker.entity.Attendant;
+import org.inventory_tracker.entity.Merchant;
 import org.inventory_tracker.entity.Payment;
 import org.inventory_tracker.entity.Product;
 import org.inventory_tracker.entity.Pump;
@@ -21,6 +22,7 @@ import org.inventory_tracker.entity.Sale;
 import org.inventory_tracker.entity.Station;
 import org.inventory_tracker.entity.StationInventory;
 import org.inventory_tracker.entity.Terminal;
+// import org.inventory_tracker.entity.security.MerchantContext;
 import org.inventory_tracker.enums.InventoryTransactionType;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
@@ -41,6 +43,8 @@ import org.inventory_tracker.repository.PumpRepository;
 import org.inventory_tracker.repository.SaleRepository;
 import org.inventory_tracker.repository.StationInventoryRepository;
 import org.inventory_tracker.repository.TerminalRepository;
+import org.inventory_tracker.security.AuthenticatedUserService;
+import org.inventory_tracker.security.MerchantPrincipal;
 import org.inventory_tracker.util.ShiftUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,19 +66,19 @@ public class PaymentService {
     private final TerminalRepository terminalRepository;
     private final PendingTransferService pendingTransferService;
     private final PendingCardPaymentService pendingCardPaymentService;
-    private final SaleService saleService;
     private final SaleMapper saleMapper;
     private final StationInventoryRepository stationInventoryRepository;
     private final InventoryTransactionService inventoryTransactionService;
     private final PumpRepository pumpRepository;
     private final PumpAssignmentRepository pumpAssignmentRepository;
     private final PumpAuditRepository pumpAuditRepository;
+    private final AuthenticatedUserService authenticatedUserService;
 
     @Transactional
     public PaymentResponse recordCashPayment(Long saleId) {
-
         Sale sale = saleRepository.findById(saleId).orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
 
+        verifySaleOwnership(sale);
         validateSale(sale);
         validatePaymentMethod(PaymentMethod.CASH);
 
@@ -94,7 +98,6 @@ public class PaymentService {
 
         validateAmount(sale, payment);
         payment = paymentRepository.save(payment);
-
         return paymentMapper.toResponse(payment);
     }
 
@@ -103,14 +106,13 @@ public class PaymentService {
         Sale sale = saleRepository.findBySaleNumber(pendingTransfer.getSaleNumber())
                             .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
 
-        paymentRepository.findByGatewayReference(notification.getRequestReference())
-                    .ifPresent(payment -> { throw new DuplicateResourceException("Payment has already been processed."); });
-
         Terminal terminal = terminalRepository.findByTid(notification.getDeviceSerial())
                                 .orElseThrow(() -> new ResourceNotFoundException("Terminal not found."));
 
-        // Sale sale = saleRepository.findFirstByTerminalIdAndSaleStatusOrderByCreatedAtAsc(terminal.getId(), SaleStatus.PENDING)
-        //                 .orElseThrow(() ->  new ResourceNotFoundException("Pending sale not found."));
+        paymentRepository.findByGatewayReference(notification.getRequestReference())
+                    .ifPresent(payment -> { throw new DuplicateResourceException("Payment has already been processed."); });
+
+        verifySaleTerminalRelationship(sale, terminal);
 
         return createTransferPaymentFromCamsNotification(sale, notification, terminal, pendingTransfer);
     }
@@ -120,21 +122,22 @@ public class PaymentService {
         Sale sale = saleRepository.findBySaleNumber(pendingCardPayment.getSaleNumber())
                         .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
 
-        paymentRepository.findByGatewayReference(cardPaymentNotification.getRrn())
-                        .ifPresent(payment -> { throw new DuplicateResourceException("Payment has already been processed."); });
-
         Terminal terminal = terminalRepository.findByTid(cardPaymentNotification.getTerminalId())
                                 .orElseThrow(() -> new ResourceNotFoundException("Terminal not found."));
+        verifySaleTerminalRelationship(sale, terminal);
+
+        paymentRepository.findByGatewayReference(cardPaymentNotification.getRrn())
+                        .ifPresent(payment -> { throw new DuplicateResourceException("Payment has already been processed."); });
 
         return createCardPaymentFromCamsNotification(sale, cardPaymentNotification, terminal, pendingCardPayment);
     }
 
     @Transactional
     public SaleResponse createSale(CreateSaleRequest request) {
-
         try {
                 Pump pump = pumpRepository.findById(request.getPumpId())
                                 .orElseThrow(() -> new ResourceNotFoundException("Pump not found"));
+                verifyStationOwnership(pump.getStation());
 
                 PumpAssignment assignment = pumpAssignmentRepository.findFirstByPumpIdAndActiveTrue(pump.getId())
                                                 .orElseThrow(() ->new ResourceNotFoundException("Pump is not currently assigned."));
@@ -179,17 +182,11 @@ public class PaymentService {
                 sale.setSellingPrice(sellingPrice);
                 sale.setShift(assignment.getShift());
                 sale.setBusinessDate(assignment.getAssignmentDate());
-                // sale.setBusinessDate(ShiftUtil.businessDate(station.getTimeZone()));
                 sale.setQuantity(quantity);
-
-                // BigDecimal gross = calculateGrossAmount(request.getQuantity(), costPerUnit);
-                        // costPerUnit.multiply(request.getQuantity());
                 sale.setGrossAmount(grossAmount);
 
                 BigDecimal discount = request.getDiscountAmount() == null ? BigDecimal.ZERO : request.getDiscountAmount();
                 sale.setDiscountAmount(discount);
-
-                // sale.setNetAmount(gross.subtract(discount));
                 sale.setNetAmount(calculateNetAmount(grossAmount, discount));
 
                 sale.setInventoryUpdated(false);
@@ -236,8 +233,8 @@ public class PaymentService {
 
     @Transactional
     public SaleResponse completeSale(Long saleId, String transactionReference, PaymentStatus paymentStatus, LocalDateTime paidAt) {
-
         Sale sale = saleRepository.findById(saleId).orElseThrow(() -> new ResourceNotFoundException("Sale not found"));
+        verifySaleOwnership(sale);
 
         if (sale.getInventoryUpdated()) { return saleMapper.toResponse(sale); }
 
@@ -327,6 +324,10 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public List<PaymentResponse> filterPayments(PaymentFilterRequest request) {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        if(principal == null) {
+            throw new ResourceNotFoundException("Merchant is not authenticated");
+        }
 
         if (request.getMinAmount() != null
                 && request.getMaxAmount() != null
@@ -342,53 +343,83 @@ public class PaymentService {
             throw new BadRequestException("Start date cannot be after end date.");
         }
 
-        return paymentRepository.findAll(PaymentSpecification.filter(request))
-                    .stream().map(paymentMapper::toResponse).toList();
+        // return paymentRepository.findAll(PaymentSpecification.filter(request))
+        //             .stream().map(paymentMapper::toResponse).toList();
+
+        Specification<Payment> specification = PaymentSpecification.filter(request)
+                    .and((root, query, criteriaBuilder) -> criteriaBuilder.equal(
+                                    root.get("sale").get("station")
+                                            .get("merchant").get("id"), principal.getMerchantDbId()));
+        return paymentRepository.findAll(specification).stream()
+                        .map(paymentMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public PaymentResponse getPaymentById(Long id) {
+        Payment payment = paymentRepository.findById(id)
+                            .orElseThrow(() -> new ResourceNotFoundException("Payment not found."));
 
-        return paymentRepository.findById(id).map(paymentMapper::toResponse)
-                .orElseThrow(() -> new ResourceNotFoundException("Payment not found."));
+        verifyPaymentOwnership(payment);
+        return paymentMapper.toResponse(payment);
     }
 
     @Transactional(readOnly = true)
     public PaymentResponse getPaymentByTransactionReference(String transactionReference) {
-        return paymentRepository.findByTransactionReference(transactionReference).map(paymentMapper::toResponse)
+        Payment payment = paymentRepository.findByTransactionReference(transactionReference)
                         .orElseThrow(() -> new ResourceNotFoundException("Payment not found."));
+
+        verifyPaymentOwnership(payment);
+        return paymentMapper.toResponse(payment);
     }
 
     @Transactional(readOnly = true)
     public PaymentResponse getPaymentBySale(Long saleId) {
-        return paymentRepository.findBySaleId(saleId).map(paymentMapper::toResponse)
+        Sale sale = saleRepository.findById(saleId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
+
+        verifySaleOwnership(sale);
+        Payment payment = paymentRepository.findBySaleId(saleId)
                         .orElseThrow(() -> new ResourceNotFoundException("Payment not found."));
+
+        return paymentMapper.toResponse(payment);
     }
 
     @Transactional(readOnly = true)
     public List<PaymentResponse> getAllPayments() {
-        return paymentRepository.findAllByOrderByPaymentTimeDesc().stream()
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        if(principal == null) {
+            throw new ResourceNotFoundException("Merchant is not authenticated");
+        }
+        return paymentRepository.findAllByMerchantIdOrderByPaymentTimeDesc( principal.getMerchantDbId()).stream()
                                     .map(paymentMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public List<PaymentResponse> getPaymentsByStatus(PaymentStatus status) {
-        return paymentRepository.findByPaymentStatusOrderByPaymentTimeDesc(status).stream()
-                                        .map(paymentMapper::toResponse).toList();
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+
+        if(principal == null) {
+            throw new ResourceNotFoundException("Merchant is not authenticated");
+        }
+        return paymentRepository.findBySale_Station_Merchant_IdAndPaymentStatusOrderByPaymentTimeDesc(principal.getMerchantDbId(), status)
+                                    .stream().map(paymentMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public List<PaymentResponse> getPaymentsByMethod(PaymentMethod method) {
-        return paymentRepository.findByPaymentMethodOrderByPaymentTimeDesc(method).stream()
-                                        .map(paymentMapper::toResponse).toList();
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        if(principal == null) {
+            throw new ResourceNotFoundException("Merchant is not authenticated");
+        }
+        return paymentRepository.findBySale_Station_Merchant_IdAndPaymentMethodOrderByPaymentTimeDesc(principal.getMerchantDbId(), method)
+                                    .stream().map(paymentMapper::toResponse).toList();
     }
 
-    // processPaymentResult(CamsPaymentDTO dto)
     @Transactional
     public PaymentResponse updatePaymentStatus(String transactionReference, PaymentStatus paymentStatus, String responseCode, String responseMessage) {
-
         Payment payment = paymentRepository.findByTransactionReference(transactionReference).orElseThrow(() -> new ResourceNotFoundException("Payment not found."));
-
+        verifyPaymentOwnership(payment);
+        
         payment.setPaymentStatus(paymentStatus);
         payment.setResponseCode(responseCode);
         payment.setResponseMessage(responseMessage);
@@ -399,18 +430,16 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public PaymentResponse getPaymentByPaymentNumber(String paymentNumber) {
-        return paymentRepository.findByPaymentNumber(paymentNumber).map(paymentMapper::toResponse)
+        Payment payment = paymentRepository.findByPaymentNumber(paymentNumber)
                                     .orElseThrow(() -> new ResourceNotFoundException("Payment not found."));
+        verifyPaymentOwnership(payment);
+        return paymentMapper.toResponse(payment);
     }
 
     @Transactional
     public PaymentResponse cancelPayment(Long paymentId) {
-
         Payment payment = paymentRepository.findById(paymentId).orElseThrow(() -> new ResourceNotFoundException("Payment not found."));
-
-        // if (payment.getPaymentStatus() == PaymentStatus.SUCCESS) {
-        //     throw new BadRequestException("Successful payments cannot be cancelled. Use a reversal or refund process.");
-        // }
+        verifyPaymentOwnership(payment);
         validatePaymentCanBeCancelled(payment);
 
         payment.setPaymentStatus(PaymentStatus.CANCELLED);
@@ -506,7 +535,6 @@ public class PaymentService {
     }
 
     private PaymentResponse createCardPaymentFromCamsNotification(Sale sale, CardPaymentNotification cardPaymentNotification, Terminal terminal, PendingCardPayment pendingCardPayment) {
-
         Payment payment = Payment.builder()
                 .paymentNumber(generatePaymentNumber())
                 .sale(sale)
@@ -525,12 +553,7 @@ public class PaymentService {
                 .build();
 
         Payment savedPayment = paymentRepository.save(payment);
-
         sale.setPaymentMethod(PaymentMethod.CARD);
-        // sale.setPaymentStatus(PaymentStatus.SUCCESS);
-        // sale.setSaleStatus(SaleStatus.COMPLETED);
-        // sale.setPaidAt(cardPaymentNotification.getTransactionTime());
-        // sale.setTransactionReference(cardPaymentNotification.getRrn());
 
         saleRepository.save(sale);
         completeSale(sale.getId(), cardPaymentNotification.getRrn(), PaymentStatus.SUCCESS, cardPaymentNotification.getTransactionTime());
@@ -538,48 +561,110 @@ public class PaymentService {
         return paymentMapper.toResponse(savedPayment);
     }
 
-            private String generateSaleNumber(Station station) {
-            return "FuelFlow-"
+    private String generateSaleNumber(Station station) {
+        return "FuelFlow-"
                     + ShiftUtil.businessDate(station.getTimeZone())
                     + "-"
                     + UUID.randomUUID()
                     .toString()
                     .substring(0, 8)
                     .toUpperCase();
-        }
+    }
 
-        private String generateReceiptNumber() {
-
-                    return "RCP-"
-                            + UUID.randomUUID()
+    private String generateReceiptNumber() {
+        return "RCP-"
+                    + UUID.randomUUID()
                             .toString()
                             .substring(0, 8)
                             .toUpperCase();
-        }
+    }
 
 
-        private BigDecimal calculateNetAmount(BigDecimal grossAmount, BigDecimal discount) {
-            if (discount == null) { discount = BigDecimal.ZERO; }
+    private BigDecimal calculateNetAmount(BigDecimal grossAmount, BigDecimal discount) {
+        if (discount == null) { discount = BigDecimal.ZERO; }
             return grossAmount.subtract(discount);
+    }
+
+    @Transactional
+    private void updateCurrentPumpAudit(Sale sale) {
+        if (sale == null || sale.getStation() == null) {
+            throw new ResourceNotFoundException("Sale station not found");
         }
 
-        @Transactional
-        private void updateCurrentPumpAudit(Sale sale) {
-            PumpAssignment assignment = pumpAssignmentRepository
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        if(principal == null) {
+            throw new ResourceNotFoundException("Merchant is not authenticated");
+        }
+
+        Station saleStation = sale.getStation();
+        if (saleStation.getMerchant() == null || !saleStation.getMerchant().getId().equals(principal.getMerchantDbId())) {
+            throw new ResourceNotFoundException("Sale not found");
+        }
+
+        PumpAssignment assignment = pumpAssignmentRepository
                             .findByPumpIdAndAssignmentDateAndShiftAndActiveTrue(
                                     sale.getPump().getId(),
                                     sale.getBusinessDate(),
                                     sale.getShift())
                             .orElseThrow(() -> new ResourceNotFoundException("Pump assignment not found"));
 
-            PumpAudit audit = pumpAuditRepository.findByPumpAssignment_Id(assignment.getId())
+        if (assignment.getStation() == null || !assignment.getStation().getId().equals(saleStation.getId())) {
+            throw new ResourceNotFoundException("Pump assignment not found");
+        }
+
+        if (assignment.getStation().getMerchant() == null || !assignment.getStation().getMerchant().getId().equals(principal.getMerchantDbId())) {
+            throw new ResourceNotFoundException("Pump assignment not found");
+        }
+
+        PumpAudit audit = pumpAuditRepository.findByPumpAssignment_Id(assignment.getId())
                                     .orElseThrow(() -> new ResourceNotFoundException("Pump audit not found"));
 
-            BigDecimal newClosing = audit.getClosingReading().add(sale.getQuantity());
+        BigDecimal newClosing = audit.getClosingReading().add(sale.getQuantity());
 
-            audit.setClosingReading(newClosing);
-            audit.setTotalDispensed(newClosing.subtract(audit.getOpeningReading()));
-            pumpAuditRepository.save(audit);
+        audit.setClosingReading(newClosing);
+        audit.setTotalDispensed(newClosing.subtract(audit.getOpeningReading()));
+        pumpAuditRepository.save(audit);
+    }
+
+    private void verifySaleOwnership(Sale sale) {
+            MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+            if(principal == null) {
+                throw new ResourceNotFoundException("Merchant is not authenticated");
+            }
+
+            if (sale.getStation() == null || sale.getStation().getMerchant() == null ||
+                    !sale.getStation().getMerchant().getId().equals(principal.getMerchantDbId())) {
+
+                throw new ResourceNotFoundException("Sale not found");
+            }
+    }
+
+    private void verifyStationOwnership(Station station) {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+
+        if(principal == null) {
+                throw new ResourceNotFoundException("Merchant is not authenticated");
         }
+
+        if (station == null || station.getMerchant() == null ||
+                    !station.getMerchant().getId().equals(principal.getMerchantDbId())) {
+
+                throw new ResourceNotFoundException("Station not found");
+        }
+    }
+
+    private void verifyPaymentOwnership(Payment payment) {
+        if (payment.getSale() == null) {
+                throw new ResourceNotFoundException("Payment not found");
+        }
+
+        verifySaleOwnership(payment.getSale());
+    }
+
+    private void verifySaleTerminalRelationship(Sale sale,Terminal terminal) {
+    if (sale.getTerminal() == null || !sale.getTerminal().getId().equals(terminal.getId())) {
+        throw new BadRequestException("Payment terminal does not match the sale terminal.");
+    }
+}
 
 }

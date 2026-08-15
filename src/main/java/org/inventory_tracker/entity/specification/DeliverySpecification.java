@@ -13,11 +13,20 @@ public class DeliverySpecification {
     private DeliverySpecification() {
     }
 
-    public static Specification<Delivery> filter(DeliveryFilterRequest request) {
+    public static Specification<Delivery> filter(DeliveryFilterRequest request, Long merchantDbId) {
 
         return (root, query, cb) -> {
 
             List<Predicate> predicates = new ArrayList<>();
+
+            predicates.add(
+                    cb.equal(
+                            root.get("station")
+                                    .get("merchant")
+                                    .get("id"),
+                            merchantDbId
+                    )
+            );
 
             if (request.getDeliveryNumber() != null &&
                     !request.getDeliveryNumber().isBlank()) {
@@ -31,7 +40,6 @@ public class DeliverySpecification {
             }
 
             if (request.getStationId() != null) {
-
                 predicates.add(
                         cb.equal(
                                 root.get("station").get("id"),
