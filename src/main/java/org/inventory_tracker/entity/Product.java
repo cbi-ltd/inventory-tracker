@@ -7,12 +7,14 @@ import jakarta.persistence.*;
 import lombok.*;
 
 
+@Builder
 @Entity
 @Getter
 @Setter
-public class Product {
-    // we will make Price belongs to Inventory and PriceHistory instead of Product
-    
+@NoArgsConstructor
+@AllArgsConstructor
+@Table(uniqueConstraints = { @UniqueConstraint(name = "uk_product_product_type", columnNames = "product_type") })
+public class Product {    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

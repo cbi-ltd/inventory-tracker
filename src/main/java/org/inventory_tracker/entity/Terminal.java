@@ -20,11 +20,13 @@ public class Terminal extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String terminalSerialNumber;
 
+    @ManyToOne
+    @JoinColumn(name = "station_id")
+    private Station station;
+
     private String model;
 
     private String posType;
-
-    // private String macAddress;
 
     private String manufacturer;
 

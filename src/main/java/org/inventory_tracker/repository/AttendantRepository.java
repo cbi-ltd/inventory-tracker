@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AttendantRepository extends JpaRepository<Attendant,Long> {
+    long countByStation_Merchant_CamsMerchantId(String merchantId);
+    
     Optional<Attendant> findByIdAndStation_Merchant_CamsMerchantId(Long id, String merchantId);
 
     List<Attendant> findByStation_Merchant_CamsMerchantIdOrderByFullNameAsc(String merchantId);

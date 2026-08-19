@@ -13,6 +13,16 @@ import java.util.Optional;
 
 @Repository
 public interface DeliveryRepository extends JpaRepository<Delivery, Long>, JpaSpecificationExecutor<Delivery> {
+    long countByProductIdAndStation_Merchant_CamsMerchantId(
+        Long productId,
+        String merchantId);
+    
+    long countByStation_Merchant_CamsMerchantIdAndBusinessDate(
+        String merchantId,
+        LocalDate businessDate);
+    
+    List<Delivery>findByStation_Merchant_CamsMerchantIdOrderByBusinessDateDescReceivedAtDesc(String merchantId);
+    
     Optional<Delivery> findByIdAndStation_Merchant_Id(Long deliveryId, Long merchantId);
 
     Optional<Delivery> findByDeliveryNumberAndStation_Merchant_Id(String deliveryNumber, Long merchantId);

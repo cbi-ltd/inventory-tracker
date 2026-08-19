@@ -46,19 +46,19 @@ public class ReportingController {
         );
     }
 
-    @GetMapping("/executive")
-    public ResponseEntity<ApiSuccessResponse<ExecutiveSummaryResponse>>getExecutiveSummary() {
-        ExecutiveSummaryResponse response = reportingService.getExecutiveSummary();
+//     @GetMapping("/executive")
+//     public ResponseEntity<ApiSuccessResponse<ExecutiveSummaryResponse>>getExecutiveSummary() {
+//         ExecutiveSummaryResponse response = reportingService.getExecutiveSummary();
 
-        return ResponseEntity.ok(
-                new ApiSuccessResponse<>(
-                        LocalDateTime.now(),
-                        HttpStatus.OK.value(),
-                        "Executive summary retrieved successfully.",
-                        response
-                )
-        );
-    }
+//         return ResponseEntity.ok(
+//                 new ApiSuccessResponse<>(
+//                         LocalDateTime.now(),
+//                         HttpStatus.OK.value(),
+//                         "Executive summary retrieved successfully.",
+//                         response
+//                 )
+//         );
+//     }
 
     @GetMapping("/station")
     public ResponseEntity<ApiSuccessResponse<List<StationReportResponse>>>getStationReport() {

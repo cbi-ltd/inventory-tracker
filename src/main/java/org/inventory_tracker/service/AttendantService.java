@@ -5,11 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.dto.request.CreateAttendantRequest;
 import org.inventory_tracker.dto.response.AttendantResponse;
 import org.inventory_tracker.entity.Attendant;
-import org.inventory_tracker.entity.Merchant;
 import org.inventory_tracker.security.*;
-// import org.inventory_tracker.entity.Merchant;
 import org.inventory_tracker.entity.Station;
-// import org.inventory_tracker.entity.security.MerchantContext;
 import org.inventory_tracker.config.mapper.AttendantMapper;
 import org.inventory_tracker.repository.AttendantRepository;
 import org.inventory_tracker.repository.StationRepository;
@@ -57,27 +54,28 @@ public class AttendantService {
         MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
         Attendant attendant =
                 attendantRepository.findByIdAndStation_Merchant_CamsMerchantId(id, principal.getMerchantId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Attendant not found"));
+                        .orElseThrow(() ->new ResourceNotFoundException("Attendant not found"));
 
         Station station = stationRepository.findByIdAndMerchant_CamsMerchantId(
                         request.getStationId(), principal.getMerchantId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Station not found"));
+                        .orElseThrow(() ->new ResourceNotFoundException("Station not found"));
 
-        if (!attendant.getUsername().equals(request.getUsername())
-                && attendantRepository.existsByUsername(
-                        request.getUsername())) {
+        if (request.getUsername() != null && !request.getUsername().isBlank()) {
+                if (!attendant.getUsername().equals(request.getUsername())
+                        && attendantRepository.existsByUsername(request.getUsername())) {
 
-            throw new DuplicateResourceException(
-                    "Username already exists");
+                        throw new DuplicateResourceException("Username already exists");
+                }
+                attendant.setUsername(request.getUsername());
         }
 
-        attendant.setUsername(request.getUsername());
-        attendant.setPin(request.getPin());
-        attendant.setFullName(request.getFullName());
+        if (request.getFullName() != null && !request.getFullName().isBlank()) {
+                attendant.setFullName(request.getFullName());
+        }
+
+        // attendant.setUsername(request.getUsername());
+        // attendant.setPin(request.getPin());
+        // attendant.setFullName(request.getFullName());
         attendant.setStation(station);
 
         return attendantMapper.toResponse(attendantRepository.save(attendant));

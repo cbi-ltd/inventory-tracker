@@ -22,6 +22,10 @@ public class TerminalResponse {
 
     private String posType;
 
+    private Long stationId;
+
+    private String stationName;
+
     private Boolean active;
 
     private LocalDateTime lastSyncedAt;

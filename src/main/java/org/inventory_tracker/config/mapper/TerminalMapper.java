@@ -12,9 +12,12 @@ import java.util.List;
 public interface TerminalMapper {
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "station", ignore = true)
     @Mapping(target = "lastSyncedAt", ignore = true)
     Terminal toEntity(TerminalSyncRequest request);
 
+    @Mapping(source = "station.id", target = "stationId")
+    @Mapping(source = "station.name", target = "stationName")
     TerminalResponse toResponse(Terminal terminal);
 
     List<TerminalResponse> toResponseList(

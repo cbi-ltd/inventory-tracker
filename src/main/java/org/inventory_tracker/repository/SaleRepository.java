@@ -8,12 +8,47 @@ import org.inventory_tracker.enums.SaleStatus;
 import org.inventory_tracker.enums.Shift;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 public interface SaleRepository extends JpaRepository<Sale, Long> {
+
+        @Query("""
+    SELECT COALESCE(SUM(s.quantity), 0)
+    FROM Sale s
+    WHERE s.pump.id = :pumpId
+      AND s.pump.station.merchant.camsMerchantId = :camsMerchantId
+      AND s.businessDate = :businessDate
+      AND s.shift = :shift
+""")
+BigDecimal sumQuantityByPumpAndMerchantAndBusinessDateAndShift(
+        @Param("pumpId") Long pumpId,
+        @Param("camsMerchantId") String camsMerchantId,
+        @Param("businessDate") LocalDate businessDate,
+        @Param("shift") Shift shift
+);
+
+@Query("""
+    SELECT COALESCE(SUM(s.netAmount), 0)
+    FROM Sale s
+    WHERE s.pump.id = :pumpId
+      AND s.pump.station.merchant.camsMerchantId = :camsMerchantId
+      AND s.businessDate = :businessDate
+      AND s.shift = :shift
+""")
+BigDecimal sumNetAmountByPumpAndMerchantAndBusinessDateAndShift(
+        @Param("pumpId") Long pumpId,
+        @Param("camsMerchantId") String camsMerchantId,
+        @Param("businessDate") LocalDate businessDate,
+        @Param("shift") Shift shift
+);
+
+    List<Sale>findByStation_Merchant_CamsMerchantIdOrderByBusinessDateDescSaleTimeDesc(String merchantId);
+    
     List<Sale>findByBusinessDateBetweenAndStation_Merchant_IdOrderByBusinessDateDescSaleTimeDesc(LocalDate startDate, LocalDate endDate, Long merchantId);
     
     List<Sale>findBySaleStatusAndStation_Merchant_IdOrderByBusinessDateDescSaleTimeDesc(SaleStatus saleStatus, Long merchantId);

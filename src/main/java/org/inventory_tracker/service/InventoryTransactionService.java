@@ -149,10 +149,7 @@ public class InventoryTransactionService {
     }
 
 
-    private boolean isInboundTransaction(
-            InventoryTransactionType transactionType
-    ) {
-
+    private boolean isInboundTransaction(InventoryTransactionType transactionType) {
         return switch (transactionType) {
 
             case OPENING_STOCK,
@@ -166,10 +163,7 @@ public class InventoryTransactionService {
     }
 
 
-    private boolean isOutboundTransaction(
-            InventoryTransactionType transactionType
-    ) {
-
+    private boolean isOutboundTransaction(InventoryTransactionType transactionType) {
         return switch (transactionType) {
 
             case SALE,
@@ -186,22 +180,13 @@ public class InventoryTransactionService {
     /**
      * Basic quantity validation.
      */
-    private void validateQuantity(
-            BigDecimal quantity
-    ) {
-
+    private void validateQuantity(BigDecimal quantity) {
         if (quantity == null) {
-
-            throw new BadRequestException(
-                    "Quantity is required."
-            );
+            throw new BadRequestException("Quantity is required.");
         }
 
         if (quantity.compareTo(BigDecimal.ZERO) == 0) {
-
-            throw new BadRequestException(
-                    "Quantity must be greater than zero."
-            );
+            throw new BadRequestException("Quantity must be greater than zero.");
         }
 
         /*
@@ -215,10 +200,7 @@ public class InventoryTransactionService {
          * should always be positive.
          */
         if (quantity.compareTo(BigDecimal.ZERO) < 0) {
-
-            throw new BadRequestException(
-                    "Quantity cannot be negative."
-            );
+            throw new BadRequestException("Quantity cannot be negative.");
         }
     }
 }

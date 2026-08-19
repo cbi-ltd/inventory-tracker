@@ -36,12 +36,17 @@ import org.inventory_tracker.repository.SaleRepository;
 import org.inventory_tracker.repository.PumpAuditRepository;
 import org.inventory_tracker.repository.StationInventoryRepository;
 import org.inventory_tracker.repository.StationRepository;
+import org.inventory_tracker.security.AuthenticatedUserService;
+import org.inventory_tracker.security.MerchantPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
+
+
 
 @Service
 @RequiredArgsConstructor
@@ -60,178 +65,189 @@ public class ReportingService {
     private final PaymentRepository paymentRepository;
     private final InventoryTransactionRepository inventoryTransactionRepository;
     private final ProductPriceHistoryRepository productPriceHistoryRepository;
+    private final AuthenticatedUserService authenticatedUserService;
 
-    public DashboardResponse getDashboard() {
+//     public DashboardResponse getDashboard() {
+//         MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+//         String merchantId = principal.getMerchantId();
 
-        LocalDate businessDate = LocalDate.now();
+//         LocalDate businessDate = LocalDate.now();
+//         BigDecimal totalInventoryQuantity = calculateTotalInventoryQuantity();
+//         BigDecimal totalInventoryValue = calculateTotalInventoryValue();
 
-        BigDecimal totalInventoryQuantity =
-                calculateTotalInventoryQuantity();
+//         return DashboardResponse.builder()
+//                 .businessDate(businessDate)
+//                 .totalStations(stationRepository.count())
+//                 .totalProducts(productRepository.count())
+//                 .totalPumps(pumpRepository.count())
+//                 .totalAttendants(attendantRepository.count())
+//                 .activePumpAssignments(pumpAssignmentRepository.countByActiveTrue())
+//                 .totalDeliveriesToday(deliveryRepository.countByBusinessDate(businessDate))
 
-        BigDecimal totalInventoryValue =
-                calculateTotalInventoryValue();
+//                 // .totalTransfersToday(
+//                 //         stockTransferRepository.countByBusinessDate(
+//                 //                 businessDate)
+//                 // )
 
-        return DashboardResponse.builder()
+//                 // .totalAdjustmentsToday(
+//                 //         stockAdjustmentRepository.countByBusinessDate(
+//                 //                 businessDate)
+//                 // )
 
-                .businessDate(businessDate)
+//                 // .totalStockCountsToday(
+//                 //         stockCountRepository.countByBusinessDate(
+//                 //                 businessDate)
+//                 // )
 
-                .totalStations(
-                        stationRepository.count()
-                )
+//                 .totalInventoryQuantity(totalInventoryQuantity)
+//                 .totalInventoryValue(totalInventoryValue)
+//                 .lowStockProducts(stationInventoryRepository.countByCurrentQuantityLessThanEqualReorderLevel())
+//                 .lowStockStations(stationInventoryRepository.countDistinctStationsWithLowStock())
+//                 .build();
+//     }
 
-                .totalProducts(
-                        productRepository.count()
-                )
+@Transactional(readOnly = true)
+public DashboardResponse getDashboard() {
 
-                .totalPumps(
-                        pumpRepository.count()
-                )
+    MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
 
-                .totalAttendants(
-                        attendantRepository.count()
-                )
+    String merchantId = principal.getMerchantId();
+    Long merchantDbId = principal.getMerchantDbId();
 
-                .activePumpAssignments(
-                        pumpAssignmentRepository.countByActiveTrue()
-                )
+    LocalDate businessDate = LocalDate.now();
 
-                .totalDeliveriesToday(
-                        deliveryRepository.countByBusinessDate(
-                                businessDate)
-                )
+    BigDecimal totalInventoryQuantity =
+            calculateTotalInventoryQuantity(merchantId);
 
-                // .totalTransfersToday(
-                //         stockTransferRepository.countByBusinessDate(
-                //                 businessDate)
-                // )
+    BigDecimal totalInventoryValue =
+            calculateTotalInventoryValue(merchantId);
 
-                // .totalAdjustmentsToday(
-                //         stockAdjustmentRepository.countByBusinessDate(
-                //                 businessDate)
-                // )
+    return DashboardResponse.builder()
 
-                // .totalStockCountsToday(
-                //         stockCountRepository.countByBusinessDate(
-                //                 businessDate)
-                // )
+            .businessDate(businessDate)
 
-                .totalInventoryQuantity(
-                        totalInventoryQuantity
-                )
+            .totalStations(
+                    stationRepository
+                            .countByMerchant_CamsMerchantId(
+                                    merchantId))
 
-                .totalInventoryValue(
-                        totalInventoryValue
-                )
+            .totalProducts(
+                    stationInventoryRepository
+                        //     .countDistinctProductByStation_Merchant_CamsMerchantId(
+                        //             merchantId))
+                        .countDistinctProductsByMerchant(merchantId))
 
-                .lowStockProducts(
-                        stationInventoryRepository
-                                .countByCurrentQuantityLessThanEqualReorderLevel()
-                )
+            .totalPumps(
+                    pumpRepository
+                            .countByStation_Merchant_CamsMerchantId(
+                                    merchantId))
 
-                .lowStockStations(
-                        stationInventoryRepository
-                                .countDistinctStationsWithLowStock()
-                )
+            .totalAttendants(
+                    attendantRepository
+                            .countByStation_Merchant_CamsMerchantId(
+                                    merchantId))
 
-                .build();
-    }
+            .activePumpAssignments(
+                    pumpAssignmentRepository
+                            .countByStation_Merchant_CamsMerchantIdAndActiveTrue(
+                                    merchantId))
 
-    @Transactional(readOnly = true)
-    public ExecutiveSummaryResponse getExecutiveSummary() {
+            .totalDeliveriesToday(
+                    deliveryRepository
+                            .countByStation_Merchant_CamsMerchantIdAndBusinessDate(
+                                    merchantId,
+                                    businessDate))
 
-        LocalDate businessDate = LocalDate.now();
+            .totalInventoryQuantity(
+                    totalInventoryQuantity)
 
-        return ExecutiveSummaryResponse.builder()
+            .totalInventoryValue(
+                    totalInventoryValue)
 
-                .businessDate(businessDate)
+            .lowStockProducts(
+                    stationInventoryRepository
+                        //     .countByStation_Merchant_CamsMerchantIdAndCurrentQuantityLessThanEqualReorderLevel(
+                        //             merchantId))
+                        .countLowStockProductsByMerchant(merchantId))
 
-                .totalStations(
-                        stationRepository.count())
+            .lowStockStations(
+                    stationInventoryRepository
+                            .countDistinctStationsWithLowStockByMerchant(
+                                    merchantId))
 
-                .totalProducts(
-                        productRepository.count())
+            .build();
+}
 
-                .totalPumps(
-                        pumpRepository.count())
+//     @Transactional(readOnly = true)
+//     public ExecutiveSummaryResponse getExecutiveSummary() {
 
-                .totalAttendants(
-                        attendantRepository.count())
+//         LocalDate businessDate = LocalDate.now();
 
-                .totalInventoryQuantity(
-                        calculateTotalInventoryQuantity())
+//         return ExecutiveSummaryResponse.builder()
 
-                .totalInventoryValue(
-                        calculateTotalInventoryValue())
+//                 .businessDate(businessDate)
 
-                .deliveriesToday(
-                        deliveryRepository.countByBusinessDate(
-                                businessDate))
+//                 .totalStations(
+//                         stationRepository.count())
 
-                // .transfersToday(
-                //         stockTransferRepository.countByBusinessDate(
-                //                 businessDate))
+//                 .totalProducts(
+//                         productRepository.count())
 
-                // .adjustmentsToday(
-                //         stockAdjustmentRepository.countByBusinessDate(
-                //                 businessDate))
+//                 .totalPumps(
+//                         pumpRepository.count())
 
-                // .stockCountsToday(
-                //         stockCountRepository.countByBusinessDate(
-                //                 businessDate))
+//                 .totalAttendants(
+//                         attendantRepository.count())
 
-                .lowStockProducts(
-                        stationInventoryRepository
-                                .countByCurrentQuantityLessThanEqualReorderLevel())
+//                 .totalInventoryQuantity(
+//                         calculateTotalInventoryQuantity(merchantId))
 
-                .lowStockStations(
-                        stationInventoryRepository
-                                .countDistinctStationsWithLowStock())
+//                 .totalInventoryValue(
+//                         calculateTotalInventoryValue(merchantId))
 
-                .build();
-    }
+//                 .deliveriesToday(
+//                         deliveryRepository.countByBusinessDate(
+//                                 businessDate))
+
+//                 // .transfersToday(
+//                 //         stockTransferRepository.countByBusinessDate(
+//                 //                 businessDate))
+
+//                 // .adjustmentsToday(
+//                 //         stockAdjustmentRepository.countByBusinessDate(
+//                 //                 businessDate))
+
+//                 // .stockCountsToday(
+//                 //         stockCountRepository.countByBusinessDate(
+//                 //                 businessDate))
+
+//                 .lowStockProducts(
+//                         stationInventoryRepository
+//                                 .countByCurrentQuantityLessThanEqualReorderLevel())
+
+//                 .lowStockStations(
+//                         stationInventoryRepository
+//                                 .countDistinctStationsWithLowStock())
+
+//                 .build();
+//     }
 
     @Transactional(readOnly = true)
     public List<StationReportResponse> getStationReport() {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        String merchantId = principal.getMerchantId();
 
-        return stationRepository.findAll()
-
+        return stationRepository.findByMerchant_CamsMerchantIdOrderByNameAsc(principal.getMerchantId())
                 .stream()
-
                 .map(station -> StationReportResponse.builder()
-
-                        .stationId(
-                                station.getId())
-
-                        .stationName(
-                                station.getName())
-
-                        .totalProducts(
-                                stationInventoryRepository
-                                        .countByStationId(
-                                                station.getId()))
-
-                        .totalPumps(
-                                pumpRepository
-                                        .countByStationId(
-                                                station.getId()))
-
-                        .activePumpAssignments(
-                                pumpAssignmentRepository
-                                        .countByStationIdAndActiveTrue(
-                                                station.getId()))
-
-                        .inventoryQuantity(
-                                calculateStationInventoryQuantity(
-                                        station.getId()))
-
-                        .inventoryValue(
-                                calculateStationInventoryValue(
-                                        station.getId()))
-
-                        .deliveries(
-                                deliveryRepository
-                                        .countByStationId(
-                                                station.getId()))
+                        .stationId(station.getId())
+                        .stationName(station.getName())
+                        .totalProducts(stationInventoryRepository.countByStationId(station.getId()))
+                        .totalPumps(pumpRepository.countByStationId(station.getId()))
+                        .activePumpAssignments(pumpAssignmentRepository.countByStationIdAndActiveTrue(station.getId()))
+                        .inventoryQuantity(calculateStationInventoryQuantity(station.getId(), merchantId))
+                        .inventoryValue(calculateStationInventoryValue(station.getId(), merchantId))
+                        .deliveries(deliveryRepository.countByStationId(station.getId()))
 
                         // .transfersIn(
                         //         stockTransferRepository
@@ -253,151 +269,159 @@ public class ReportingService {
                         //                 .countByStationId(
                         //                         station.getId()))
 
-                        .lowStockProducts(
-                                stationInventoryRepository
-                                        .countLowStockProductsByStation(
-                                                station.getId()))
-
+                        .lowStockProducts(stationInventoryRepository.countLowStockProductsByStation(station.getId()))
                         .build())
-
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<InventoryReportResponse> getInventoryReport() {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
 
-        return stationInventoryRepository.findAll()
-
+        return stationInventoryRepository.findByStation_Merchant_CamsMerchantId(principal.getMerchantId())
                 .stream()
-
                 .map(inventory -> {
+                    BigDecimal inventoryValue = inventory.getCurrentQuantity()
+                                    .multiply(inventory.getSellingPrice());
 
-                    BigDecimal inventoryValue =
-                            inventory.getCurrentQuantity()
-                                    .multiply(
-                                            inventory.getSellingPrice());
-
-                    boolean belowReorder =
-                            inventory.getCurrentQuantity()
-                                    .compareTo(
-                                            inventory.getReorderLevel()) <= 0;
+                    boolean belowReorder =inventory.getCurrentQuantity()
+                                    .compareTo(inventory.getReorderLevel()) <= 0;
 
                     return InventoryReportResponse.builder()
+                            .stationId(inventory.getStation().getId())
+                            .stationName(inventory.getStation().getName())
+                            .productId(inventory.getProduct().getId())
+                            .productName(inventory.getProduct().getName())
+                            .currentQuantity(inventory.getCurrentQuantity())
+                            .sellingPrice(inventory.getSellingPrice())
+                            .inventoryValue(inventoryValue)
+                            .reorderLevel(inventory.getReorderLevel())
+                            .belowReorderLevel(belowReorder)
+                            .build();
+                })
+                .toList();
+    }
 
-                            .stationId(
-                                    inventory.getStation().getId())
+//     @Transactional(readOnly = true)
+//     public List<ProductReportResponse> getProductReport() {
+//         MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+//         String merchantId = principal.getMerchantId();
 
-                            .stationName(
-                                    inventory.getStation().getName())
+//         return stationInventoryRepository.findByStation_Merchant_CamsMerchantId(merchantId)
+//                         .stream()
+//                         .map(product -> ProductReportResponse.builder()
+//                         .productId(product.getId())
+//                         .productName(product.getName())
+//                         .productCode(product.getProductType() != null ? product.getProductType().getCode(): null)
+//                         .stationsStockingProduct(stationInventoryRepository
+//                                         .countDistinctStationsByProductId(product.getId()))
+//                         .totalQuantity(calculateProductQuantity(product.getId(), merchantId))
+//                         .averageSellingPrice(calculateAverageSellingPrice(product.getId()))
+//                         .inventoryValue(calculateProductInventoryValue(product.getId(), merchantId))
+//                         .deliveries(deliveryRepository.countByProductId(product.getId()))
+
+//                         // .transfers(stockTransferRepository.countByProductId(product.getId()))
+
+//                         // .adjustments(stockAdjustmentRepository.countByProductId(product.getId()))
+
+//                         // .stockCounts(stockCountRepository.countByProductId(product.getId()))
+//                         .build())
+
+//                 .toList();
+//     }
+
+
+@Transactional(readOnly = true)
+public List<ProductReportResponse> getProductReport() {
+
+    MerchantPrincipal principal =
+            authenticatedUserService.getCurrentUser();
+
+    String merchantId =
+            principal.getMerchantId();
+
+    return stationInventoryRepository
+            .findByStation_Merchant_CamsMerchantId(merchantId)
+            .stream()
+
+            .map(StationInventory::getProduct)
+
+            .filter(Objects::nonNull)
+
+            .distinct()
+
+            .map(product ->
+                    ProductReportResponse.builder()
 
                             .productId(
-                                    inventory.getProduct().getId())
+                                    product.getId())
 
                             .productName(
-                                    inventory.getProduct().getName())
+                                    product.getName())
 
-                            .currentQuantity(
-                                    inventory.getCurrentQuantity())
+                            .productCode(
+                                    product.getProductType() != null
+                                            ? product.getProductType().getCode()
+                                            : null)
 
-                            .sellingPrice(
-                                    inventory.getSellingPrice())
+                            .stationsStockingProduct(
+                                    stationInventoryRepository
+                                            .countDistinctStationsByProductIdAndMerchant(
+                                                    product.getId(),
+                                                    merchantId))
+
+                            .totalQuantity(
+                                    calculateProductQuantity(
+                                            product.getId(),
+                                            merchantId))
+
+                            .averageSellingPrice(
+                                    calculateAverageSellingPrice(
+                                            product.getId(),
+                                            merchantId))
 
                             .inventoryValue(
-                                    inventoryValue)
+                                    calculateProductInventoryValue(
+                                            product.getId(),
+                                            merchantId))
 
-                            .reorderLevel(
-                                    inventory.getReorderLevel())
+                            .deliveries(
+                                    deliveryRepository
+                                            .countByProductIdAndStation_Merchant_CamsMerchantId(
+                                                    product.getId(),
+                                                    merchantId))
 
-                            .belowReorderLevel(
-                                    belowReorder)
+                            .build())
 
-                            .build();
-
-                })
-
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<ProductReportResponse> getProductReport() {
-
-        return productRepository.findAll().stream()
-                .map(product -> ProductReportResponse.builder()
-                        .productId(product.getId())
-                        .productName(product.getName())
-
-                        .productCode(product.getProductType() != null ? product.getProductType().getCode(): null)
-
-                        .stationsStockingProduct(stationInventoryRepository
-                                        .countDistinctStationsByProductId(product.getId()))
-
-                        .totalQuantity(calculateProductQuantity(product.getId()))
-
-                        .averageSellingPrice(calculateAverageSellingPrice(product.getId()))
-
-                        .inventoryValue(calculateProductInventoryValue(product.getId()))
-
-                        .deliveries(deliveryRepository.countByProductId(product.getId()))
-
-                        // .transfers(stockTransferRepository.countByProductId(product.getId()))
-
-                        // .adjustments(stockAdjustmentRepository.countByProductId(product.getId()))
-
-                        // .stockCounts(stockCountRepository.countByProductId(product.getId()))
-
-                        .build())
-
-                .toList();
-    }
+            .toList();
+}
 
     @Transactional(readOnly = true)
     public List<PumpReportResponse> getPumpReport() {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
 
-        return pumpRepository.findAll()
-
+        return pumpRepository.findByStation_Merchant_CamsMerchantIdOrderByPumpNumberAsc(principal.getMerchantId())
                 .stream()
-
                 .map(pump -> PumpReportResponse.builder()
 
-                        .pumpId(
-                                pump.getId())
-
-                        .pumpNumber(
-                                pump.getPumpNumber())
-
-                        .pumpName(
-                                pump.getPumpName())
-
-                        .stationName(
-                                pump.getStation().getName())
-
-                        .productName(
-                                pump.getProduct().getName())
-
-                        .active(
-                                pump.getActive())
-
-                        .totalAssignments(
-                                pumpAssignmentRepository
-                                        .countByPumpId(
-                                                pump.getId()))
-
-                        .activeAssignments(
-                                pumpAssignmentRepository
-                                        .countByPumpIdAndActiveTrue(
-                                                pump.getId()))
-
+                        .pumpId(pump.getId())
+                        .pumpNumber(pump.getPumpNumber())
+                        .pumpName(pump.getPumpName())
+                        .stationName(pump.getStation().getName())
+                        .productName(pump.getProduct().getName())
+                        .active(pump.getActive())
+                        .totalAssignments(pumpAssignmentRepository.countByPumpId(pump.getId()))
+                        .activeAssignments(pumpAssignmentRepository.countByPumpIdAndActiveTrue(pump.getId()))
                         .auditsCompleted(0L)
-
                         .build())
-
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<AttendantReportResponse> getAttendantReport() {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
 
-        return attendantRepository.findAll().stream()
+        return attendantRepository.findByStation_Merchant_CamsMerchantIdOrderByFullNameAsc(principal.getMerchantId()).stream()
                 .map(attendant -> {
                     PumpAssignment assignment =
                             pumpAssignmentRepository.findFirstByAttendantIdAndActiveTrue(attendant.getId())
@@ -426,141 +450,189 @@ public class ReportingService {
     }
 
 
-    private BigDecimal calculateTotalInventoryQuantity() {
+    private BigDecimal calculateTotalInventoryQuantity(String merchantId) {
+        // return stationInventoryRepository.findAll()
+        //         .stream()
+        //         .map(StationInventory::getCurrentQuantity)
+        //         .reduce(BigDecimal.ZERO, BigDecimal::add);
+            return stationInventoryRepository
+            .findByStation_Merchant_CamsMerchantId(merchantId)
+            .stream()
 
-        return stationInventoryRepository.findAll()
+            .map(StationInventory::getCurrentQuantity)
 
-                .stream()
-
-                .map(StationInventory::getCurrentQuantity)
-
-                .reduce(
-                        BigDecimal.ZERO,
-                        BigDecimal::add);
+            .reduce(
+                    BigDecimal.ZERO,
+                    BigDecimal::add
+            );
     }
 
-    private BigDecimal calculateTotalInventoryValue() {
+    private BigDecimal calculateTotalInventoryValue(String merchantId) {
+        // return stationInventoryRepository.findAll()
+        //         .stream()
+        //         .map(inventory ->
+        //                 inventory.getCurrentQuantity()
+        //                         .multiply(inventory.getSellingPrice()))
+        //         .reduce(BigDecimal.ZERO, BigDecimal::add);
+            return stationInventoryRepository
+            .findByStation_Merchant_CamsMerchantId(merchantId)
+            .stream()
 
-        return stationInventoryRepository.findAll()
+            .map(inventory ->
+                    inventory.getCurrentQuantity()
+                            .multiply(
+                                    inventory.getSellingPrice()
+                            )
+            )
 
-                .stream()
-
-                .map(inventory ->
-
-                        inventory.getCurrentQuantity()
-
-                                .multiply(
-                                        inventory.getSellingPrice()))
-
-                .reduce(
-                        BigDecimal.ZERO,
-                        BigDecimal::add);
+            .reduce(
+                    BigDecimal.ZERO,
+                    BigDecimal::add
+            );
     }
 
-    private BigDecimal calculateStationInventoryQuantity(Long stationId) {
+    private BigDecimal calculateStationInventoryQuantity(Long stationId, String merchantId) {
+        // return stationInventoryRepository
+        //         .findByStationId(stationId)
+        //         .stream()
+        //         .map(StationInventory::getCurrentQuantity)
+        //         .reduce(BigDecimal.ZERO, BigDecimal::add);
+    return stationInventoryRepository
+            .findByStationIdAndStation_Merchant_CamsMerchantId(
+                    stationId,
+                    merchantId)
+            .stream()
+            .map(StationInventory::getCurrentQuantity)
+            .filter(Objects::nonNull)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+}
 
-        return stationInventoryRepository
+    private BigDecimal calculateStationInventoryValue(Long stationId, String merchantId) {
+        // return stationInventoryRepository
+        //         .findByStationId(stationId)
+        //         .stream()
+        //         .map(inventory ->
+        //                 inventory.getCurrentQuantity()
+        //                         .multiply(inventory.getSellingPrice()))
+        //         .reduce(BigDecimal.ZERO, BigDecimal::add);
+    return stationInventoryRepository
+            .findByStationIdAndStation_Merchant_CamsMerchantId(
+                    stationId,
+                    merchantId
+            )
+            .stream()
 
-                .findByStationId(stationId)
+            .map(inventory ->
+                    inventory.getCurrentQuantity()
+                            .multiply(
+                                    inventory.getSellingPrice()
+                            )
+            )
 
-                .stream()
-
-                .map(StationInventory::getCurrentQuantity)
-
-                .reduce(
-                        BigDecimal.ZERO,
-                        BigDecimal::add);
+            .reduce(
+                    BigDecimal.ZERO,
+                    BigDecimal::add
+            );
     }
 
-    private BigDecimal calculateStationInventoryValue(Long stationId) {
+    private BigDecimal calculateProductQuantity(Long productId, String merchantId) {
+        // return stationInventoryRepository
+        //         .findByProductId(productId)
+        //         .stream()
+        //         .map(StationInventory::getCurrentQuantity)
+        //         .reduce(BigDecimal.ZERO, BigDecimal::add);
+            return stationInventoryRepository
+            .findByProductIdAndStation_Merchant_CamsMerchantId(
+                    productId,
+                    merchantId
+            )
+            .stream()
 
-        return stationInventoryRepository
+            .map(StationInventory::getCurrentQuantity)
 
-                .findByStationId(stationId)
-
-                .stream()
-
-                .map(inventory ->
-
-                        inventory.getCurrentQuantity()
-
-                                .multiply(
-                                        inventory.getSellingPrice()))
-
-                .reduce(
-                        BigDecimal.ZERO,
-                        BigDecimal::add);
+            .reduce(
+                    BigDecimal.ZERO,
+                    BigDecimal::add
+            );
     }
 
-    private BigDecimal calculateProductQuantity(Long productId) {
+    private BigDecimal calculateProductInventoryValue(Long productId, String merchantId) {
+        // return stationInventoryRepository
+        //         .findByProductId(productId)
+        //         .stream()
+        //         .map(inventory ->
+        //                 inventory.getCurrentQuantity()
+        //                         .multiply(inventory.getSellingPrice()))
+        //         .reduce(BigDecimal.ZERO, BigDecimal::add);
+            return stationInventoryRepository
+            .findByProductIdAndStation_Merchant_CamsMerchantId(
+                    productId,
+                    merchantId
+            )
+            .stream()
 
-        return stationInventoryRepository
+            .map(inventory ->
+                    inventory.getCurrentQuantity()
+                            .multiply(
+                                    inventory.getSellingPrice()
+                            )
+            )
 
-                .findByProductId(productId)
-
-                .stream()
-
-                .map(StationInventory::getCurrentQuantity)
-
-                .reduce(
-                        BigDecimal.ZERO,
-                        BigDecimal::add);
+            .reduce(
+                    BigDecimal.ZERO,
+                    BigDecimal::add
+            );
     }
 
-    private BigDecimal calculateProductInventoryValue(Long productId) {
+//     private BigDecimal calculateAverageSellingPrice(Long productId) {
+//         List<StationInventory> inventories = stationInventoryRepository
+//                         .findByProductId(productId);
 
-        return stationInventoryRepository
+//         if (inventories.isEmpty()) {
+//             return BigDecimal.ZERO;
+//         }
 
-                .findByProductId(productId)
+//         BigDecimal total = inventories.stream()
+//                 .map(StationInventory::getSellingPrice)
+//                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                .stream()
+//         return total.divide(BigDecimal.valueOf(inventories.size()), 2, RoundingMode.HALF_UP);
+//     }
 
-                .map(inventory ->
+private BigDecimal calculateAverageSellingPrice(Long productId, String merchantId) {
 
-                        inventory.getCurrentQuantity()
+    List<BigDecimal> prices =
+            stationInventoryRepository
+                    .findByProductIdAndStation_Merchant_CamsMerchantId(
+                            productId,
+                            merchantId)
+                    .stream()
 
-                                .multiply(
-                                        inventory.getSellingPrice()))
+                    .map(StationInventory::getSellingPrice)
 
-                .reduce(
-                        BigDecimal.ZERO,
-                        BigDecimal::add);
+                    .filter(Objects::nonNull)
+
+                    .toList();
+
+    if (prices.isEmpty()) {
+        return BigDecimal.ZERO;
     }
 
-    private BigDecimal calculateAverageSellingPrice(Long productId) {
+    BigDecimal total =
+            prices.stream()
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        List<StationInventory> inventories =
-
-                stationInventoryRepository
-                        .findByProductId(productId);
-
-        if (inventories.isEmpty()) {
-
-            return BigDecimal.ZERO;
-        }
-
-        BigDecimal total = inventories.stream()
-
-                .map(StationInventory::getSellingPrice)
-
-                .reduce(
-                        BigDecimal.ZERO,
-                        BigDecimal::add);
-
-        return total.divide(
-
-                BigDecimal.valueOf(
-                        inventories.size()),
-
-                2,
-
-                RoundingMode.HALF_UP
-        );
-    }
+    return total.divide(
+            BigDecimal.valueOf(prices.size()),
+            2,
+            RoundingMode.HALF_UP);
+}
 
     @Transactional(readOnly = true)
     public List<PumpAssignmentReportResponse> getPumpAssignmentReport() {
-        return pumpAssignmentRepository.findAll()
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+
+        return pumpAssignmentRepository.findByStation_Merchant_CamsMerchantId(principal.getMerchantId())
                 .stream()
                 .map(assignment -> {
                         Pump pump = assignment.getPump();
@@ -588,109 +660,104 @@ public class ReportingService {
     }
 
     @Transactional(readOnly = true)
-public List<PumpAuditReportResponse> getPumpAuditReport() {
+    public List<PumpAuditReportResponse> getPumpAuditReport() {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
 
-    return pumpAuditRepository
-            .findAllByOrderByBusinessDateDesc()
-            .stream()
-            .map(audit -> {
+        return pumpAuditRepository.findByPumpAssignment_Station_Merchant_CamsMerchantId(principal.getMerchantId())
+                // .findAllByOrderByBusinessDateDesc()
+                .stream()
+                .map(audit -> {
+                        PumpAssignment assignment = audit.getPumpAssignment();
+                        Pump pump = assignment != null ? assignment.getPump() : null;
 
-                PumpAssignment assignment =
-                        audit.getPumpAssignment();
-
-                Pump pump =
-                        assignment != null
-                                ? assignment.getPump()
-                                : null;
-
-                Attendant attendant =
-                        assignment != null
-                                ? assignment.getAttendant()
-                                : null;
-
-                Station station =
-                        assignment != null
-                                ? assignment.getStation()
-                                : null;
-
-                return PumpAuditReportResponse.builder()
-
-                        .auditId(
-                                audit.getId())
-
-                        .assignmentId(
+                        Attendant attendant =
                                 assignment != null
-                                        ? assignment.getId()
-                                        : null)
+                                        ? assignment.getAttendant()
+                                        : null;
 
-                        .stationId(
-                                station != null
-                                        ? station.getId()
-                                        : null)
-
-                        .stationName(
-                                station != null
-                                        ? station.getName()
-                                        : null)
-
-                        .pumpId(
-                                pump != null
-                                        ? pump.getId()
-                                        : null)
-
-                        .pumpNumber(
-                                pump != null
-                                        ? pump.getPumpNumber()
-                                        : null)
-
-                        .pumpName(
-                                pump != null
-                                        ? pump.getPumpName()
-                                        : null)
-
-                        .attendantId(
-                                attendant != null
-                                        ? attendant.getId()
-                                        : null)
-
-                        .attendantName(
-                                attendant != null
-                                        ? attendant.getFullName()
-                                        : null)
-
-                        .businessDate(
-                                audit.getBusinessDate())
-
-                        .shift(
+                        Station station =
                                 assignment != null
-                                        ? assignment.getShift()
-                                        : null)
+                                        ? assignment.getStation()
+                                        : null;
 
-                        .clockInTime(
-                                audit.getClockInTime())
+                        return PumpAuditReportResponse.builder()
 
-                        .clockOutTime(
-                                audit.getClockOutTime())
+                                .auditId(
+                                        audit.getId())
 
-                        .openingReading(
-                                audit.getOpeningReading())
+                                .assignmentId(
+                                        assignment != null
+                                                ? assignment.getId()
+                                                : null)
 
-                        .closingReading(
-                                audit.getClosingReading())
+                                .stationId(
+                                        station != null
+                                                ? station.getId()
+                                                : null)
 
-                        .totalDispensed(
-                                audit.getTotalDispensed())
+                                .stationName(
+                                        station != null
+                                                ? station.getName()
+                                                : null)
 
-                        .build();
-            })
-            .toList();
-}
+                                .pumpId(
+                                        pump != null
+                                                ? pump.getId()
+                                                : null)
+
+                                .pumpNumber(
+                                        pump != null
+                                                ? pump.getPumpNumber()
+                                                : null)
+
+                                .pumpName(
+                                        pump != null
+                                                ? pump.getPumpName()
+                                                : null)
+
+                                .attendantId(
+                                        attendant != null
+                                                ? attendant.getId()
+                                                : null)
+
+                                .attendantName(
+                                        attendant != null
+                                                ? attendant.getFullName()
+                                                : null)
+
+                                .businessDate(
+                                        audit.getBusinessDate())
+
+                                .shift(
+                                        assignment != null
+                                                ? assignment.getShift()
+                                                : null)
+
+                                .clockInTime(
+                                        audit.getClockInTime())
+
+                                .clockOutTime(
+                                        audit.getClockOutTime())
+
+                                .openingReading(
+                                        audit.getOpeningReading())
+
+                                .closingReading(
+                                        audit.getClosingReading())
+
+                                .totalDispensed(
+                                        audit.getTotalDispensed())
+
+                                .build();
+                })
+                .toList();
+        }
 
 @Transactional(readOnly = true)
 public List<SalesReportResponse> getSalesReport() {
+    MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
 
-    return saleRepository
-            .findAllByOrderByBusinessDateDescSaleTimeDesc()
+    return saleRepository.findByStation_Merchant_CamsMerchantIdOrderByBusinessDateDescSaleTimeDesc(principal.getMerchantId())
             .stream()
 
             .map(sale -> {
@@ -803,9 +870,9 @@ public List<SalesReportResponse> getSalesReport() {
 
 @Transactional(readOnly = true)
 public List<DeliveryReportResponse> getDeliveryReport() {
-
+    MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
     return deliveryRepository
-            .findAllByOrderByBusinessDateDescReceivedAtDesc()
+            .findByStation_Merchant_CamsMerchantIdOrderByBusinessDateDescReceivedAtDesc(principal.getMerchantId())
             .stream()
 
             .map(delivery -> {
@@ -897,96 +964,32 @@ public List<DeliveryReportResponse> getDeliveryReport() {
 
 @Transactional(readOnly = true)
 public List<PaymentReportResponse> getPaymentReport() {
+    MerchantPrincipal principal =authenticatedUserService.getCurrentUser();
 
-    return paymentRepository
-            .findAll()
+    return paymentRepository.findBySale_Station_Merchant_CamsMerchantId(principal.getMerchantId())
             .stream()
             .map(payment -> {
-
                 Sale sale = payment.getSale();
-
-                Station station =
-                        sale != null
-                                ? sale.getStation()
-                                : null;
-
-                Pump pump =
-                        sale != null
-                                ? sale.getPump()
-                                : null;
-
-                Attendant attendant =
-                        sale != null
-                                ? sale.getAttendant()
-                                : null;
+                Station station = sale != null ? sale.getStation() : null;
+                Pump pump = sale != null ? sale.getPump() : null;
+                Attendant attendant = sale != null ? sale.getAttendant() : null;
 
                 return PaymentReportResponse.builder()
-
-                        .paymentId(
-                                payment.getId())
-
-                        .saleId(
-                                sale != null
-                                        ? sale.getId()
-                                        : null)
-
-                        .saleNumber(
-                                sale != null
-                                        ? sale.getSaleNumber()
-                                        : null)
-
-                        .transactionReference(
-                                sale != null
-                                        ? sale.getTransactionReference()
-                                        : null)
-
-                        .stationId(
-                                station != null
-                                        ? station.getId()
-                                        : null)
-
-                        .stationName(
-                                station != null
-                                        ? station.getName()
-                                        : null)
-
-                        .pumpId(
-                                pump != null
-                                        ? pump.getId()
-                                        : null)
-
-                        .pumpNumber(
-                                pump != null
-                                        ? pump.getPumpNumber()
-                                        : null)
-
-                        .attendantId(
-                                attendant != null
-                                        ? attendant.getId()
-                                        : null)
-
-                        .attendantName(
-                                attendant != null
-                                        ? attendant.getFullName()
-                                        : null)
-
-                        .amount(
-                                payment.getAmount())
-
-                        .paymentMethod(
-                                payment.getPaymentMethod())
-
-                        .paymentStatus(
-                                payment.getPaymentStatus())
-
-                        .businessDate(
-                                sale != null
-                                        ? sale.getBusinessDate()
-                                        : null)
-
-                        .paymentTime(
-                                payment.getPaymentTime())
-
+                        .paymentId(payment.getId())
+                        .saleId(sale != null ? sale.getId() : null)
+                        .saleNumber(sale != null ? sale.getSaleNumber() : null)
+                        .transactionReference(sale != null ? sale.getTransactionReference() : null)
+                        .stationId(station != null ? station.getId() : null)
+                        .stationName(station != null ? station.getName(): null)
+                        .pumpId(pump != null ? pump.getId() : null)
+                        .pumpNumber(pump != null ? pump.getPumpNumber() : null)
+                        .attendantId(attendant != null ? attendant.getId() : null)
+                        .attendantName(attendant != null ? attendant.getFullName(): null)
+                        .amount(payment.getAmount())
+                        .paymentMethod(payment.getPaymentMethod())
+                        .paymentStatus(payment.getPaymentStatus())
+                        .businessDate(sale != null ? sale.getBusinessDate() : null)
+                        .paymentTime(payment.getPaymentTime())
                         .build();
             })
             .toList();
@@ -994,75 +997,32 @@ public List<PaymentReportResponse> getPaymentReport() {
 
 @Transactional(readOnly = true)
 public List<InventoryTransactionReportResponse> getInventoryTransactionReport() {
+    MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
 
     return inventoryTransactionRepository
-            .findAll()
+            .findByStationInventory_Station_Merchant_CamsMerchantId(principal.getMerchantId())
             .stream()
             .map(transaction -> {
-
-                Station station =
-                        transaction.getStation();
-
-                Product product =
-                        transaction.getProduct();
-
-                StationInventory stationInventory =
-                        transaction.getStationInventory();
+                Station station = transaction.getStation();
+                Product product = transaction.getProduct();
+                StationInventory stationInventory = transaction.getStationInventory();
 
                 return InventoryTransactionReportResponse.builder()
 
-                        .transactionId(
-                                transaction.getId())
-
-                        .stationId(
-                                station != null
-                                        ? station.getId()
-                                        : null)
-
-                        .stationName(
-                                station != null
-                                        ? station.getName()
-                                        : null)
-
-                        .stationInventoryId(
-                                stationInventory != null
-                                        ? stationInventory.getId()
-                                        : null)
-
-                        .productId(
-                                product != null
-                                        ? product.getId()
-                                        : null)
-
-                        .productName(
-                                product != null
-                                        ? product.getName()
-                                        : null)
-
-                        .transactionType(
-                                transaction.getTransactionType())
-
-                        .quantity(
-                                transaction.getQuantity())
-
-                        .balanceBeforeTransaction(
-                                transaction.getBalanceBeforeTransaction())
-
-                        .balanceAfterTransaction(
-                                transaction.getBalanceAfterTransaction())
-
-                        .remarks(
-                                transaction.getRemarks())
-
-                        .referenceNumber(
-                                transaction.getReferenceNumber())
-
-                        .businessDate(
-                                transaction.getBusinessDate())
-
-                        .transactionTime(
-                                transaction.getTransactionTime())
-
+                        .transactionId(transaction.getId())
+                        .stationId(station != null ? station.getId() : null)
+                        .stationName(station != null ? station.getName() : null)
+                        .stationInventoryId(stationInventory != null ? stationInventory.getId() : null)
+                        .productId(product != null ? product.getId() : null)
+                        .productName(product != null ? product.getName() : null)
+                        .transactionType(transaction.getTransactionType())
+                        .quantity(transaction.getQuantity())
+                        .balanceBeforeTransaction(transaction.getBalanceBeforeTransaction())
+                        .balanceAfterTransaction(transaction.getBalanceAfterTransaction())
+                        .remarks(transaction.getRemarks())
+                        .referenceNumber(transaction.getReferenceNumber())
+                        .businessDate(transaction.getBusinessDate())
+                        .transactionTime(transaction.getTransactionTime())
                         .build();
             })
             .toList();
@@ -1070,67 +1030,31 @@ public List<InventoryTransactionReportResponse> getInventoryTransactionReport() 
 
 @Transactional(readOnly = true)
 public List<PriceHistoryReportResponse> getPriceHistoryReport() {
+    MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
 
     return productPriceHistoryRepository
-            .findAll(
-                    Sort.by(
-                            Sort.Direction.DESC,
-                            "changedAt"))
+        //     .findAll(Sort.by(Sort.Direction.DESC,"changedAt"))
+            .findByStation_Merchant_CamsMerchantId(principal.getMerchantId())
             .stream()
             .map(history -> {
-
-                Station station =
-                        history.getStation();
-
-                Product product =
-                        history.getProduct();
+                Station station = history.getStation();
+                Product product = history.getProduct();
 
                 return PriceHistoryReportResponse.builder()
-
-                        .historyId(
-                                history.getId())
-
-                        .stationId(
-                                station != null
-                                        ? station.getId()
-                                        : null)
-
-                        .stationName(
-                                station != null
-                                        ? station.getName()
-                                        : null)
-
-                        .productId(
-                                product != null
-                                        ? product.getId()
-                                        : null)
-
-                        .productName(
-                                product != null
-                                        ? product.getName()
-                                        : null)
-
-                        .oldSellingPrice(
-                                history.getOldPrice())
-
-                        .newSellingPrice(
-                                history.getNewPrice())
-
-                        .priceDifference(
-                                history.getPriceDifference())
-
-                        .changedBy(
-                                history.getChangedBy())
-
-                        .businessDate(
-                                history.getBusinessDate())
-
-                        .changedAt(
-                                history.getChangedAt())
+                        .historyId(history.getId())
+                        .stationId(station != null ? station.getId() : null)
+                        .stationName(station != null ? station.getName() : null)
+                        .productId(product != null ? product.getId() : null)
+                        .productName(product != null ? product.getName() : null)
+                        .oldSellingPrice(history.getOldPrice())
+                        .newSellingPrice(history.getNewPrice())
+                        .priceDifference(history.getPriceDifference())
+                        .changedBy(history.getChangedBy())
+                        .businessDate(history.getBusinessDate())
+                        .changedAt(history.getChangedAt())
 
                         .build();
             })
             .toList();
-}
-
+        }       
 }

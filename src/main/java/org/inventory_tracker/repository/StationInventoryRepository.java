@@ -3,6 +3,8 @@ package org.inventory_tracker.repository;
 import org.inventory_tracker.entity.StationInventory;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -16,6 +18,70 @@ public interface StationInventoryRepository extends JpaRepository<StationInvento
 //         AND s.businessDate = CURRENT_DATE
 //     """)
 //     Optional<StationInventory> findTodayInventory(@Param("outletId") String outletId, @Param("productType") ProductType productType);
+
+
+Optional<StationInventory>
+findByStation_IdAndStation_Merchant_CamsMerchantIdAndProduct_Id(
+        Long stationId,
+        String camsMerchantId,
+        Long productId
+);
+
+
+@Query("""
+    SELECT COUNT(DISTINCT si.product.id)
+    FROM StationInventory si
+    WHERE si.station.merchant.camsMerchantId = :merchantId
+""")
+long countDistinctProductsByMerchant(
+        @Param("merchantId") String merchantId
+);
+    // long countDistinctProductByStation_Merchant_CamsMerchantId(String camsMerchantId);
+
+
+    @Query("""
+    SELECT COUNT(DISTINCT si.station.id)
+    FROM StationInventory si
+    WHERE si.product.id = :productId
+      AND si.station.merchant.camsMerchantId = :merchantId
+""")
+long countDistinctStationsByProductIdAndMerchant(
+        @Param("productId") Long productId,
+        @Param("merchantId") String merchantId);
+    // long countDistinctStationsByProductIdAndMerchant(Long productId, String merchantId);
+    
+
+    @Query("""
+    SELECT COUNT(si)
+    FROM StationInventory si
+    WHERE si.station.merchant.camsMerchantId = :merchantId
+      AND si.currentQuantity <= si.reorderLevel
+""")
+long countLowStockProductsByMerchant(
+        @Param("merchantId") String merchantId
+);
+    // long countByStation_Merchant_CamsMerchantIdAndCurrentQuantityLessThanEqualReorderLevel(String camsMerchantId);
+
+    
+    @Query("""
+        SELECT COUNT(DISTINCT si.station)
+        FROM StationInventory si
+        WHERE si.station.merchant.camsMerchantId = :merchantId
+          AND si.currentQuantity <= si.reorderLevel
+    """)
+    long countDistinctStationsWithLowStockByMerchant(
+        @Param("merchantId") String merchantId
+    );
+
+    List<StationInventory> findByStationIdAndStation_Merchant_CamsMerchantId(
+        Long stationId,
+        String merchantId);
+
+    List<StationInventory> findByProductIdAndStation_Merchant_CamsMerchantId(
+        Long productId,
+        String merchantId);
+
+    List<StationInventory> findByStation_Merchant_CamsMerchantId(String camsMerchantId);
 
     boolean existsByStationIdAndProductIdAndStation_Merchant_Id(Long stationId, Long productId, Long merchantId);
 

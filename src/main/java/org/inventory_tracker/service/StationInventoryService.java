@@ -76,7 +76,7 @@ public class StationInventoryService {
 
     @Transactional
     public StationInventoryResponse createStationInventory(CreateStationInventoryRequest request) {
-                Merchant merchant = authenticatedUserService.getCurrentMerchant();
+        Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
         if (stationInventoryRepository.existsByStationIdAndProductIdAndStation_Merchant_Id(
                 request.getStationId(),
@@ -114,7 +114,7 @@ public class StationInventoryService {
         history.setChangedBy("SYSTEM");
         history.setBusinessDate(ShiftUtil.businessDate(station.getTimeZone()));
         history.setChangedAt(LocalDateTime.now(station.getTimeZone()));
-        // history.setPriceDifference(request.getSellingPrice().subtract(history.getOldPrice()));
+        history.setPriceDifference(request.getSellingPrice().subtract(history.getOldPrice()));
 
         priceHistoryRepository.save(history);
         return stationInventoryMapper.toResponse(saved);

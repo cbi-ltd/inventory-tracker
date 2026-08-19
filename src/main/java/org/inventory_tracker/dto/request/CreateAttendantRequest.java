@@ -14,12 +14,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateAttendantRequest {
 
-    @NotBlank
+    // @NotBlank
     private String username;
 
     private String pin;
 
-    @NotBlank
+    // @NotBlank
     private String fullName;
 
     @NotNull

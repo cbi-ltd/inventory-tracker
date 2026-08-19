@@ -10,9 +10,9 @@ import java.util.List;
 
 
 @Repository
-public interface InventoryTransactionRepository
-        extends JpaRepository<InventoryTransaction, Long> {
-
+public interface InventoryTransactionRepository extends JpaRepository<InventoryTransaction, Long> {
+    List<InventoryTransaction>findByStationInventory_Station_Merchant_CamsMerchantId(String camsMerchantId);
+    
     List<InventoryTransaction>
     findByStationInventoryIdOrderByTransactionTimeDesc(
             Long stationInventoryId);

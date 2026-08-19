@@ -24,13 +24,8 @@ public class StationInventoryController {
 
     @PostMapping
     public ResponseEntity<ApiSuccessResponse<StationInventoryResponse>>
-    createStationInventory(
-            @Valid
-            @RequestBody CreateStationInventoryRequest request) {
-
-        StationInventoryResponse response =
-                stationInventoryService
-                        .createStationInventory(request);
+    createStationInventory(@Valid @RequestBody CreateStationInventoryRequest request) {
+        StationInventoryResponse response = stationInventoryService.createStationInventory(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(

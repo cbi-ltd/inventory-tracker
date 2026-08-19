@@ -10,6 +10,8 @@ import java.util.List;
 
 @Repository
 public interface ProductPriceHistoryRepository extends JpaRepository<ProductPriceHistory, Long>, JpaSpecificationExecutor<ProductPriceHistory> {
+    List<ProductPriceHistory> findByStation_Merchant_CamsMerchantId(String camsMerchantId);
+    
     List<ProductPriceHistory>findByChangedByAndStation_Merchant_IdOrderByChangedAtDesc(String changedBy, Long merchantId);
     
     List<ProductPriceHistory>findByBusinessDateBetweenAndStation_Merchant_IdOrderByChangedAtDesc(LocalDate startDate, LocalDate endDate, Long merchantId);

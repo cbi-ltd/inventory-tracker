@@ -9,11 +9,14 @@ import lombok.Setter;
 @Setter
 public class TerminalSyncRequest {
 
-    @NotBlank(message = "Terminal ID is required")
+    // @NotBlank(message = "Terminal ID is required")
     private String tid;
 
     @NotBlank(message = "Terminal serial number is required")
     private String terminalSerialNumber;
+
+    @NotNull(message = "Station is required")
+    private Long stationId;
 
     private String model;
 
