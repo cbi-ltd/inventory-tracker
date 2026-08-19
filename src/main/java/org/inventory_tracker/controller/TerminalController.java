@@ -23,14 +23,9 @@ public class TerminalController {
     private final TerminalService terminalService;
     private final PosSession posSessionService;
 
-    //this endpoint should eventually be secured so only your CAMS integration (or an internal service account) can invoke it
-    @PostMapping("/sync")
-    public ResponseEntity<ApiSuccessResponse<TerminalResponse>>
-    syncTerminal(
-            @Valid @RequestBody TerminalSyncRequest request) {
-
-        TerminalResponse response =
-                terminalService.syncTerminal(request);
+   @PostMapping("/sync")
+    public ResponseEntity<ApiSuccessResponse<TerminalResponse>>syncTerminal(@Valid @RequestBody TerminalSyncRequest request) {
+        TerminalResponse response = terminalService.syncTerminal(request);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
@@ -126,7 +121,7 @@ public class TerminalController {
             @RequestParam(required = false) Long terminalId,
             @RequestParam(required = false) String terminalSerialNumber) {
 
-        PosSessionResponse response = posSessionService.getPosSession(terminalId, terminalSerialNumber);
+        PosSessionResponse response = posSessionService.getPosSession(terminalSerialNumber);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
@@ -136,7 +131,4 @@ public class TerminalController {
                         response
                 ));
     }
-
-
-
 }

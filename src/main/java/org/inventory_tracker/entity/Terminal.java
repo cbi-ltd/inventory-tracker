@@ -14,7 +14,7 @@ public class Terminal extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = true, unique = true)
     private String tid; //FOR NOW, SAVE SERIAL-NUMBER INTO THIS
 
     @Column(nullable = false, unique = true)

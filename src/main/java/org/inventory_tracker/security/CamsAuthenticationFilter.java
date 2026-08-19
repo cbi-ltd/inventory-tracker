@@ -36,6 +36,11 @@ public class CamsAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
+        if (isPosEndpoint(request)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
 
         if (authorization == null
@@ -58,33 +63,18 @@ public class CamsAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            MerchantPrincipal principal =
-                    camsAuthenticationService
-                            .authenticateUser(authorization);
+            MerchantPrincipal principal = camsAuthenticationService.authenticateUser(authorization);
 
             UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            principal,
-                            null,
-                            Collections.emptyList()
-                    );
+                    new UsernamePasswordAuthenticationToken(principal,  null, Collections.emptyList());
 
-            SecurityContextHolder
-                    .getContext()
-                    .setAuthentication(authentication);
-
+            SecurityContextHolder.getContext().setAuthentication(authentication);
             filterChain.doFilter(request, response);
-
-        } catch (InvalidCamsAuthenticationException ex) {
-
+        } 
+        catch (InvalidCamsAuthenticationException ex) {
             SecurityContextHolder.clearContext();
-
-            response.setStatus(
-                    HttpStatus.UNAUTHORIZED.value());
-
-            response.setContentType(
-                    MediaType.APPLICATION_JSON_VALUE);
-
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getWriter().write(
                     """
                     {
@@ -95,4 +85,35 @@ public class CamsAuthenticationFilter extends OncePerRequestFilter {
             );
         }
     }
+
+        private boolean isPosEndpoint(HttpServletRequest request) {
+
+                String method = request.getMethod();
+                String uri = request.getRequestURI();
+
+                return
+                        ("GET".equalsIgnoreCase(method)
+                                && uri.equals("/api/v1/terminals/session"))
+
+                        ||
+
+                        ("GET".equalsIgnoreCase(method)
+                                && uri.equals("/api/v1/pump-audits/shift-summary"))
+
+                        ||
+
+                        ("GET".equalsIgnoreCase(method)
+                                && uri.equals("/api/v1/station-inventory/current-selling-price"))
+
+                        ||
+
+                        ("POST".equalsIgnoreCase(method)
+                                && uri.equals("/api/v1/sales"))
+
+                        ||
+
+                        ("PUT".equalsIgnoreCase(method)
+                                && uri.equals("/api/v1/pump-audits/close"));
+
+        }
 }

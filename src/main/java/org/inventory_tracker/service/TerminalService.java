@@ -115,5 +115,5 @@ public class TerminalService {
         terminal.setLastSyncedAt(LocalDateTime.now());
 
         return terminalRepository.save(terminal);
-        }
+    }
 }

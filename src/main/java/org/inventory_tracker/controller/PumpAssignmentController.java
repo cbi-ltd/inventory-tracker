@@ -7,6 +7,7 @@ import org.inventory_tracker.dto.request.AssignPumpRequest;
 import org.inventory_tracker.dto.request.ChangeTerminalAssignmentRequest;
 import org.inventory_tracker.dto.response.ProductResponse;
 import org.inventory_tracker.dto.response.PumpAssignmentResponse;
+import org.inventory_tracker.dto.response.PumpAuditResponse;
 import org.inventory_tracker.enums.Shift;
 import org.inventory_tracker.service.PumpAssignmentService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -215,6 +217,7 @@ public class PumpAssignmentController {
                         )
                 );
         }
+        
 
         @GetMapping("/shift/{shift}")
         public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>> getAssignmentsByShift(@PathVariable Shift shift) {

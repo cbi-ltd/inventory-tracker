@@ -8,6 +8,8 @@ import java.util.Optional;
 
 @Repository
 public interface PumpRepository extends JpaRepository<Pump, Long> {
+    Optional<Pump>findByIdAndStation_IdAndStation_Merchant_CamsMerchantId(Long pumpId, Long stationId, String camsMerchantId);
+    
     long countByStation_Merchant_CamsMerchantId(
         String merchantId);
     List<Pump> findByStation_Merchant_CamsMerchantIdOrderByPumpNumberAsc(String camsMerchantId);

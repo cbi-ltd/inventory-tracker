@@ -176,10 +176,10 @@ public class StationInventoryController {
 
     @GetMapping("/station/{stationId}/product/{productId}/price")
     public ResponseEntity<ApiSuccessResponse<BigDecimal>>getCurrentSellingPrice(
-            @PathVariable Long stationId,
+            @PathVariable String terminalSerialNumber,
             @PathVariable Long productId) {
 
-        BigDecimal price = stationInventoryService.getCurrentSellingPrice(stationId, productId);
+        BigDecimal price = stationInventoryService.getCurrentSellingPrice(terminalSerialNumber, productId);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(

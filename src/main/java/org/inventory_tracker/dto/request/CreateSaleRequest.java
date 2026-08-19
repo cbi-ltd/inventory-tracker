@@ -13,9 +13,11 @@ import java.math.BigDecimal;
 @Setter
 public class CreateSaleRequest {
 
-
     @NotNull
     private Long pumpId;
+
+    @NotNull
+    private String terminalSerialNumber;
 
     @DecimalMin("0.001")
     private BigDecimal quantity;

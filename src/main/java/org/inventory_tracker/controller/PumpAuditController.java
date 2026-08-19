@@ -3,16 +3,19 @@ package org.inventory_tracker.controller;
 import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.dto.request.CreatePumpAuditRequest;
 import org.inventory_tracker.dto.request.PumpAuditFilterRequest;
+import org.inventory_tracker.dto.response.PumpAssignmentResponse;
 import org.inventory_tracker.dto.response.PumpAuditResponse;
 import org.inventory_tracker.dto.response.ShiftSummaryResponse;
 import org.inventory_tracker.service.PumpAuditService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.inventory_tracker.dto.request.ClosePumpAuditRequest;
 import java.util.List;
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.springframework.format.annotation.DateTimeFormat;
 import jakarta.validation.Valid;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -180,12 +183,28 @@ public class PumpAuditController {
         );
     }
 
+    @PutMapping("/close")
+    public ResponseEntity<ApiSuccessResponse<PumpAuditResponse>> closePumpAudit(@RequestBody ClosePumpAuditRequest request) {
+        PumpAuditResponse response = pumpAuditService.closePumpAudit(request.getTerminalSerialNumber(), request.getClosingReading());
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Pump audit closed successfully",
+                        response
+                )
+        );
+   }
+
+
+
     @GetMapping("/shift-summary")
     public ResponseEntity<ApiSuccessResponse<ShiftSummaryResponse>>
     getShiftSummary(@RequestParam(required = false) Long terminalId, @RequestParam(required = false)
             String terminalSerialNumber) {
 
-        ShiftSummaryResponse response = pumpAuditService.getShiftSummary(terminalId, terminalSerialNumber);
+        ShiftSummaryResponse response = pumpAuditService.getShiftSummary(terminalSerialNumber);
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),

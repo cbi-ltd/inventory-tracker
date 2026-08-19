@@ -20,6 +20,7 @@ public interface StationInventoryRepository extends JpaRepository<StationInvento
 //     Optional<StationInventory> findTodayInventory(@Param("outletId") String outletId, @Param("productType") ProductType productType);
 
 
+
 Optional<StationInventory>
 findByStation_IdAndStation_Merchant_CamsMerchantIdAndProduct_Id(
         Long stationId,

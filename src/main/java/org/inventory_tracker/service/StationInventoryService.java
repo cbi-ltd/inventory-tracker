@@ -8,9 +8,11 @@ import org.inventory_tracker.dto.response.StationInventoryResponse;
 import org.inventory_tracker.dto.request.ChangeSellingPriceRequest;
 import org.inventory_tracker.entity.Station;
 import org.inventory_tracker.entity.StationInventory;
+import org.inventory_tracker.entity.Terminal;
 // import org.inventory_tracker.entity.security.MerchantContext;
 import org.inventory_tracker.repository.StationInventoryRepository;
 import org.inventory_tracker.repository.StationRepository;
+import org.inventory_tracker.repository.TerminalRepository;
 import org.inventory_tracker.security.AuthenticatedUserService;
 import org.springframework.stereotype.Service;
 import org.inventory_tracker.repository.ProductRepository;
@@ -39,6 +41,7 @@ public class StationInventoryService {
     private final ProductRepository productRepository;
     private final ProductPriceHistoryRepository priceHistoryRepository;
     private final AuthenticatedUserService authenticatedUserService;
+    private final TerminalRepository terminalRepository;
 
 
         @Transactional
@@ -222,11 +225,38 @@ public class StationInventoryService {
     }
 
     @Transactional(readOnly = true)
-    public BigDecimal getCurrentSellingPrice(Long stationId, Long productId) {
-                Merchant merchant = authenticatedUserService.getCurrentMerchant();
+    public BigDecimal getStationSellingPrice(Long stationId, Long productId) {
+        Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
         StationInventory inventory = stationInventoryRepository.findByStationIdAndProductIdAndStation_Merchant_Id(stationId,productId, merchant.getId())
                                         .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
+
+        return inventory.getSellingPrice();
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal getCurrentSellingPrice(String terminalSerialNumber, Long productId) {
+        Terminal terminal = terminalRepository.findByTerminalSerialNumberAndActiveTrue(terminalSerialNumber)
+                        .orElseThrow(() -> new ResourceNotFoundException("Active terminal not found"));
+
+        Station station = terminal.getStation();
+
+        if (station == null) {
+            throw new ResourceNotFoundException("Terminal is not associated with a station");
+        }
+
+        Merchant merchant = station.getMerchant();
+
+        if (merchant == null) {
+            throw new ResourceNotFoundException("Station is not associated with a merchant");
+        }
+
+        StationInventory inventory = stationInventoryRepository
+                        .findByStation_IdAndStation_Merchant_CamsMerchantIdAndProduct_Id(
+                                station.getId(),
+                                merchant.getCamsMerchantId(),
+                                productId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
 
         return inventory.getSellingPrice();
     }
