@@ -75,7 +75,7 @@ public class StockAdjustmentService {
         adjustment.setTotalAdjustmentValue(inventory.getCostPerUnit().multiply(request.getQuantity()));
 
         InventoryTransaction transaction =
-                inventoryTransactionService.recordTransaction(
+                inventoryTransactionService.recordTransactionForDashboard(
 
                         inventory.getId(),
 
@@ -139,7 +139,7 @@ public class StockAdjustmentService {
                 adjustment.setTotalAdjustmentValue(inventory.getCostPerUnit().multiply(request.getQuantity()));
 
                 InventoryTransaction transaction =
-                        inventoryTransactionService.recordTransaction(
+                        inventoryTransactionService.recordTransactionForDashboard(
 
                                 inventory.getId(),
 

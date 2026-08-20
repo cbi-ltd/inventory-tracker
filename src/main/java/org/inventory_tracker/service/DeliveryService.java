@@ -90,7 +90,7 @@ public class DeliveryService {
         inventory.setCostPerUnit(delivery.getCostPerUnit());
         stationInventoryRepository.save(inventory);
 
-        inventoryTransactionService.recordTransaction(
+        inventoryTransactionService.recordTransactionForDashboard(
                 delivery.getStationInventory().getId(),
                 InventoryTransactionType.DELIVERY,
                 delivery.getQuantityDelivered(),
@@ -169,7 +169,7 @@ public class DeliveryService {
                 throw new BadRequestException("Delivery cannot be reversed because some or all of the stock has already been consumed.");
         }
 
-        inventoryTransactionService.recordTransaction(
+        inventoryTransactionService.recordTransactionForDashboard(
                 inventory.getId(),
                 InventoryTransactionType.DELIVERY_REVERSAL,
                 delivery.getQuantityDelivered(),

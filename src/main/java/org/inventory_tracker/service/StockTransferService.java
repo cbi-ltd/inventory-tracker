@@ -171,7 +171,7 @@ public class StockTransferService {
         * Record TRANSFER OUT.
         */
         InventoryTransaction transferOut =
-                inventoryTransactionService.recordTransaction(
+                inventoryTransactionService.recordTransactionForDashboard(
 
                         sourceInventory.getId(),
 
@@ -188,7 +188,7 @@ public class StockTransferService {
         * Record TRANSFER IN.
         */
         InventoryTransaction transferIn =
-                inventoryTransactionService.recordTransaction(
+                inventoryTransactionService.recordTransactionForDashboard(
 
                         destinationInventory.getId(),
 
