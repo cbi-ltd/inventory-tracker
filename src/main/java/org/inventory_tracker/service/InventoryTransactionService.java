@@ -2,6 +2,7 @@ package org.inventory_tracker.service;
 
 
 import org.inventory_tracker.entity.InventoryTransaction;
+import org.inventory_tracker.entity.Product;
 // import org.inventory_tracker.entity.Merchant;
 import org.inventory_tracker.repository.InventoryTransactionRepository;
 import org.inventory_tracker.enums.InventoryTransactionType;
@@ -32,7 +33,7 @@ public class InventoryTransactionService {
     private final InventoryTransactionRepository inventoryTransactionRepository;
     private final AuthenticatedUserService authenticatedUserService;
 
-    public InventoryTransaction recordTransaction(
+    public InventoryTransaction recordTransactionForDashboard(
             Long stationInventoryId,
             InventoryTransactionType transactionType,
             BigDecimal quantity,
@@ -99,43 +100,92 @@ public class InventoryTransactionService {
     }
 
 
+    @Transactional
+    public InventoryTransaction recordTransaction(
+            Long stationInventoryId,
+            BigDecimal quantity,
+            String remarks,
+            String referenceNumber,
+            Station expectedStation,
+            Product expectedProduct
+    ) {
 
-    // private BigDecimal calculateNewBalance(
-    //         BigDecimal currentBalance,
-    //         BigDecimal quantity,
-    //         InventoryTransactionType transactionType
-    // ) {
+        validateQuantity(quantity);
 
-    //     if (isInboundTransaction(transactionType)) {
+        StationInventory stationInventory =
+                stationInventoryRepository.findById(stationInventoryId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Station inventory not found"));
 
-    //         return currentBalance.add(quantity);
-    //     }
+        Station station = stationInventory.getStation();
 
-    //     if (isOutboundTransaction(transactionType)) {
+        if (station == null) {
+            throw new ResourceNotFoundException(
+                    "Station inventory is not associated with a station");
+        }
 
-    //         return currentBalance.subtract(quantity);
-    //     }
+        if (station.getMerchant() == null) {
+            throw new ResourceNotFoundException(
+                    "Station is not associated with a merchant");
+        }
 
-    //     /*
-    //      * STOCK_COUNT and ADJUSTMENT can either
-    //      * increase or decrease inventory.
-    //      *
-    //      * The caller should supply:
-    //      *
-    //      * positive quantity  -> increase
-    //      * negative quantity  -> decrease
-    //      */
-    //     if (transactionType == InventoryTransactionType.ADJUSTMENT
-    //             || transactionType == InventoryTransactionType.STOCK_COUNT) {
+        // Make sure the inventory belongs to the sale's station.
+        if (!station.getId().equals(expectedStation.getId())) {
+            throw new ResourceNotFoundException(
+                    "Station inventory not found");
+        }
 
-    //         return currentBalance.add(quantity);
-    //     }
+        // Make sure the inventory is for the sale's product.
+        if (!stationInventory.getProduct().getId()
+                .equals(expectedProduct.getId())) {
 
-    //     throw new BadRequestException(
-    //             "Unsupported inventory transaction type: "
-    //                     + transactionType
-    //     );
-    // }
+            throw new ResourceNotFoundException(
+                    "Station inventory not found");
+        }
+
+        BigDecimal balanceBefore =
+                stationInventory.getCurrentQuantity();
+
+        validateTransaction(
+                balanceBefore,
+                quantity,
+                InventoryTransactionType.SALE);
+
+        BigDecimal balanceAfter =
+                calculateNewBalance(
+                        balanceBefore,
+                        quantity,
+                        InventoryTransactionType.SALE);
+
+        stationInventory.setCurrentQuantity(balanceAfter);
+
+        stationInventoryRepository.save(stationInventory);
+
+        InventoryTransaction transaction =
+                new InventoryTransaction();
+
+        transaction.setStationInventory(stationInventory);
+        transaction.setStation(stationInventory.getStation());
+        transaction.setProduct(stationInventory.getProduct());
+        transaction.setTransactionType(
+                InventoryTransactionType.SALE);
+        transaction.setQuantity(quantity);
+        transaction.setBalanceBeforeTransaction(
+                balanceBefore);
+        transaction.setBalanceAfterTransaction(
+                balanceAfter);
+        transaction.setRemarks(remarks);
+        transaction.setReferenceNumber(referenceNumber);
+        transaction.setBusinessDate(
+                ShiftUtil.businessDate(station.getTimeZone()));
+        transaction.setTransactionTime(
+                LocalDateTime.now(station.getTimeZone()));
+
+        return inventoryTransactionRepository.save(transaction);
+    }
+
+
     private BigDecimal calculateNewBalance(BigDecimal currentBalance, BigDecimal quantity, InventoryTransactionType transactionType) {
         if (isInboundTransaction(transactionType)) {
             return currentBalance.add(quantity);

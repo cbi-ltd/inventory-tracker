@@ -25,106 +25,73 @@ public class SaleController {
     private final PaymentService paymentService;
 
     @PostMapping
-    public SaleResponse createSale(
-            @Valid
-            @RequestBody
-            CreateSaleRequest request) {
-
+    public SaleResponse createSale(@Valid @RequestBody CreateSaleRequest request) {
         return paymentService.createSale(request);
     }
 
     @PostMapping("/{saleId}/complete-cash")
-    public SaleResponse completeCashSale(
-            @PathVariable Long saleId) {
-
+    public SaleResponse completeCashSale(@PathVariable Long saleId) {
         return paymentService.completeCashSale(saleId);
     }
 
     @PutMapping("/{saleId}/cancel")
-    public SaleResponse cancelSale(
-            @PathVariable Long saleId) {
-
+    public SaleResponse cancelSale(@PathVariable Long saleId) {
         return saleService.cancelSale(saleId);
     }
 
     @GetMapping("/{id}")
-    public SaleResponse getSaleById(
-            @PathVariable Long id) {
-
+    public SaleResponse getSaleById(@PathVariable Long id) {
         return saleService.getSaleById(id);
     }
 
     @GetMapping("/number/{saleNumber}")
-    public SaleResponse getSaleBySaleNumber(
-            @PathVariable String saleNumber) {
-
+    public SaleResponse getSaleBySaleNumber(@PathVariable String saleNumber) {
         return saleService.getSaleBySaleNumber(saleNumber);
     }
 
     @GetMapping("/transaction/{transactionReference}")
-    public SaleResponse getSaleByTransactionReference(
-            @PathVariable String transactionReference) {
-
-        return saleService.getSaleByTransactionReference(
-                transactionReference);
+    public SaleResponse getSaleByTransactionReference(@PathVariable String transactionReference) {
+        return saleService.getSaleByTransactionReference(transactionReference);
     }
 
     @GetMapping
     public List<SaleResponse> getAllSales() {
-
         return saleService.getAllSales();
     }
 
     @GetMapping("/station/{stationId}")
-    public List<SaleResponse> getSalesByStation(
-            @PathVariable Long stationId) {
-
+    public List<SaleResponse> getSalesByStation(@PathVariable Long stationId) {
         return saleService.getSalesByStation(stationId);
     }
 
     @GetMapping("/pump/{pumpId}")
-    public List<SaleResponse> getSalesByPump(
-            @PathVariable Long pumpId) {
-
+    public List<SaleResponse> getSalesByPump(@PathVariable Long pumpId) {
         return saleService.getSalesByPump(pumpId);
     }
 
     @GetMapping("/attendant/{attendantId}")
-    public List<SaleResponse> getSalesByAttendant(
-            @PathVariable Long attendantId) {
-
+    public List<SaleResponse> getSalesByAttendant(@PathVariable Long attendantId) {
         return saleService.getSalesByAttendant(attendantId);
     }
 
     @GetMapping("/product/{productId}")
-    public List<SaleResponse> getSalesByProduct(
-            @PathVariable Long productId) {
-
+    public List<SaleResponse> getSalesByProduct(@PathVariable Long productId) {
         return saleService.getSalesByProduct(productId);
     }
 
     @GetMapping("/payment-method/{paymentMethod}")
-    public List<SaleResponse> getSalesByPaymentMethod(
-            @PathVariable PaymentMethod paymentMethod) {
-
-        return saleService.getSalesByPaymentMethod(
-                paymentMethod);
+    public List<SaleResponse> getSalesByPaymentMethod(@PathVariable PaymentMethod paymentMethod) {
+        return saleService.getSalesByPaymentMethod(paymentMethod);
     }
 
     @GetMapping("/payment-status/{paymentStatus}")
-    public List<SaleResponse> getSalesByPaymentStatus(
-            @PathVariable PaymentStatus paymentStatus) {
-
-        return saleService.getSalesByPaymentStatus(
-                paymentStatus);
+    public List<SaleResponse> getSalesByPaymentStatus(@PathVariable PaymentStatus paymentStatus) {
+        return saleService.getSalesByPaymentStatus(paymentStatus);
     }
 
     @GetMapping("/status/{saleStatus}")
-    public List<SaleResponse> getSalesByStatus(
-            @PathVariable SaleStatus saleStatus) {
-
-        return saleService.getSalesByStatus(
-                saleStatus);
+    public List<SaleResponse> getSalesByStatus(@PathVariable SaleStatus saleStatus) {
+        return saleService.getSalesByStatus(saleStatus);
     }
 
     @GetMapping("/between-dates")
@@ -138,8 +105,6 @@ public class SaleController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate endDate) {
 
-        return saleService.getSalesBetweenDates(
-                startDate,
-                endDate);
+        return saleService.getSalesBetweenDates(startDate, endDate);
     }
 }

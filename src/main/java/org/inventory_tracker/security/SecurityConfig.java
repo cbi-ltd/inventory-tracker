@@ -29,7 +29,7 @@ public class SecurityConfig {
                                 "/api/v1/",
                                 "/api/v1/terminals/session",
                                 "/api/v1/pump-audits/shift-summary",
-                                "/api/v1/station-inventory/current-selling-price",
+                                "/api/v1/station-inventories/price",
                                 "/api/v1/sales",
                                 "/api/v1/pump-audits/close"
                         ).permitAll()

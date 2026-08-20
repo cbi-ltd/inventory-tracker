@@ -103,7 +103,7 @@ public class CamsAuthenticationFilter extends OncePerRequestFilter {
                         ||
 
                         ("GET".equalsIgnoreCase(method)
-                                && uri.equals("/api/v1/station-inventory/current-selling-price"))
+                                && uri.equals("/api/v1/station-inventories/price"))
 
                         ||
 
