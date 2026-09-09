@@ -18,6 +18,39 @@ import java.util.Optional;
 public interface SaleRepository extends JpaRepository<Sale, Long> {
 
    @Query("""
+    SELECT s.pump.id, s.pump.pumpNumber, COALESCE(SUM(s.quantity), 0), COALESCE(SUM(s.netAmount), 0)
+    FROM Sale s WHERE s.station.merchant.camsMerchantId = :merchantId
+      AND s.businessDate = :businessDate
+      AND s.paymentStatus = :paymentStatus
+      AND s.saleStatus = :saleStatus
+    GROUP BY s.pump.id, s.pump.pumpNumber
+    ORDER BY s.pump.pumpNumber ASC
+    """)
+   List<Object[]> calculatePumpPerformance(
+        @Param("merchantId") String merchantId,
+        @Param("businessDate") LocalDate businessDate,
+        @Param("paymentStatus") PaymentStatus paymentStatus,
+        @Param("saleStatus") SaleStatus saleStatus);
+
+    @Query("""
+        SELECT s.paymentMethod, COALESCE(SUM(s.netAmount), 0)
+        FROM Sale s
+        WHERE s.station.merchant.camsMerchantId = :merchantId
+          AND s.businessDate = :businessDate
+          AND s.paymentMethod IN :paymentMethods
+          AND s.paymentStatus = :paymentStatus
+          AND s.saleStatus = :saleStatus
+        GROUP BY s.paymentMethod
+        """)
+    List<Object[]> calculatePaymentDistribution(
+            @Param("merchantId") String merchantId,
+            @Param("businessDate") LocalDate businessDate,
+            @Param("paymentMethods") List<PaymentMethod> paymentMethods,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("saleStatus") SaleStatus saleStatus
+    );
+
+   @Query("""
         SELECT COUNT(s)
         FROM Sale s
         WHERE s.station.merchant.camsMerchantId = :merchantId

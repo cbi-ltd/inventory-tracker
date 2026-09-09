@@ -8,11 +8,13 @@ import org.inventory_tracker.dto.response.report.DeliveryReportResponse;
 import org.inventory_tracker.dto.response.report.ExecutiveSummaryResponse;
 import org.inventory_tracker.dto.response.report.InventoryReportResponse;
 import org.inventory_tracker.dto.response.report.InventoryTransactionReportResponse;
+import org.inventory_tracker.dto.response.report.PaymentDistributionResponse;
 import org.inventory_tracker.dto.response.report.PaymentReportResponse;
 import org.inventory_tracker.dto.response.report.PriceHistoryReportResponse;
 import org.inventory_tracker.dto.response.report.ProductReportResponse;
 import org.inventory_tracker.dto.response.report.PumpAssignmentReportResponse;
 import org.inventory_tracker.dto.response.report.PumpAuditReportResponse;
+import org.inventory_tracker.dto.response.report.PumpPerformanceResponse;
 import org.inventory_tracker.dto.response.report.PumpReportResponse;
 import org.inventory_tracker.dto.response.report.SalesReportResponse;
 import org.inventory_tracker.dto.response.report.StationReportResponse;
@@ -46,6 +48,7 @@ import org.inventory_tracker.enums.SaleStatus;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -69,45 +72,6 @@ public class ReportingService {
     private final InventoryTransactionRepository inventoryTransactionRepository;
     private final ProductPriceHistoryRepository productPriceHistoryRepository;
     private final AuthenticatedUserService authenticatedUserService;
-
-//     public DashboardResponse getDashboard() {
-//         MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
-//         String merchantId = principal.getMerchantId();
-
-//         LocalDate businessDate = LocalDate.now();
-//         BigDecimal totalInventoryQuantity = calculateTotalInventoryQuantity();
-//         BigDecimal totalInventoryValue = calculateTotalInventoryValue();
-
-//         return DashboardResponse.builder()
-//                 .businessDate(businessDate)
-//                 .totalStations(stationRepository.count())
-//                 .totalProducts(productRepository.count())
-//                 .totalPumps(pumpRepository.count())
-//                 .totalAttendants(attendantRepository.count())
-//                 .activePumpAssignments(pumpAssignmentRepository.countByActiveTrue())
-//                 .totalDeliveriesToday(deliveryRepository.countByBusinessDate(businessDate))
-
-//                 // .totalTransfersToday(
-//                 //         stockTransferRepository.countByBusinessDate(
-//                 //                 businessDate)
-//                 // )
-
-//                 // .totalAdjustmentsToday(
-//                 //         stockAdjustmentRepository.countByBusinessDate(
-//                 //                 businessDate)
-//                 // )
-
-//                 // .totalStockCountsToday(
-//                 //         stockCountRepository.countByBusinessDate(
-//                 //                 businessDate)
-//                 // )
-
-//                 .totalInventoryQuantity(totalInventoryQuantity)
-//                 .totalInventoryValue(totalInventoryValue)
-//                 .lowStockProducts(stationInventoryRepository.countByCurrentQuantityLessThanEqualReorderLevel())
-//                 .lowStockStations(stationInventoryRepository.countDistinctStationsWithLowStock())
-//                 .build();
-//     }
 
 @Transactional(readOnly = true)
 public DashboardResponse getDashboard(LocalDate businessDate) {
@@ -1101,5 +1065,45 @@ public List<PriceHistoryReportResponse> getPriceHistoryReport() {
                         .build();
             })
             .toList();
-        }       
+}
+        
+        @Transactional(readOnly = true)
+        public List<PaymentDistributionResponse> getPaymentDistribution(LocalDate businessDate) {
+
+                MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+                String merchantId = principal.getMerchantId();
+
+                if (businessDate == null) { businessDate = LocalDate.now(); }
+
+                List<Object[]> results = saleRepository.calculatePaymentDistribution(
+                        merchantId, businessDate,
+                        Arrays.asList(PaymentMethod.CASH, PaymentMethod.CARD, PaymentMethod.TRANSFER),
+                        PaymentStatus.SUCCESS,
+                        SaleStatus.COMPLETED
+                );
+
+                return results.stream().map(row -> PaymentDistributionResponse.builder()
+                                .paymentMethod((PaymentMethod) row[0])
+                                .amount((BigDecimal) row[1])
+                                .build()).toList();
+        }
+
+
+        @Transactional(readOnly = true)
+        public List<PumpPerformanceResponse> getPumpPerformance(LocalDate businessDate) {
+                MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+                String merchantId = principal.getMerchantId();
+
+                if (businessDate == null) { businessDate = LocalDate.now(); }
+
+                List<Object[]> results = saleRepository.calculatePumpPerformance(merchantId, businessDate, PaymentStatus.SUCCESS, SaleStatus.COMPLETED);
+
+                return results.stream().map(row -> PumpPerformanceResponse.builder()
+                    .pumpId((Long) row[0])
+                    .pumpNumber((String) row[1])
+                    .liters((BigDecimal) row[2])
+                    .revenue((BigDecimal) row[3])
+                    .build())
+                    .toList();
+        }
 }

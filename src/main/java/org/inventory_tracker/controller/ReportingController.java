@@ -9,11 +9,13 @@ import org.inventory_tracker.dto.response.report.DeliveryReportResponse;
 import org.inventory_tracker.dto.response.report.ExecutiveSummaryResponse;
 import org.inventory_tracker.dto.response.report.InventoryReportResponse;
 import org.inventory_tracker.dto.response.report.InventoryTransactionReportResponse;
+import org.inventory_tracker.dto.response.report.PaymentDistributionResponse;
 import org.inventory_tracker.dto.response.report.PaymentReportResponse;
 import org.inventory_tracker.dto.response.report.PriceHistoryReportResponse;
 import org.inventory_tracker.dto.response.report.ProductReportResponse;
 import org.inventory_tracker.dto.response.report.PumpAssignmentReportResponse;
 import org.inventory_tracker.dto.response.report.PumpAuditReportResponse;
+import org.inventory_tracker.dto.response.report.PumpPerformanceResponse;
 import org.inventory_tracker.dto.response.report.PumpReportResponse;
 import org.inventory_tracker.dto.response.report.SalesReportResponse;
 import org.inventory_tracker.dto.response.report.StationReportResponse;
@@ -36,7 +38,7 @@ public class ReportingController {
     @GetMapping("/dashboard")
     public ResponseEntity<ApiSuccessResponse<DashboardResponse>>getDashboard(
         @RequestParam(required = false) LocalDate businessDate) {
-                
+
         DashboardResponse response = reportingService.getDashboard(businessDate);
 
         return ResponseEntity.ok(
@@ -256,5 +258,36 @@ public class ReportingController {
                 )
         );
     }
+
+    @GetMapping("/dashboard/payment-distribution")
+    public ResponseEntity<ApiSuccessResponse<List<PaymentDistributionResponse>>>
+        getPaymentDistribution(@RequestParam(required = false) LocalDate businessDate) {
+
+        List<PaymentDistributionResponse> response = reportingService.getPaymentDistribution(businessDate);
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Payment distribution retrieved successfully.",
+                        response
+                )
+        );
+    }
+
+    @GetMapping("/dashboard/pump-performance")
+    public ResponseEntity<ApiSuccessResponse<List<PumpPerformanceResponse>>>
+        getPumpPerformance(@RequestParam(required = false) LocalDate businessDate) {
+
+        List<PumpPerformanceResponse> response = reportingService.getPumpPerformance(businessDate);
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(
+                    LocalDateTime.now(),
+                    HttpStatus.OK.value(),
+                    "Pump performance retrieved successfully.",
+                    response
+        )
+    );
+}
 
 }
