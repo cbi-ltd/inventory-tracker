@@ -23,15 +23,11 @@
 // @EnableMethodSecurity
 // public class SecurityConfiguration {
 
-//     // private final JwtAuthenticationFilter jwtAuthFilter;
-
+//     private final JwtAuthenticationFilter jwtAuthFilter;
 //     private final UserDetailsService userDetailsService;
 
 //     @Bean
-//     public SecurityFilterChain securityFilterChain(
-//             HttpSecurity http
-//     ) throws Exception {
-
+//     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
 //         http
 //                 .csrf(csrf -> csrf.disable())
@@ -41,59 +37,57 @@
 
 //         return http.build();
 
-        // http
-        //         .csrf(csrf -> csrf.disable())
+//         http
+//                 .csrf(csrf -> csrf.disable())
 
-        //         .authorizeHttpRequests(auth -> auth
+//                 .authorizeHttpRequests(auth -> auth
 
-        //                 .requestMatchers(
-        //                         "/auth/**",
-        //                         "/swagger-ui/**",
-        //                         "/v3/api-docs/**"
-        //                 )
-        //                 .permitAll()
+//                         .requestMatchers(
+//                                 "/auth/**",
+//                                 "/swagger-ui/**",
+//                                 "/v3/api-docs/**"
+//                         )
+//                         .permitAll()
 
-        //                 .requestMatchers(
-        //                         "/companies/**"
-        //                 )
-        //                 .hasRole("SUPER_ADMIN")
+//                         .requestMatchers(
+//                                 "/companies/**"
+//                         )
+//                         .hasRole("SUPER_ADMIN")
 
-        //                 .requestMatchers(
-        //                         "/stations/**"
-        //                 )
-        //                 .hasAnyRole(
-        //                         "SUPER_ADMIN",
-        //                         "ADMIN"
-        //                 )
+//                         .requestMatchers(
+//                                 "/stations/**"
+//                         )
+//                         .hasAnyRole(
+//                                 "SUPER_ADMIN",
+//                                 "ADMIN"
+//                         )
 
-        //                 .anyRequest()
-        //                 .authenticated()
-        //         )
+//                         .anyRequest()
+//                         .authenticated()
+//                 )
 
-        //         .sessionManagement(session ->
-        //                 session.sessionCreationPolicy(
-        //                         SessionCreationPolicy.STATELESS
-        //                 )
-        //         )
+//                 .sessionManagement(session ->
+//                         session.sessionCreationPolicy(
+//                                 SessionCreationPolicy.STATELESS
+//                         )
+//                 )
 
-        //         .authenticationProvider(authenticationProvider())
+//                 .authenticationProvider(authenticationProvider())
 
-        //         .addFilterBefore(
-        //                 jwtAuthFilter,
-        //                 UsernamePasswordAuthenticationFilter.class
-        //         );
+//                 .addFilterBefore(
+//                         jwtAuthFilter,
+//                         UsernamePasswordAuthenticationFilter.class
+//                 );
 
-        // return http.build();
+//         return http.build();
 //     }
 
 //     @Bean
 //     public AuthenticationProvider authenticationProvider() {
 
-//         DaoAuthenticationProvider provider =
-//                 new DaoAuthenticationProvider();
+//         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
 
 //         provider.setUserDetailsService(userDetailsService);
-
 //         provider.setPasswordEncoder(passwordEncoder());
 
 //         return provider;
@@ -106,9 +100,7 @@
 //     }
 
 //     @Bean
-//     public AuthenticationManager authenticationManager(
-//             AuthenticationConfiguration config
-//     ) throws Exception {
+//     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
 
 //         return config.getAuthenticationManager();
 //     }

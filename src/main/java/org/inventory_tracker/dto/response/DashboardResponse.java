@@ -39,4 +39,22 @@ public class DashboardResponse {
     private Long lowStockStations;
 
     private LocalDate businessDate;
+
+    private BigDecimal totalRevenue;
+
+    private BigDecimal totalCashCollected;
+    
+    private long totalElectronicTransactionsCount;
+
+    private BigDecimal totalElectronicTransactions;
+
+    private long totalCashCollectedCount;
+
+    private BigDecimal totalCardTransactions;
+
+    private long totalCardTransactionsCount;
+
+    private BigDecimal totalTransferTransactions;
+
+    private long totalTransferTransactionsCount;
 }

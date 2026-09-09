@@ -69,9 +69,7 @@ public class ProductDataInitializer implements CommandLineRunner {
         );
     }
 
-    private void createProduct(
-            ProductType productType,
-            UnitOfMeasure unitOfMeasure) {
+    private void createProduct(ProductType productType, UnitOfMeasure unitOfMeasure) {
 
         if (productRepository.existsByProductType(productType)) {
             return;

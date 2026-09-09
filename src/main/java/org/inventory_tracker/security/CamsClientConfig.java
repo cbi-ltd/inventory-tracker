@@ -10,8 +10,7 @@ import org.springframework.web.client.RestClient;
 public class CamsClientConfig {
 
     @Bean
-    public RestClient camsRestClient(
-            @Value("${cams.request-processor.base-url}") String baseUrl) {
+    public RestClient camsRestClient(@Value("${cams.request-processor.base-url}") String baseUrl) {
 
         return RestClient.builder()
                 .baseUrl(baseUrl)

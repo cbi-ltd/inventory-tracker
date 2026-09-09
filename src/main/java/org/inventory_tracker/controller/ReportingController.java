@@ -22,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -33,8 +34,10 @@ public class ReportingController {
     private final ReportingService reportingService;
 
     @GetMapping("/dashboard")
-    public ResponseEntity<ApiSuccessResponse<DashboardResponse>>getDashboard() {
-        DashboardResponse response = reportingService.getDashboard();
+    public ResponseEntity<ApiSuccessResponse<DashboardResponse>>getDashboard(
+        @RequestParam(required = false) LocalDate businessDate) {
+                
+        DashboardResponse response = reportingService.getDashboard(businessDate);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(

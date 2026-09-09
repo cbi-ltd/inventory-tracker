@@ -10,11 +10,11 @@ import org.inventory_tracker.dto.request.UpdatePumpRequest;
 import org.inventory_tracker.dto.response.PumpResponse;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
+import org.inventory_tracker.exception.BadRequestException;
 import org.springframework.transaction.annotation.Transactional;
 import org.inventory_tracker.repository.ProductRepository;
 import java.util.List;
 import org.inventory_tracker.entity.*;
-// import org.inventory_tracker.security.MerchantPrincipal;
 import org.springframework.stereotype.Service;
 import org.inventory_tracker.repository.TerminalRepository;
 import org.inventory_tracker.security.AuthenticatedUserService;
@@ -47,8 +47,19 @@ public class PumpService {
         Pump pump = pumpMapper.toEntity(request);
         pump.setStation(station);
         pump.setProduct(product);
-        Pump savedPump = pumpRepository.save(pump);
 
+        if (request.getDefaultTerminalId() != null) {
+            Terminal terminal = terminalRepository.findByIdAndStation_Merchant_Id(request.getDefaultTerminalId(), merchant.getId())
+                                    .orElseThrow(() ->new ResourceNotFoundException("Terminal not found"));
+
+            if (!terminal.getStation().getId().equals(station.getId())) {
+                throw new BadRequestException("Terminal does not belong to the selected station");
+            }
+
+            pump.setDefaultTerminal(terminal);
+        }
+
+        Pump savedPump = pumpRepository.save(pump);
         return pumpMapper.toResponse(savedPump);
     }
 
@@ -57,9 +68,6 @@ public class PumpService {
         Merchant merchant = authenticatedUserService.getCurrentMerchant();
         Pump pump = pumpRepository.findByIdAndStation_Merchant_Id(id, merchant.getId())
                                 .orElseThrow(() ->new ResourceNotFoundException("Pump not found"));
-        // Pump pump = pumpRepository.findById(id)
-        //         .orElseThrow(() ->
-        //                 new ResourceNotFoundException("Pump not found"));
 
         return pumpMapper.toResponse(pump);
     }
@@ -88,14 +96,6 @@ public class PumpService {
         pumpMapper.updatePumpFromDto(request, pump);
         pump.setStation(targetStation);
 
-        // if (request.getStationId() != null) {
-        //         Station station = stationRepository.findById(request.getStationId())
-        //                 .orElseThrow(() ->
-        //                         new ResourceNotFoundException("Station not found"));
-
-        //         pump.setStation(station);
-        // }
-
         if (request.getProductId() != null) {
                 Product product = productRepository.findById(request.getProductId())
                         .orElseThrow(() ->
@@ -105,11 +105,15 @@ public class PumpService {
         }
 
         if (request.getDefaultTerminalId() != null) {
-                Terminal terminal = terminalRepository.findById(request.getDefaultTerminalId())
+                Terminal terminal = terminalRepository.findByIdAndStation_Merchant_Id(request.getDefaultTerminalId(), merchant.getId())
                         .orElseThrow(() ->
                                 new ResourceNotFoundException("Terminal not found"));
+            if (!terminal.getStation().getId().equals(targetStation.getId())) {
+                throw new BadRequestException("Terminal does not belong to the pump's station");
+            }
+                
 
-                pump.setDefaultTerminal(terminal);
+            pump.setDefaultTerminal(terminal);
         }
 
         Pump updatedPump = pumpRepository.save(pump);
@@ -132,14 +136,6 @@ public class PumpService {
         Station station = getMerchantStation(stationId, merchant);
 
         return pumpMapper.toResponseList(pumpRepository.findByStation_IdOrderByPumpNumberAsc(station.getId()));
-
-        // if (!stationRepository.existsById(stationId)) {
-        //     throw new ResourceNotFoundException("Station not found");
-        // }
-
-        // return pumpMapper.toResponseList(
-        //         pumpRepository.findByStation_IdOrderByPumpNumberAsc(stationId)
-        // );
     }
 
     @Transactional(readOnly = true)
@@ -147,9 +143,6 @@ public class PumpService {
         Merchant merchant = authenticatedUserService.getCurrentMerchant();
         return pumpMapper.toResponseList(pumpRepository
                         .findByStation_Merchant_IdAndActiveTrueOrderByPumpNumberAsc(merchant.getId()));
-        // return pumpMapper.toResponseList(
-        //         pumpRepository.findByActiveTrueOrderByPumpNumberAsc()
-        // );
     }
 
     @Transactional
@@ -166,9 +159,6 @@ public class PumpService {
         Pump updatedPump = pumpRepository.save(pump);
 
         return pumpMapper.toResponse(updatedPump);
-        // Pump pump = pumpRepository.findById(id)
-        //         .orElseThrow(() ->
-        //                 new ResourceNotFoundException("Pump not found"));
     }
 
     @Transactional
@@ -177,10 +167,6 @@ public class PumpService {
 
         Pump pump = pumpRepository.findByIdAndStation_Merchant_Id(id, merchant.getId())
                         .orElseThrow(() -> new ResourceNotFoundException("Pump not found"));
-
-        // Pump pump = pumpRepository.findById(id)
-        //         .orElseThrow(() ->
-        //                 new ResourceNotFoundException("Pump not found"));
 
         if (Boolean.FALSE.equals(pump.getActive())) {
             throw new DuplicateResourceException("Pump is already inactive");

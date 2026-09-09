@@ -1,6 +1,8 @@
 package org.inventory_tracker.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,6 +21,9 @@ public class Terminal extends BaseEntity {
 
     @Column(nullable = false, unique = true)
     private String terminalSerialNumber;
+
+    @OneToMany(mappedBy = "defaultTerminal", fetch = FetchType.LAZY)
+    private List<Pump> pumps = new ArrayList<>();
 
     @ManyToOne
     @JoinColumn(name = "station_id")

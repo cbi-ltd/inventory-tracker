@@ -1,17 +1,10 @@
 package org.inventory_tracker.security;
 
 import lombok.*;
-import org.inventory_tracker.dto.response.*;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.*;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.FilterChain;
@@ -43,13 +36,10 @@ public class CamsAuthenticationFilter extends OncePerRequestFilter {
 
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (authorization == null
-                || !authorization.startsWith("Bearer ")) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
 
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.setContentType(
-                    MediaType.APPLICATION_JSON_VALUE);
-
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getWriter().write(
                     """
                     {

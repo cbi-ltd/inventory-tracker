@@ -22,63 +22,47 @@ public class CamsAuthenticationService {
     public CamsProfileData authenticate(String bearerToken) {
 
         if (bearerToken == null || bearerToken.isBlank()) {
-            throw new InvalidCamsAuthenticationException(
-                    "CAMS authentication token is required.");
+            throw new InvalidCamsAuthenticationException("CAMS authentication token is required.");
         }
 
         CamsProfileResponse response;
 
         try {
-
             response = camsRestClient.get()
                     .uri("/cbi-request-api/v1/user/get-profile")
-                    .header(
-                            HttpHeaders.AUTHORIZATION,
-                            bearerToken)
+                    .header(HttpHeaders.AUTHORIZATION, bearerToken)
                     .retrieve()
                     .body(CamsProfileResponse.class);
+        }
+        catch (HttpClientErrorException.Unauthorized ex) {
 
-        } catch (HttpClientErrorException.Unauthorized ex) {
+            throw new InvalidCamsAuthenticationException("Invalid CAMS authentication.");
+        } 
+        catch (HttpClientErrorException.Forbidden ex) {
 
-            throw new InvalidCamsAuthenticationException(
-                    "Invalid CAMS authentication.");
+            throw new InvalidCamsAuthenticationException("CAMS authentication was denied.");
+        } 
+        catch (RestClientException ex) {
 
-        } catch (HttpClientErrorException.Forbidden ex) {
-
-            throw new InvalidCamsAuthenticationException(
-                    "CAMS authentication was denied.");
-
-        } catch (RestClientException ex) {
-
-            throw new InvalidCamsAuthenticationException(
-                    "Unable to verify CAMS authentication.",
-                    ex);
+            throw new InvalidCamsAuthenticationException("Unable to verify CAMS authentication.", ex);
         }
 
         if (response == null) {
-
-            throw new InvalidCamsAuthenticationException(
-                    "Empty response received from CAMS.");
+            throw new InvalidCamsAuthenticationException("Empty response received from CAMS.");
         }
 
         if (!response.isSuccess()) {
-
             throw new InvalidCamsAuthenticationException(
-                    response.getMessage() != null
-                            ? response.getMessage()
-                            : "CAMS authentication failed.");
+                    response.getMessage() != null ? response.getMessage() : "CAMS authentication failed.");
         }
 
         CamsProfileData profile = response.getData();
 
         if (profile == null) {
-
-            throw new InvalidCamsAuthenticationException(
-                    "CAMS profile was not returned.");
+            throw new InvalidCamsAuthenticationException("CAMS profile was not returned.");
         }
 
         validateProfile(profile);
-
         return profile;
     }
 
@@ -86,43 +70,33 @@ public class CamsAuthenticationService {
     private void validateProfile(CamsProfileData profile) {
 
         if (!"ACTIVE".equalsIgnoreCase(profile.getStatus())) {
-
-            throw new InvalidCamsAuthenticationException(
-                    "CAMS user account is not active.");
+            throw new InvalidCamsAuthenticationException("CAMS user account is not active.");
         }
 
         if (!"APPROVED".equalsIgnoreCase(profile.getKycStatus())) {
-
-            throw new InvalidCamsAuthenticationException(
-                    "CAMS user KYC is not approved.");
+            throw new InvalidCamsAuthenticationException("CAMS user KYC is not approved.");
         }
 
-        if (profile.getUserId() == null
-                || profile.getUserId().isBlank()) {
-
-            throw new InvalidCamsAuthenticationException(
-                    "CAMS profile does not contain a user ID.");
+        if (profile.getUserId() == null || profile.getUserId().isBlank()) {
+            throw new InvalidCamsAuthenticationException("CAMS profile does not contain a user ID.");
         }
 
-        if (profile.getProfileType() == null
-                || profile.getProfileType().isBlank()) {
-
-            throw new InvalidCamsAuthenticationException(
-                    "CAMS profile type is missing.");
+        if (profile.getProfileType() == null || profile.getProfileType().isBlank()) {
+            throw new InvalidCamsAuthenticationException( "CAMS profile type is missing.");
         }
     }
 
-        public MerchantPrincipal authenticateUser(String bearerToken) {
+    public MerchantPrincipal authenticateUser(String bearerToken) {
 
-            CamsProfileData profile = authenticate(bearerToken);
+        CamsProfileData profile = authenticate(bearerToken);
 
-            Merchant merchant = merchantService.getOrCreateMerchant(profile);
+        Merchant merchant = merchantService.getOrCreateMerchant(profile);
 
-            return MerchantPrincipal.builder()
+        return MerchantPrincipal.builder()
                     .merchantId(merchant.getCamsMerchantId())
                     .merchantDbId(merchant.getId())
                     .role(merchant.getMerchantRole())
                     .institutionId(merchant.getInstitutionId())
                     .build();
-        }
+    }
 }

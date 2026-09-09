@@ -183,9 +183,23 @@ public class PumpAuditController {
         );
     }
 
+    @PutMapping("/close-audit")
+    public ResponseEntity<ApiSuccessResponse<PumpAuditResponse>> closePmpAudit(@RequestBody ClosePumpAuditRequest request) {
+        PumpAuditResponse response = pumpAuditService.closePmpAudit(request.getTerminalSerialNumber(), request.getClosingReading());
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Pump audit closed successfully",
+                        response
+                )
+        );
+   }
+
     @PutMapping("/close")
     public ResponseEntity<ApiSuccessResponse<PumpAuditResponse>> closePumpAudit(@RequestBody ClosePumpAuditRequest request) {
-        PumpAuditResponse response = pumpAuditService.closePumpAudit(request.getTerminalSerialNumber(), request.getClosingReading());
+        PumpAuditResponse response = pumpAuditService.closePumpAudit(request.getPumpAssignmentId(), request.getClosingReading());
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(

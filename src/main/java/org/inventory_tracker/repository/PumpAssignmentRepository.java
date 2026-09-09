@@ -9,12 +9,33 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PumpAssignmentRepository extends JpaRepository<PumpAssignment, Long> {
-        Optional<PumpAssignment>findFirstByTerminal_TerminalSerialNumberAndTerminal_Station_Merchant_CamsMerchantIdAndActiveTrueOrderByAssignmentDateDesc(
-        String terminalSerialNumber,
-        String camsMerchantId
-);
+    Optional<PumpAssignment>
+    findByTerminal_TerminalSerialNumberAndPump_IdAndAssignmentDateAndShiftAndActiveTrue(
+            String terminalSerialNumber,
+            Long pumpId,
+            LocalDate assignmentDate,
+            Shift shift
+    );
 
-        Optional<PumpAssignment>
+    Optional<PumpAssignment>
+    findByTerminal_IdAndPump_IdAndAssignmentDateAndShiftAndActiveTrue(
+            Long terminalId,
+            Long pumpId,
+            LocalDate assignmentDate,
+            Shift shift
+    );
+
+    boolean existsByPump_IdAndAssignmentDateAndShiftAndActiveTrue(
+            Long pumpId,
+            LocalDate assignmentDate,
+            Shift shift
+    );
+
+   Optional<PumpAssignment>findFirstByTerminal_TerminalSerialNumberAndTerminal_Station_Merchant_CamsMerchantIdAndActiveTrueOrderByAssignmentDateDesc(
+        String terminalSerialNumber,
+        String camsMerchantId);
+
+    Optional<PumpAssignment>
     findByTerminal_IdAndTerminal_Station_Merchant_CamsMerchantIdAndAssignmentDateAndShiftAndActiveTrue(
             Long terminalId,
             String camsMerchantId,

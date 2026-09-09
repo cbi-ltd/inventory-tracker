@@ -17,6 +17,109 @@ import java.util.Optional;
 
 public interface SaleRepository extends JpaRepository<Sale, Long> {
 
+   @Query("""
+        SELECT COUNT(s)
+        FROM Sale s
+        WHERE s.station.merchant.camsMerchantId = :merchantId
+          AND s.businessDate = :businessDate
+          AND s.paymentMethod = :paymentMethod
+          AND s.paymentStatus = :paymentStatus
+          AND s.saleStatus = :saleStatus
+        """)
+    long countTransactionsByPaymentMethod(
+            @Param("merchantId") String merchantId,
+            @Param("businessDate") LocalDate businessDate,
+            @Param("paymentMethod") PaymentMethod paymentMethod,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("saleStatus") SaleStatus saleStatus
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(s.netAmount), 0)
+        FROM Sale s
+        WHERE s.station.merchant.camsMerchantId = :merchantId
+          AND s.businessDate = :businessDate
+          AND s.paymentMethod = :paymentMethod
+          AND s.paymentStatus = :paymentStatus
+          AND s.saleStatus = :saleStatus
+        """)
+    BigDecimal calculateTotalTransactionsByPaymentMethod(
+            @Param("merchantId") String merchantId,
+            @Param("businessDate") LocalDate businessDate,
+            @Param("paymentMethod") PaymentMethod paymentMethod,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("saleStatus") SaleStatus saleStatus
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(s.netAmount), 0)
+        FROM Sale s
+        WHERE s.station.merchant.camsMerchantId = :merchantId
+          AND s.businessDate = :businessDate
+          AND s.paymentStatus = :paymentStatus
+          AND s.saleStatus = :saleStatus
+        """)
+    BigDecimal calculateTotalRevenue(
+            @Param("merchantId") String merchantId,
+            @Param("businessDate") LocalDate businessDate,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("saleStatus") SaleStatus saleStatus
+    );
+
+
+    @Query("""
+        SELECT COALESCE(SUM(s.netAmount), 0)
+        FROM Sale s
+        WHERE s.station.merchant.camsMerchantId = :merchantId
+          AND s.businessDate = :businessDate
+          AND s.paymentMethod = :paymentMethod
+          AND s.paymentStatus = :paymentStatus
+          AND s.saleStatus = :saleStatus
+        """)
+    BigDecimal calculateTotalCollectedByPaymentMethod(
+            @Param("merchantId") String merchantId,
+            @Param("businessDate") LocalDate businessDate,
+            @Param("paymentMethod") PaymentMethod paymentMethod,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("saleStatus") SaleStatus saleStatus
+    );
+
+
+    @Query("""
+        SELECT COUNT(s)
+        FROM Sale s
+        WHERE s.station.merchant.camsMerchantId = :merchantId
+          AND s.businessDate = :businessDate
+          AND s.paymentMethod <> :cashPaymentMethod
+          AND s.paymentStatus = :paymentStatus
+          AND s.saleStatus = :saleStatus
+        """)
+    long countElectronicTransactions(
+            @Param("merchantId") String merchantId,
+            @Param("businessDate") LocalDate businessDate,
+            @Param("cashPaymentMethod") PaymentMethod cashPaymentMethod,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("saleStatus") SaleStatus saleStatus
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(s.netAmount), 0)
+        FROM Sale s
+        WHERE s.station.merchant.camsMerchantId = :merchantId
+          AND s.businessDate = :businessDate
+          AND s.paymentMethod <> :cashPaymentMethod
+          AND s.paymentStatus = :paymentStatus
+          AND s.saleStatus = :saleStatus
+        """)
+    BigDecimal calculateTotalElectronicTransactions(
+            @Param("merchantId") String merchantId,
+            @Param("businessDate") LocalDate businessDate,
+            @Param("cashPaymentMethod") PaymentMethod cashPaymentMethod,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("saleStatus") SaleStatus saleStatus
+    );
+
+
         @Query("""
     SELECT COALESCE(SUM(s.quantity), 0)
     FROM Sale s

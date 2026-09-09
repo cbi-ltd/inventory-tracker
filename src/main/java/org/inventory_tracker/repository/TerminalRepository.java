@@ -9,12 +9,11 @@ import java.util.List;
 
 @Repository
 public interface TerminalRepository extends JpaRepository<Terminal, Long> {
+    Optional<Terminal> findByIdAndStation_Merchant_Id(Long id, Long merchantId);
+
     Optional<Terminal>findByTerminalSerialNumberAndActiveTrue(String terminalSerialNumber);
 
-    Optional<Terminal> findByIdAndStation_Merchant_CamsMerchantId(
-            Long terminalId,
-            String camsMerchantId
-    );
+    Optional<Terminal> findByIdAndStation_Merchant_CamsMerchantId(Long terminalId, String camsMerchantId);
 
     List<Terminal>findByStation_Merchant_CamsMerchantIdAndActiveTrueOrderByTidAsc(String merchantId);
     

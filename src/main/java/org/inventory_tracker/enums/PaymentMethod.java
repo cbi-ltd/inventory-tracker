@@ -14,7 +14,8 @@ public enum PaymentMethod {
         
         try {
             return PaymentMethod.valueOf(value.toUpperCase().trim());
-        } catch (IllegalArgumentException e) {
+        } 
+        catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Unknown payment method: " + value);
         }
     }

@@ -15,8 +15,7 @@ public class AuthenticatedUserService {
 
     public MerchantPrincipal getCurrentUser() {
 
-        Authentication authentication = SecurityContextHolder.getContext()
-                        .getAuthentication();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new InvalidCamsAuthenticationException("No authenticated CAMS user found.");
@@ -35,9 +34,7 @@ public class AuthenticatedUserService {
         Long merchantDbId = getMerchantDbId();
 
         return merchantRepository.findById(merchantDbId)
-                .orElseThrow(() ->
-                        new InvalidCamsAuthenticationException(
-                                "Authenticated merchant not found."));
+                .orElseThrow(() -> new InvalidCamsAuthenticationException("Authenticated merchant not found."));
     }
 
     public String getMerchantId() {

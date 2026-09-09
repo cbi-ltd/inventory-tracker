@@ -161,7 +161,7 @@ public class PumpAuditService {
     }
 
     @Transactional
-    public PumpAuditResponse closePumpAudit(String terminalSerialNumber, BigDecimal closingReading) {
+    public PumpAuditResponse closePmpAudit(String terminalSerialNumber, BigDecimal closingReading) {
         if (terminalSerialNumber == null || terminalSerialNumber.isBlank()) {
                 throw new BadRequestException("Terminal serial number is required");
         }
@@ -246,6 +246,85 @@ public class PumpAuditService {
 
         return pumpAuditMapper.toResponse(savedAudit);
     }
+
+    @Transactional
+    public PumpAuditResponse closePumpAudit(Long pumpAssignmentId, BigDecimal closingReading) {
+        if (pumpAssignmentId == null) {
+                throw new BadRequestException("Pump assignment ID is required");
+        }
+
+        if (closingReading == null) {
+                throw new BadRequestException("Closing meter reading is required");
+        }
+
+        PumpAssignment assignment =
+                pumpAssignmentRepository.findById(pumpAssignmentId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Pump assignment not found"));
+
+        Terminal terminal = assignment.getTerminal();
+
+        if (terminal == null) {
+                throw new ResourceNotFoundException("Assignment is not associated with a terminal");
+        }
+
+        if (!Boolean.TRUE.equals(terminal.getActive())) {
+                throw new BadRequestException("Terminal is inactive");
+        }
+
+        Pump pump = assignment.getPump();
+
+        if (pump == null) {
+                throw new ResourceNotFoundException("Assignment is not associated with a pump");
+        }
+
+        PumpAudit audit = pumpAuditRepository.findByPumpAssignment_Id(assignment.getId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Pump audit not found"));
+
+        if (audit.getClockOutTime() != null) {
+                throw new BadRequestException(
+                        "Pump audit is already closed");
+        }
+
+        BigDecimal openingReading = audit.getOpeningReading();
+
+        if (openingReading == null) {
+                throw new BadRequestException(
+                        "Opening meter reading is not set");
+        }
+
+        if (closingReading.compareTo(openingReading) < 0) {
+                throw new BadRequestException(
+                        "Closing reading cannot be less than opening reading");
+        }
+
+        BigDecimal totalDispensed =
+                closingReading.subtract(openingReading);
+
+        audit.setClosingReading(closingReading);
+        audit.setTotalDispensed(totalDispensed);
+
+        Station station = assignment.getStation();
+
+        if (station == null) {
+                throw new ResourceNotFoundException(
+                        "Assignment is not associated with a station");
+        }
+
+        audit.setClockOutTime(
+                LocalDateTime.now(station.getTimeZone())
+        );
+
+        assignment.setActive(false);
+
+        pumpAssignmentRepository.save(assignment);
+
+        PumpAudit savedAudit =
+                pumpAuditRepository.save(audit);
+
+        return pumpAuditMapper.toResponse(savedAudit);
+   }
 
 
     @Transactional(readOnly = true)
@@ -411,9 +490,7 @@ public class PumpAuditService {
         verifyStationOwnership(assignment.getStation());
     }
 
-    private void newVerifyAssignmentOwnership(
-        PumpAssignment assignment,
-        String camsMerchantId) {
+    private void newVerifyAssignmentOwnership(PumpAssignment assignment, String camsMerchantId) {
 
     if (assignment == null
             || assignment.getTerminal() == null
@@ -431,13 +508,8 @@ public class PumpAuditService {
             .getMerchant()
             .getCamsMerchantId();
 
-    if (!Objects.equals(
-            assignmentMerchantId,
-            camsMerchantId)) {
-
-        throw new ResourceNotFoundException(
-                "Assignment not found"
-        );
+    if (!Objects.equals(assignmentMerchantId, camsMerchantId)) {
+        throw new ResourceNotFoundException("Assignment not found");
     }
 }
 }

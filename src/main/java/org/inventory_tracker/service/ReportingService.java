@@ -40,6 +40,9 @@ import org.inventory_tracker.security.AuthenticatedUserService;
 import org.inventory_tracker.security.MerchantPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.inventory_tracker.enums.PaymentMethod;
+import org.inventory_tracker.enums.PaymentStatus;
+import org.inventory_tracker.enums.SaleStatus;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -107,14 +110,14 @@ public class ReportingService {
 //     }
 
 @Transactional(readOnly = true)
-public DashboardResponse getDashboard() {
+public DashboardResponse getDashboard(LocalDate businessDate) {
 
     MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
 
     String merchantId = principal.getMerchantId();
     Long merchantDbId = principal.getMerchantDbId();
 
-    LocalDate businessDate = LocalDate.now();
+    if (businessDate == null) { businessDate = LocalDate.now(); }
 
     BigDecimal totalInventoryQuantity =
             calculateTotalInventoryQuantity(merchantId);
@@ -122,6 +125,40 @@ public DashboardResponse getDashboard() {
     BigDecimal totalInventoryValue =
             calculateTotalInventoryValue(merchantId);
 
+    BigDecimal totalRevenue = saleRepository.calculateTotalRevenue(
+                        merchantId, businessDate, PaymentStatus.SUCCESS, SaleStatus.COMPLETED);
+
+    BigDecimal totalCashCollected = saleRepository.calculateTotalCollectedByPaymentMethod(merchantId, businessDate,
+                        PaymentMethod.CASH,PaymentStatus.SUCCESS, SaleStatus.COMPLETED);
+
+    long totalElectronicTransactionsCount = saleRepository.countElectronicTransactions(
+                        merchantId, businessDate, PaymentMethod.CASH, PaymentStatus.SUCCESS, SaleStatus.COMPLETED);
+
+    BigDecimal totalElectronicTransactions = saleRepository.calculateTotalElectronicTransactions(
+                merchantId, businessDate, PaymentMethod.CASH, PaymentStatus.SUCCESS, SaleStatus.COMPLETED);
+
+    long totalCashCollectedCount =
+        saleRepository.countTransactionsByPaymentMethod(
+                merchantId,
+                businessDate,
+                PaymentMethod.CASH,
+                PaymentStatus.SUCCESS,
+                SaleStatus.COMPLETED
+        );
+
+    BigDecimal totalCardTransactions = saleRepository.calculateTotalTransactionsByPaymentMethod(
+                merchantId, businessDate, PaymentMethod.CARD, PaymentStatus.SUCCESS, SaleStatus.COMPLETED);
+
+    long totalCardTransactionsCount = saleRepository.countTransactionsByPaymentMethod(
+                merchantId, businessDate, PaymentMethod.CARD, PaymentStatus.SUCCESS, SaleStatus.COMPLETED);
+
+    BigDecimal totalTransferTransactions = saleRepository.calculateTotalTransactionsByPaymentMethod(
+                merchantId, businessDate, PaymentMethod.TRANSFER, PaymentStatus.SUCCESS, SaleStatus.COMPLETED);
+
+    long totalTransferTransactionsCount = saleRepository.countTransactionsByPaymentMethod(
+                merchantId, businessDate, PaymentMethod.TRANSFER, PaymentStatus.SUCCESS, SaleStatus.COMPLETED);
+                
+      
     return DashboardResponse.builder()
 
             .businessDate(businessDate)
@@ -174,7 +211,15 @@ public DashboardResponse getDashboard() {
                     stationInventoryRepository
                             .countDistinctStationsWithLowStockByMerchant(
                                     merchantId))
-
+            .totalRevenue(totalRevenue)
+            .totalCashCollectedCount(totalCashCollectedCount)
+            .totalCashCollected(totalCashCollected)
+            .totalCardTransactions(totalCardTransactions)
+            .totalCardTransactionsCount(totalCardTransactionsCount)
+            .totalTransferTransactions(totalTransferTransactions)
+            .totalTransferTransactionsCount(totalTransferTransactionsCount)
+            .totalElectronicTransactionsCount(totalElectronicTransactionsCount)
+            .totalElectronicTransactions(totalElectronicTransactions)
             .build();
 }
 
