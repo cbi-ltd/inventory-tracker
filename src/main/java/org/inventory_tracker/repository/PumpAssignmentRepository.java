@@ -9,6 +9,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PumpAssignmentRepository extends JpaRepository<PumpAssignment, Long> {
+    List<PumpAssignment> findByStation_Merchant_CamsMerchantIdAndAssignmentDate(String merchantId, LocalDate assignmentDate);
+    
+    Optional<PumpAssignment> findFirstByAttendantIdAndAssignmentDateOrderByShiftAsc(Long attendantId, LocalDate assignmentDate);
+
+    long countByAttendantIdAndAssignmentDateAndActiveFalse(Long attendantId, LocalDate assignmentDate);
+
     Optional<PumpAssignment>
     findByTerminal_TerminalSerialNumberAndPump_IdAndAssignmentDateAndShiftAndActiveTrue(
             String terminalSerialNumber,

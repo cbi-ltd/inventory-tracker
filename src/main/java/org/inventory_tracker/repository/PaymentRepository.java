@@ -9,11 +9,14 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long>, JpaSpecificationExecutor<Payment> {
+    List<Payment>findBySale_Station_Merchant_CamsMerchantIdAndSale_BusinessDate(String merchantId, LocalDate businessDate);
+    
     List<Payment> findBySale_Station_Merchant_CamsMerchantId(String camsMerchantId);
     
     List<Payment> findBySale_Station_Merchant_IdAndPaymentMethodOrderByPaymentTimeDesc(Long merchantId, PaymentMethod paymentMethod);

@@ -18,10 +18,7 @@ public class ChangeSellingPriceRequest {
     private Long stationInventoryId;
 
     @NotNull(message = "New selling price is required")
-    @DecimalMin(
-            value = "0.01",
-            message = "Selling price must be greater than zero"
-    )
+    @DecimalMin(value = "0.01", message = "Selling price must be greater than zero")
     private BigDecimal newSellingPrice;
 
     @NotBlank(message = "Changed by is required")

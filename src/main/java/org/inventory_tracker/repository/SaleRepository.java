@@ -1,6 +1,7 @@
 package org.inventory_tracker.repository;
 
 
+import org.inventory_tracker.entity.Payment;
 import org.inventory_tracker.entity.Sale;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SaleRepository extends JpaRepository<Sale, Long> {
+   List<Sale> findByStation_Merchant_CamsMerchantIdAndBusinessDateOrderBySaleTimeDesc(String merchantId, LocalDate businessDate);
 
    @Query("""
     SELECT s.pump.id, s.pump.pumpNumber, COALESCE(SUM(s.quantity), 0), COALESCE(SUM(s.netAmount), 0)

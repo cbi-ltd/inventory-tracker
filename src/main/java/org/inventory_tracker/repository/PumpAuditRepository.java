@@ -10,6 +10,10 @@ import java.util.Optional;
 
 @Repository
 public interface PumpAuditRepository extends JpaRepository<PumpAudit, Long>, JpaSpecificationExecutor<PumpAudit> {
+    List<PumpAudit> findByPumpAssignment_Station_Merchant_CamsMerchantIdAndBusinessDate(String merchantId, LocalDate businessDate);
+    
+    long countByPumpAssignment_Pump_IdAndBusinessDateAndClockOutTimeIsNotNull(Long pumpId, LocalDate businessDate);
+    
     List<PumpAudit> findByPumpAssignment_Station_Merchant_CamsMerchantId(String camsMerchantId);
     
     List<PumpAudit> findByPumpAssignment_Station_Merchant_IdOrderByBusinessDateDesc(Long merchantId);

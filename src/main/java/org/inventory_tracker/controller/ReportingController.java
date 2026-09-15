@@ -66,8 +66,9 @@ public class ReportingController {
 //     }
 
     @GetMapping("/station")
-    public ResponseEntity<ApiSuccessResponse<List<StationReportResponse>>>getStationReport() {
-        List<StationReportResponse> response = reportingService.getStationReport();
+    public ResponseEntity<ApiSuccessResponse<List<StationReportResponse>>>getStationReport(
+            @RequestParam(required = false) LocalDate businessDate) {
+        List<StationReportResponse> response = reportingService.getStationReport(businessDate);
         int count = response.size();
 
         return ResponseEntity.ok(
@@ -115,8 +116,9 @@ public class ReportingController {
     }
 
     @GetMapping("/pump")
-    public ResponseEntity<ApiSuccessResponse<List<PumpReportResponse>>>getPumpReport() {
-        List<PumpReportResponse> response = reportingService.getPumpReport();
+    public ResponseEntity<ApiSuccessResponse<List<PumpReportResponse>>>getPumpReport(
+            @RequestParam(required = false) LocalDate businessDate) {
+        List<PumpReportResponse> response = reportingService.getPumpReport(businessDate);
         int count = response.size();
 
         return ResponseEntity.ok(
@@ -131,9 +133,10 @@ public class ReportingController {
     }
 
     @GetMapping("/attendant")
-    public ResponseEntity<ApiSuccessResponse<List<AttendantReportResponse>>>getAttendantReport() {
+    public ResponseEntity<ApiSuccessResponse<List<AttendantReportResponse>>>getAttendantReport(
+            @RequestParam(required = false) LocalDate businessDate) {
         List<AttendantReportResponse> response =
-                reportingService.getAttendantReport();
+                reportingService.getAttendantReport(businessDate);
         int count = response.size();
 
         return ResponseEntity.ok(
@@ -148,8 +151,9 @@ public class ReportingController {
     }
 
     @GetMapping("/pump-assignment")
-    public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentReportResponse>>> getPumpAssignmentReport() {
-        List<PumpAssignmentReportResponse> response = reportingService.getPumpAssignmentReport();
+    public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentReportResponse>>> getPumpAssignmentReport(
+            @RequestParam(required = false) LocalDate businessDate) {
+        List<PumpAssignmentReportResponse> response = reportingService.getPumpAssignmentReport(businessDate);
         int count = response.size();
 
         return ResponseEntity.ok(
@@ -164,8 +168,9 @@ public class ReportingController {
     }
 
     @GetMapping("/pump-audit")
-    public ResponseEntity<ApiSuccessResponse<List<PumpAuditReportResponse>>> getPumpAuditReport() {
-        List<PumpAuditReportResponse> response = reportingService.getPumpAuditReport();
+    public ResponseEntity<ApiSuccessResponse<List<PumpAuditReportResponse>>> getPumpAuditReport(
+            @RequestParam(required = false) LocalDate businessDate) {
+        List<PumpAuditReportResponse> response = reportingService.getPumpAuditReport(businessDate);
         int count = response.size();
 
         return ResponseEntity.ok(
@@ -180,8 +185,8 @@ public class ReportingController {
     }
 
     @GetMapping("/sales")
-    public ResponseEntity<ApiSuccessResponse<List<SalesReportResponse>>> getSalesReport() {
-        List<SalesReportResponse> response = reportingService.getSalesReport();
+    public ResponseEntity<ApiSuccessResponse<List<SalesReportResponse>>> getSalesReport(@RequestParam(required = false) LocalDate businessDate) {
+        List<SalesReportResponse> response = reportingService.getSalesReport(businessDate);
         int count = response.size();
 
         return ResponseEntity.ok(
@@ -196,8 +201,8 @@ public class ReportingController {
     }
 
     @GetMapping("/delivery")
-    public ResponseEntity<ApiSuccessResponse<List<DeliveryReportResponse>>> getDeliveryReport() {
-        List<DeliveryReportResponse> response = reportingService.getDeliveryReport();
+    public ResponseEntity<ApiSuccessResponse<List<DeliveryReportResponse>>> getDeliveryReport(@RequestParam(required = false) LocalDate businessDate) {
+        List<DeliveryReportResponse> response = reportingService.getDeliveryReport(businessDate);
         int count = response.size();
 
         return ResponseEntity.ok(
@@ -212,8 +217,8 @@ public class ReportingController {
     }
 
     @GetMapping("/payment")
-    public ResponseEntity<ApiSuccessResponse<List<PaymentReportResponse>>> getPaymentReport() {
-        List<PaymentReportResponse> response = reportingService.getPaymentReport();
+    public ResponseEntity<ApiSuccessResponse<List<PaymentReportResponse>>> getPaymentReport(@RequestParam(required = false) LocalDate businessDate) {
+        List<PaymentReportResponse> response = reportingService.getPaymentReport(businessDate);
         int count = response.size();
 
         return ResponseEntity.ok(
@@ -228,8 +233,8 @@ public class ReportingController {
     }
 
     @GetMapping("/inventory-transaction")
-    public ResponseEntity<ApiSuccessResponse<List<InventoryTransactionReportResponse>>> getInventoryTransactionReport() {
-        List<InventoryTransactionReportResponse> response = reportingService.getInventoryTransactionReport();
+    public ResponseEntity<ApiSuccessResponse<List<InventoryTransactionReportResponse>>> getInventoryTransactionReport(@RequestParam(required = false) LocalDate businessDate) {
+        List<InventoryTransactionReportResponse> response = reportingService.getInventoryTransactionReport(businessDate);
         int count = response.size();
 
         return ResponseEntity.ok(
@@ -244,8 +249,8 @@ public class ReportingController {
     }
 
     @GetMapping("/price-history")
-    public ResponseEntity<ApiSuccessResponse<List<PriceHistoryReportResponse>>> getPriceHistoryReport() {
-        List<PriceHistoryReportResponse> response = reportingService.getPriceHistoryReport();
+    public ResponseEntity<ApiSuccessResponse<List<PriceHistoryReportResponse>>> getPriceHistoryReport(@RequestParam(required = false) LocalDate businessDate) {
+        List<PriceHistoryReportResponse> response = reportingService.getPriceHistoryReport(businessDate);
         int count = response.size();
 
         return ResponseEntity.ok(

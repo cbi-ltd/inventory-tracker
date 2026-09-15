@@ -21,13 +21,10 @@ public interface DeliveryMapper {
     Delivery toEntity(CreateDeliveryRequest request);
 
     @Mapping(source = "stationInventory.id", target = "stationInventoryId")
-
     @Mapping(source = "station.id", target = "stationId")
     @Mapping(source = "station.name", target = "stationName")
-
     @Mapping(source = "product.id", target = "productId")
     @Mapping(source = "product.name", target = "productName")
-
     DeliveryResponse toResponse(Delivery delivery);
 
     List<DeliveryResponse> toResponseList(List<Delivery> deliveries);

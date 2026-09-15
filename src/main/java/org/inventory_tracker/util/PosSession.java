@@ -260,33 +260,19 @@ public PosSessionResponse getTerminalPosSession(Long terminalId, String terminal
     //     throw new BadRequestException("Either terminalId or terminalSerialNumber must be supplied.");
     // }
 
-    private void newVerifyAssignmentOwnership(
-        PumpAssignment assignment,
-        String camsMerchantId) {
+    private void newVerifyAssignmentOwnership(PumpAssignment assignment, String camsMerchantId) {
+        if (assignment == null
+                || assignment.getTerminal() == null
+                || assignment.getTerminal().getStation() == null
+                || assignment.getTerminal().getStation().getMerchant() == null) {
 
-    if (assignment == null
-            || assignment.getTerminal() == null
-            || assignment.getTerminal().getStation() == null
-            || assignment.getTerminal().getStation().getMerchant() == null) {
+                throw new ResourceNotFoundException("Assignment ownership could not be verified");
+        }
 
-        throw new ResourceNotFoundException(
-                "Assignment ownership could not be verified"
-        );
+        String assignmentMerchantId = assignment.getTerminal().getStation().getMerchant().getCamsMerchantId();
+
+        if (!Objects.equals(assignmentMerchantId, camsMerchantId)) {
+                throw new ResourceNotFoundException("Assignment not found");
+        }
     }
-
-    String assignmentMerchantId = assignment
-            .getTerminal()
-            .getStation()
-            .getMerchant()
-            .getCamsMerchantId();
-
-    if (!Objects.equals(
-            assignmentMerchantId,
-            camsMerchantId)) {
-
-        throw new ResourceNotFoundException(
-                "Assignment not found"
-        );
-    }
-}
 }

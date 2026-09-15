@@ -31,7 +31,6 @@ public interface SaleMapper {
     @Mapping(target = "transactionReference", ignore = true)
     @Mapping(target = "receiptNumber", ignore = true)
     @Mapping(target = "inventoryUpdated", ignore = true)
-
     Sale toEntity(CreateSaleRequest request);
 
     @Mapping(source = "station.id", target = "stationId")
@@ -44,6 +43,5 @@ public interface SaleMapper {
     @Mapping(source = "attendant.fullName", target = "attendantName")
     @Mapping(source = "product.id", target = "productId")
     @Mapping(source = "product.name", target = "productName")
-
     SaleResponse toResponse(Sale sale);
 }
