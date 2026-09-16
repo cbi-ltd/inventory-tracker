@@ -1,6 +1,8 @@
 package org.inventory_tracker.controller;
 
 import lombok.RequiredArgsConstructor;
+
+import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.inventory_tracker.dto.response.report.AttendantReportResponse;
 import org.inventory_tracker.dto.response.report.DeliveryReportResponse;
 import org.inventory_tracker.dto.response.report.InventoryReportResponse;
@@ -18,12 +20,15 @@ import org.inventory_tracker.dto.response.report.StationReportResponse;
 import org.inventory_tracker.service.ExcelReportService;
 import org.inventory_tracker.service.PdfReportService;
 import org.inventory_tracker.service.ReportingService;
+import org.inventory_tracker.util.EmailService;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -34,6 +39,7 @@ public class ReportExportController {
     private final ReportingService reportingService;
     private final ExcelReportService excelReportService;
     private final PdfReportService pdfReportService;
+    private final EmailService emailService;
 
     @GetMapping("/export/excel")
     public ResponseEntity<byte[]> exportAllReports(@RequestParam(required = false) LocalDate businessDate) {
@@ -310,6 +316,219 @@ public class ReportExportController {
     @GetMapping("/sales/export/pdf") public ResponseEntity<byte[]> exportSalesReportPdf( @RequestParam(required = false) LocalDate businessDate) { 
         return buildPdfResponse( pdfReportService.exportSalesReport( reportingService.getSalesReport(businessDate) ), "sales-report.pdf" ); 
     }
+
+    @PostMapping("/attendants/email")
+    public ResponseEntity<ApiSuccessResponse<Void>> emailAttendantReport(@RequestParam String recipient, @RequestParam(required = false) LocalDate businessDate) {
+        List<AttendantReportResponse> reports = reportingService.getAttendantReport(businessDate);
+        byte[] pdf = pdfReportService.exportAttendantReport(reports);
+
+        emailService.sendReport(
+                recipient,
+                "Attendant Report",
+                "Please find the requested attendant report attached.",
+                pdf,
+                "attendant-report.pdf"
+        );
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Attendant report emailed successfully", null));
+    }
+
+    @PostMapping("/deliveries/email")
+    public ResponseEntity<ApiSuccessResponse<Void>> emailDeliveryReport(@RequestParam String recipient, @RequestParam(required = false) LocalDate businessDate) {
+        byte[] pdf = pdfReportService.exportDeliveryReport(reportingService.getDeliveryReport(businessDate));
+
+        emailService.sendReport(
+                recipient,
+                "Delivery Report",
+                "Please find the requested delivery report attached.",
+                pdf,
+                "delivery-report.pdf"
+        );
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Delivery report emailed successfully", null));
+    }
+
+    @PostMapping("/inventory/email")
+    public ResponseEntity<ApiSuccessResponse<Void>> emailInventoryReport(@RequestParam String recipient) {
+        byte[] pdf = pdfReportService.exportInventoryReport(reportingService.getInventoryReport());
+
+        emailService.sendReport(
+                recipient,
+                "Inventory Report",
+                "Please find the requested inventory report attached.",
+                pdf,
+                "inventory-report.pdf"
+        );
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Inventory report emailed successfully", null));
+    }
+
+    @PostMapping("/inventory-transactions/email")
+    public ResponseEntity<ApiSuccessResponse<Void>> emailInventoryTransactionsReport(@RequestParam String recipient, @RequestParam(required = false) LocalDate businessDate) {
+        byte[] pdf = pdfReportService.exportInventoryTransactionReport(reportingService.getInventoryTransactionReport(businessDate));
+
+        emailService.sendReport(
+                recipient,
+                "Inventory Transactions Report",
+                "Please find the requested inventory transactions report attached.",
+                pdf,
+                "inventory-transactions-report.pdf"
+        );
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Inventory transactions report emailed successfully", null));
+    }
+
+    @PostMapping("/payments/email")
+    public ResponseEntity<ApiSuccessResponse<Void>> emailPaymentsReport(@RequestParam String recipient, @RequestParam(required = false) LocalDate businessDate) {
+        byte[] pdf = pdfReportService.exportPaymentReport(reportingService.getPaymentReport(businessDate));
+
+        emailService.sendReport(
+                recipient,
+                "Payments Report",
+                "Please find the requested payments report attached.",
+                pdf,
+                "payments-report.pdf"
+        );
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Payments report emailed successfully", null));
+    }
+
+    @PostMapping("/payments/distribution/email")
+    public ResponseEntity<ApiSuccessResponse<Void>> emailPaymentsDistributionReport(@RequestParam String recipient, @RequestParam(required = false) LocalDate businessDate) {
+        byte[] pdf = pdfReportService.exportPaymentDistributionReport(reportingService.getPaymentDistribution(businessDate));
+
+        emailService.sendReport(
+                recipient,
+                "Payments Distribution Report",
+                "Please find the requested payments distribution report attached.",
+                pdf,
+                "payments-distribution-report.pdf"
+        );
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Payments distribution report emailed successfully", null));
+    }
+
+    @PostMapping("/price-history/email")
+    public ResponseEntity<ApiSuccessResponse<Void>> emailPriceHistoryReport(@RequestParam String recipient, @RequestParam(required = false) LocalDate businessDate) {
+        byte[] pdf = pdfReportService.exportPriceHistoryReport(reportingService.getPriceHistoryReport(businessDate));
+
+        emailService.sendReport(
+                recipient,
+                "Price History Report",
+                "Please find the requested price history report attached.",
+                pdf,
+                "price-history-report.pdf"
+        );
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Price history report emailed successfully", null));
+    }
+
+    @PostMapping("/products/email")
+    public ResponseEntity<ApiSuccessResponse<Void>> emailProductsReport(@RequestParam String recipient) {
+        byte[] pdf = pdfReportService.exportProductReport(reportingService.getProductReport());
+
+        emailService.sendReport(
+                recipient,
+                "Products Report",
+                "Please find the requested products report attached.",
+                pdf,
+                "products-report.pdf"
+        );
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Products report emailed successfully", null));
+    }
+
+    @PostMapping("/pump-assignments/email")
+    public ResponseEntity<ApiSuccessResponse<Void>> emailPumpAssignmentsReport(@RequestParam String recipient, @RequestParam(required = false) LocalDate businessDate) {
+        byte[] pdf = pdfReportService.exportPumpAssignmentReport(reportingService.getPumpAssignmentReport(businessDate));
+
+        emailService.sendReport(
+                recipient,
+                "Pump Assignments Report",
+                "Please find the requested pump assignments report attached.",
+                pdf,
+                "pump-assignments-report.pdf"
+        );
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Pump assignments report emailed successfully", null));
+    }
+
+    @PostMapping("/pump-audits/email")
+    public ResponseEntity<ApiSuccessResponse<Void>> emailPumpAuditsReport(@RequestParam String recipient, @RequestParam(required = false) LocalDate businessDate) {
+        byte[] pdf = pdfReportService.exportPumpAuditReport(reportingService.getPumpAuditReport(businessDate));
+
+        emailService.sendReport(
+                recipient,
+                "Pump Audits Report",
+                "Please find the requested pump audits report attached.",
+                pdf,
+                "pump-audits-report.pdf"
+        );
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Pump audits report emailed successfully", null));
+    }
+
+    @PostMapping("/pump-performance/email")
+    public ResponseEntity<ApiSuccessResponse<Void>> emailPumpPerformanceReport(@RequestParam String recipient, @RequestParam(required = false) LocalDate businessDate) {
+        byte[] pdf = pdfReportService.exportPumpPerformanceReport(reportingService.getPumpPerformance(businessDate));
+
+        emailService.sendReport(
+                recipient,
+                "Pump Performance Report",
+                "Please find the requested pump performance report attached.",
+                pdf,
+                "pump-performance-report.pdf"
+        );
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Pump performance report emailed successfully", null));
+    }
+
+    @PostMapping("/pumps/email")
+    public ResponseEntity<ApiSuccessResponse<Void>> emailPumpReport(@RequestParam String recipient, @RequestParam(required = false) LocalDate businessDate) {
+        byte[] pdf = pdfReportService.exportPumpReport(reportingService.getPumpReport(businessDate));
+
+        emailService.sendReport(
+                recipient,
+                "Pump Report",
+                "Please find the requested pump report attached.",
+                pdf,
+                "pump-report.pdf"
+        );
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Pump report emailed successfully", null));
+    }
+
+    @PostMapping("/stations/email")
+    public ResponseEntity<ApiSuccessResponse<Void>> emailStationReport(@RequestParam String recipient, @RequestParam(required = false) LocalDate businessDate) {
+        byte[] pdf = pdfReportService.exportStationReport(reportingService.getStationReport(businessDate));
+
+        emailService.sendReport(
+                recipient,
+                "Station Report",
+                "Please find the requested station report attached.",
+                pdf,
+                "station-report.pdf"
+        );
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Station report emailed successfully", null));
+    }
+
+    @PostMapping("/sales/email")
+    public ResponseEntity<ApiSuccessResponse<Void>> emailSalesReport(@RequestParam String recipient, @RequestParam(required = false) LocalDate businessDate) {
+        byte[] pdf = pdfReportService.exportSalesReport(reportingService.getSalesReport(businessDate));
+
+        emailService.sendReport(
+                recipient,
+                "Sales Report",
+                "Please find the requested sales report attached.",
+                pdf,
+                "sales-report.pdf"
+        );
+
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Sales report emailed successfully", null));
+    }
+
+    
 
 
 
