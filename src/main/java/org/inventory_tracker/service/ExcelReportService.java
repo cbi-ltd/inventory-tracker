@@ -1176,6 +1176,23 @@ public class ExcelReportService {
         );
     }
 
+    public byte[] exportPaymentDistributionReport(List<PaymentDistributionResponse> reports) {
+
+        return createWorkbook(
+                "Payment Distribution Report",
+                "Payment Distribution",
+                new String[]{
+                        "Payment Method",
+                        "Amount"
+                },
+                reports,
+                (row, report) -> {
+                    writeString(row, 0, report.getPaymentMethod().name());
+                    writeDecimal(row, 1, report.getAmount());
+                }
+        );
+    }
+
     public byte[] exportPumpReport(
             List<PumpReportResponse> reports) {
 

@@ -11,10 +11,12 @@ import org.inventory_tracker.dto.response.report.PumpReportResponse;
 import org.inventory_tracker.dto.response.report.PumpAuditReportResponse;
 import org.inventory_tracker.dto.response.report.PumpPerformanceResponse;
 import org.inventory_tracker.dto.response.report.PumpAssignmentReportResponse;
+import org.inventory_tracker.dto.response.report.PaymentDistributionResponse;
 import org.inventory_tracker.dto.response.report.PriceHistoryReportResponse;
 import org.inventory_tracker.dto.response.report.ReportExportData;
 import org.inventory_tracker.dto.response.report.StationReportResponse;
 import org.inventory_tracker.service.ExcelReportService;
+import org.inventory_tracker.service.PdfReportService;
 import org.inventory_tracker.service.ReportingService;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -31,6 +33,7 @@ public class ReportExportController {
 
     private final ReportingService reportingService;
     private final ExcelReportService excelReportService;
+    private final PdfReportService pdfReportService;
 
     @GetMapping("/export/excel")
     public ResponseEntity<byte[]> exportAllReports(@RequestParam(required = false) LocalDate businessDate) {
@@ -214,6 +217,14 @@ public class ReportExportController {
         );
     }
 
+    @GetMapping("/payment-distribution/export")
+    public ResponseEntity<byte[]> exportPaymentDistributionReport(@RequestParam(required = false) LocalDate businessDate) {
+        List<PaymentDistributionResponse> reports = reportingService.getPaymentDistribution(businessDate);
+        byte[] excel = excelReportService.exportPaymentDistributionReport(reports);
+
+        return buildExcelResponse(excel, "payment-distribution-report.xlsx");
+    }
+
 
     @GetMapping("/pumps/export")
     public ResponseEntity<byte[]> exportPumpReport(
@@ -240,8 +251,82 @@ public class ReportExportController {
     }
 
 
+    @GetMapping("/attendants/export/pdf")
+    public ResponseEntity<byte[]> exportAttendantReportPdf(@RequestParam(required = false) LocalDate businessDate) {
+        List<AttendantReportResponse> reports = reportingService.getAttendantReport(businessDate);
+        byte[] pdf = pdfReportService.exportAttendantReport(reports);
+
+        return buildPdfResponse(pdf, "attendant-report.pdf");
+    }
+
+    @GetMapping("/deliveries/export/pdf") public ResponseEntity<byte[]> exportDeliveryReportPdf( @RequestParam(required = false) LocalDate businessDate) { 
+        return buildPdfResponse( pdfReportService.exportDeliveryReport( reportingService.getDeliveryReport(businessDate) ), "delivery-report.pdf" );
+     }
+
+    @GetMapping("/inventory/export/pdf") public ResponseEntity<byte[]> exportInventoryReportPdf() { 
+        return buildPdfResponse( pdfReportService.exportInventoryReport( reportingService.getInventoryReport() ), "inventory-report.pdf" ); 
+    }
+
+    @GetMapping("/inventory-transactions/export/pdf") public ResponseEntity<byte[]> exportInventoryTransactionReportPdf( @RequestParam(required = false) LocalDate businessDate) { 
+        return buildPdfResponse( pdfReportService.exportInventoryTransactionReport( reportingService.getInventoryTransactionReport(businessDate) ), "inventory-transaction-report.pdf" ); 
+    }
+
+    @GetMapping("/payments/export/pdf") public ResponseEntity<byte[]> exportPaymentReportPdf( @RequestParam(required = false) LocalDate businessDate) { 
+        return buildPdfResponse( pdfReportService.exportPaymentReport( reportingService.getPaymentReport(businessDate) ), "payment-report.pdf" ); 
+    }
+
+    @GetMapping("/payments/distribution/export/pdf") public ResponseEntity<byte[]> exportPaymentDistributionReportPdf( @RequestParam(required = false) LocalDate businessDate) { 
+        return buildPdfResponse( pdfReportService.exportPaymentDistributionReport( reportingService.getPaymentDistribution(businessDate) ), "payment-distribution-report.pdf" ); 
+    }
+
+    @GetMapping("/price-history/export/pdf") public ResponseEntity<byte[]> exportPriceHistoryReportPdf( @RequestParam(required = false) LocalDate businessDate) { 
+        return buildPdfResponse( pdfReportService.exportPriceHistoryReport( reportingService.getPriceHistoryReport(businessDate) ), "price-history-report.pdf" ); 
+    }
+
+    @GetMapping("/products/export/pdf") public ResponseEntity<byte[]> exportProductReportPdf() { 
+        return buildPdfResponse( pdfReportService.exportProductReport( reportingService.getProductReport() ), "product-report.pdf" ); 
+    }
+
+    @GetMapping("/pump-assignments/export/pdf") public ResponseEntity<byte[]> exportPumpAssignmentReportPdf( @RequestParam(required = false) LocalDate businessDate) { 
+        return buildPdfResponse( pdfReportService.exportPumpAssignmentReport( reportingService.getPumpAssignmentReport(businessDate) ), "pump-assignment-report.pdf" ); 
+    }
+
+    @GetMapping("/pump-audits/export/pdf") public ResponseEntity<byte[]> exportPumpAuditReportPdf( @RequestParam(required = false) LocalDate businessDate) { 
+        return buildPdfResponse( pdfReportService.exportPumpAuditReport( reportingService.getPumpAuditReport(businessDate) ), "pump-audit-report.pdf" ); 
+    }
+
+    @GetMapping("/pump-performance/export/pdf") public ResponseEntity<byte[]> exportPumpPerformanceReportPdf( @RequestParam(required = false) LocalDate businessDate) { 
+        return buildPdfResponse( pdfReportService.exportPumpPerformanceReport( reportingService.getPumpPerformance(businessDate) ), "pump-performance-report.pdf" ); 
+    }
+
+    @GetMapping("/stations/export/pdf") public ResponseEntity<byte[]> exportStationReportPdf( @RequestParam(required = false) LocalDate businessDate) { 
+        return buildPdfResponse( pdfReportService.exportStationReport( reportingService.getStationReport(businessDate) ), "station-report.pdf" ); 
+    }
+
+    @GetMapping("/pumps/export/pdf") public ResponseEntity<byte[]> exportPumpReportPdf( @RequestParam(required = false) LocalDate businessDate) { 
+        return buildPdfResponse( pdfReportService.exportPumpReport( reportingService.getPumpReport(businessDate) ), "pump-report.pdf" ); 
+    }
+
+    @GetMapping("/sales/export/pdf") public ResponseEntity<byte[]> exportSalesReportPdf( @RequestParam(required = false) LocalDate businessDate) { 
+        return buildPdfResponse( pdfReportService.exportSalesReport( reportingService.getSalesReport(businessDate) ), "sales-report.pdf" ); 
+    }
 
 
+
+
+
+
+
+
+
+    private ResponseEntity<byte[]> buildPdfResponse(byte[] content, String filename) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.attachment().filename(filename).build());
+
+        headers.setContentLength(content.length);
+        return ResponseEntity.ok().headers(headers).body(content);
+    }
 
     private ResponseEntity<byte[]> buildExcelResponse(byte[] content, String filename) {
         HttpHeaders headers = new HttpHeaders();
