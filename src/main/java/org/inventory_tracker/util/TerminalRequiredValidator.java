@@ -28,7 +28,7 @@ public class TerminalRequiredValidator implements ConstraintValidator<ValidTermi
         }
 
         if (request instanceof CreatePumpRequest createPumpRequest) {
-            return isValidCreatePumpRequest(createPumpRequest);
+            return isValidCreatePumpRequest(createPumpRequest, context);
         }
 
         if (request instanceof ClosePumpAuditRequest closePumpAuditRequest) {
@@ -38,12 +38,21 @@ public class TerminalRequiredValidator implements ConstraintValidator<ValidTermi
         return true;
     }
 
-    private boolean isValidCreatePumpRequest(CreatePumpRequest request) {
+    private boolean isValidCreatePumpRequest(CreatePumpRequest request, ConstraintValidatorContext context) {
         boolean hasTerminalId = request.getDefaultTerminalId() != null;
 
         boolean hasSerialNumber = request.getTerminalSerialNumber() != null && !request.getTerminalSerialNumber().trim().isEmpty();
 
-        return hasTerminalId || hasSerialNumber;
+        if (!hasTerminalId && !hasSerialNumber) {
+            addViolation(
+                    context,
+                    "Provide either defaultTerminalId or terminalSerialNumber"
+            );
+
+            return false;
+        }
+
+        return true;
     }
 
     private boolean isValidClosePumpAuditRequest(ClosePumpAuditRequest request, ConstraintValidatorContext context) {
@@ -51,6 +60,28 @@ public class TerminalRequiredValidator implements ConstraintValidator<ValidTermi
                         && !request.getTerminalSerialNumber().trim().isEmpty();
 
         boolean hasPumpAssignmentId = request.getPumpAssignmentId() != null;
+
+        boolean hasPumpId =
+                request.getPumpId() != null;
+
+
+        if (hasPumpAssignmentId == hasTerminalSerialNumber) {
+            addViolation(
+                    context,
+                    "Provide either pumpAssignmentId or terminalSerialNumber, but not both"
+            );
+
+            return false;
+        }
+
+                if (hasPumpAssignmentId && hasPumpId) {
+            addViolation(
+                    context,
+                    "pumpId must not be provided with pumpAssignmentId"
+            );
+
+            return false;
+        }
 
         /*
          * XOR:
@@ -60,16 +91,28 @@ public class TerminalRequiredValidator implements ConstraintValidator<ValidTermi
          * false + false = invalid
          * true  + true  = invalid
          */
-        boolean valid = hasTerminalSerialNumber ^ hasPumpAssignmentId;
+        // boolean valid = hasTerminalSerialNumber ^ hasPumpAssignmentId;
 
-        if (!valid) {
-            context.disableDefaultConstraintViolation();
+        // if (!valid) {
+        //     context.disableDefaultConstraintViolation();
 
-            context.buildConstraintViolationWithTemplate("Provide exactly one of terminalSerialNumber or pumpAssignmentId")
-                    .addConstraintViolation();
-        }
+        //     context.buildConstraintViolationWithTemplate("Provide exactly one of terminalSerialNumber or pumpAssignmentId")
+        //             .addConstraintViolation();
+        // }
 
-        return valid;
+        // return valid;
+
+        return true;
+    }
+
+    private void addViolation(
+            ConstraintValidatorContext context,
+            String message) {
+
+        context.disableDefaultConstraintViolation();
+
+        context.buildConstraintViolationWithTemplate(message)
+                .addConstraintViolation();
     }
 }
 

@@ -198,8 +198,8 @@ public class PumpAuditController {
    }
 
     @PutMapping("/close")
-    public ResponseEntity<ApiSuccessResponse<PumpAuditResponse>> closePumpAudit(@RequestBody ClosePumpAuditRequest request) {
-        PumpAuditResponse response = pumpAuditService.closePumpAudit(request.getPumpAssignmentId(), request.getClosingReading());
+    public ResponseEntity<ApiSuccessResponse<PumpAuditResponse>> closePumpAudit(@Valid @RequestBody ClosePumpAuditRequest request) {
+        PumpAuditResponse response = pumpAuditService.closePumpAudit(request.getPumpAssignmentId(), request.getTerminalSerialNumber(), request.getPumpId(), request.getClosingReading());
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
@@ -216,9 +216,9 @@ public class PumpAuditController {
     @GetMapping("/shift-summary")
     public ResponseEntity<ApiSuccessResponse<ShiftSummaryResponse>>
     getShiftSummary(@RequestParam(required = false) Long terminalId, @RequestParam(required = false)
-            String terminalSerialNumber) {
+            String terminalSerialNumber, @RequestParam(required = false) Long pumpId) {
 
-        ShiftSummaryResponse response = pumpAuditService.getShiftSummary(terminalSerialNumber);
+        ShiftSummaryResponse response = pumpAuditService.getShiftSummary(terminalSerialNumber, pumpId);
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),

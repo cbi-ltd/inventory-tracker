@@ -15,6 +15,7 @@ import org.inventory_tracker.repository.PumpRepository;
 import org.inventory_tracker.repository.PumpAssignmentRepository;
 import org.inventory_tracker.repository.StationRepository;
 import org.inventory_tracker.enums.Shift;
+import org.inventory_tracker.enums.TerminalMode;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
@@ -40,38 +41,175 @@ public class PumpAssignmentService {
     private final AuthenticatedUserService authenticatedUserService;
 
 
-    @Transactional
-    public PumpAssignmentResponse changeTerminalAssignment(Long assignmentId,
-        ChangeTerminalAssignmentRequest request) {
-        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
-        PumpAssignment assignment = pumpAssignmentRepository.findById(assignmentId)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Pump assignment not found"));
-        if (!assignment.getStation().getMerchant().getId().equals(principal.getMerchantDbId())) {
-                throw new ResourceNotFoundException("Pump assignment not found");
-        }
+//     @Transactional
+//     public PumpAssignmentResponse changeTerminalAssignment(Long assignmentId,
+//         ChangeTerminalAssignmentRequest request) {
+//         MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+//         PumpAssignment assignment = pumpAssignmentRepository.findById(assignmentId)
+//                         .orElseThrow(() ->
+//                                 new ResourceNotFoundException(
+//                                         "Pump assignment not found"));
+//         if (!assignment.getStation().getMerchant().getId().equals(principal.getMerchantDbId())) {
+//                 throw new ResourceNotFoundException("Pump assignment not found");
+//         }
 
-        Pump pump = assignment.getPump();
-        Terminal terminal = terminalRepository.findById(request.getTerminalId())
-                                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
+//         Pump pump = assignment.getPump();
+//         Station station = assignment.getStation();
+//         Terminal terminal = terminalRepository.findById(request.getTerminalId())
+//                                 .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
 
-        boolean terminalBelongsToPump = (pump.getDefaultTerminal() != null
-                                                && pump.getDefaultTerminal().getId().equals(terminal.getId())) ||
-                                        (pump.getTerminalSerialNumber() != null
-                                                && pump.getTerminalSerialNumber().equals(terminal.getTerminalSerialNumber()));
+//         boolean terminalBelongsToPump = (pump.getDefaultTerminal() != null
+//                                                 && pump.getDefaultTerminal().getId().equals(terminal.getId())) ||
+//                                         (pump.getTerminalSerialNumber() != null
+//                                                 && pump.getTerminalSerialNumber().equals(terminal.getTerminalSerialNumber()));
 
-        if (!terminalBelongsToPump) {
-                throw new ResourceNotFoundException("Terminal not found");
-        }
+//         if (!terminalBelongsToPump) {
+//                 throw new ResourceNotFoundException("Terminal not found");
+//         }
 
-        assignment.setTerminal(terminal);
-        PumpAssignment updated = pumpAssignmentRepository.save(assignment);
+//         assignment.setTerminal(terminal);
+//         PumpAssignment updated = pumpAssignmentRepository.save(assignment);
 
-        return pumpAssignmentMapper.toResponse(updated);
+//         return pumpAssignmentMapper.toResponse(updated);
+//     }
+
+
+        @Transactional
+        public PumpAssignmentResponse changeTerminalAssignment(Long assignmentId, ChangeTerminalAssignmentRequest request) {
+                MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+                PumpAssignment assignment = pumpAssignmentRepository.findById(assignmentId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Pump assignment not found"));
+
+                if (!assignment.getStation().getMerchant().getId().equals(principal.getMerchantDbId())) {
+                        throw new ResourceNotFoundException("Pump assignment not found");
+                }
+
+                Station station = assignment.getStation();
+
+                    if (station == null ||
+            station.getMerchant() == null ||
+            !station.getMerchant().getId()
+                    .equals(principal.getMerchantDbId())) {
+
+        throw new ResourceNotFoundException(
+                "Pump assignment not found");
     }
 
+    if (!Boolean.TRUE.equals(assignment.getActive())) {
+        throw new BadRequestException(
+                "Cannot change a closed pump assignment");
+    }
+
+    if (request.getTerminalId() == null) {
+        throw new BadRequestException(
+                "Terminal ID is required");
+    }
+
+                Pump pump = assignment.getPump();
+
+                Terminal terminal = terminalRepository.findById(request.getTerminalId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
+
+                if (terminal.getStation() == null || !terminal.getStation().getId().equals(station.getId())) {
+                        throw new BadRequestException("Terminal does not belong to this station");
+                }
+
+                if (!Boolean.TRUE.equals(terminal.getActive())) {
+        throw new BadRequestException(
+                "Terminal is inactive");
+    }
+
+
+                if (station.getTerminalMode() == TerminalMode.SINGLE_PUMP) {
+                        boolean terminalBelongsToPump = (pump.getDefaultTerminal() != null && pump.getDefaultTerminal()
+                                                .getId().equals(terminal.getId()))
+                                ||
+                                (pump.getTerminalSerialNumber() != null
+                                        && pump.getTerminalSerialNumber().equals(terminal.getTerminalSerialNumber()));
+
+                        if (!terminalBelongsToPump) {
+                                throw new BadRequestException("Terminal is not configured for this pump");
+                        }
+                }
+
+                assignment.setTerminal(terminal);
+                PumpAssignment updated = pumpAssignmentRepository.save(assignment);
+                return pumpAssignmentMapper.toResponse(updated);
+        }
+
         
+//     @Transactional
+//     public PumpAssignmentResponse assignPumpToAttendant(AssignPumpRequest request) {
+//         MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+        
+//         Station station = stationRepository.findById(request.getStationId())
+//                                 .orElseThrow(() -> new ResourceNotFoundException("Station not found"));
+
+//         if (!station.getMerchant().getId().equals(principal.getMerchantDbId())) {
+//                 throw new ResourceNotFoundException("Station not found");
+//         }
+        
+//         Attendant attendant = attendantRepository.findById(request.getAttendantId())
+//                 .orElseThrow(() -> new ResourceNotFoundException("Attendant not found"));
+
+//         if (!attendant.getStation().getId().equals(station.getId())) {
+//                 throw new BadRequestException("Attendant does not belong to this station");
+//         }
+
+
+//         Pump pump = pumpRepository.findById(request.getPumpId())
+//                         .orElseThrow(() ->new ResourceNotFoundException("Pump not found"));
+
+//         if (!pump.getStation().getId().equals(station.getId())) {
+//                 throw new BadRequestException("Pump does not belong to this station");
+//         }
+                        
+//         LocalDate today = ShiftUtil.businessDate(station.getTimeZone());
+//         Shift currentShift = ShiftUtil.currentShift(station.getTimeZone());
+
+//         pumpAssignmentRepository
+//                 .findByPumpIdAndAssignmentDateAndShiftAndActiveTrue(pump.getId(), today,currentShift)
+//                 .ifPresent(existing -> {
+//                     throw new DuplicateResourceException(
+//                             "Pump " + pump.getPumpNumber()
+//                                     + " is already assigned for the current shift."
+//                     );
+//                 });
+
+//         List<PumpAssignment> activeAssignments = pumpAssignmentRepository
+//                                                         .findAllByAttendantIdAndActiveTrue(attendant.getId());
+
+//         if (!activeAssignments.isEmpty()) {
+//             activeAssignments.forEach(a -> a.setActive(false));
+//             pumpAssignmentRepository.saveAll(activeAssignments);
+//         }
+
+//         Terminal terminal = (pump.getDefaultTerminal() != null) ? pump.getDefaultTerminal() : terminalRepository.findByTerminalSerialNumber(pump.getTerminalSerialNumber())
+//                                 .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
+
+//         boolean terminalBelongsToPump = (pump.getDefaultTerminal() != null
+//                                                 && pump.getDefaultTerminal().getId().equals(terminal.getId())) ||
+//                                         (pump.getTerminalSerialNumber() != null
+//                                                 && pump.getTerminalSerialNumber().equals(terminal.getTerminalSerialNumber()));
+
+//         if (!terminalBelongsToPump) {
+//                 throw new ResourceNotFoundException("Terminal not found");
+//         }
+                         
+//         PumpAssignment assignment = new PumpAssignment();
+//         assignment.setPump(pump);
+//         assignment.setTerminal(terminal);
+//         assignment.setAttendant(attendant);
+//         assignment.setStation(station);
+//         assignment.setAssignmentDate(today);
+//         assignment.setShift(currentShift);
+//         assignment.setActive(true);
+
+//         PumpAssignment saved = pumpAssignmentRepository.save(assignment);
+//         return pumpAssignmentMapper.toResponse(saved);
+//     }
+
+
     @Transactional
     public PumpAssignmentResponse assignPumpToAttendant(AssignPumpRequest request) {
         MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
@@ -118,18 +256,63 @@ public class PumpAssignmentService {
             pumpAssignmentRepository.saveAll(activeAssignments);
         }
 
-        Terminal terminal = (pump.getDefaultTerminal() != null) ? pump.getDefaultTerminal() : terminalRepository.findByTerminalSerialNumber(pump.getTerminalSerialNumber())
-                                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
+        Terminal terminal;
 
-        boolean terminalBelongsToPump = (pump.getDefaultTerminal() != null
-                                                && pump.getDefaultTerminal().getId().equals(terminal.getId())) ||
-                                        (pump.getTerminalSerialNumber() != null
-                                                && pump.getTerminalSerialNumber().equals(terminal.getTerminalSerialNumber()));
+        if (station.getTerminalMode() == TerminalMode.MULTI_PUMP) {
 
-        if (!terminalBelongsToPump) {
-                throw new ResourceNotFoundException("Terminal not found");
+        // Multi-pump mode requires an explicitly selected terminal.
+        if (request.getTerminalId() == null) {
+            throw new BadRequestException(
+                    "Terminal ID is required for multi-pump stations");
         }
-                         
+
+        terminal = terminalRepository.findById(request.getTerminalId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Terminal not found"));
+
+    }else{
+
+        if (pump.getDefaultTerminal() != null) {
+                terminal = pump.getDefaultTerminal();
+        } 
+        else if (pump.getTerminalSerialNumber() != null) {
+
+        terminal = terminalRepository
+                .findByTerminalSerialNumber(pump.getTerminalSerialNumber())
+                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
+        } 
+        else {
+                throw new ResourceNotFoundException("No terminal configured for pump");
+        }
+}
+
+        if (terminal.getStation() == null || !terminal.getStation().getId().equals(station.getId())) {
+                throw new BadRequestException("Terminal does not belong to this station");
+        }
+
+// if (station.getTerminalMode() == TerminalMode.SINGLE_PUMP) {
+
+//     boolean terminalBelongsToPump =
+//             (pump.getDefaultTerminal() != null
+//                     && pump.getDefaultTerminal()
+//                             .getId()
+//                             .equals(terminal.getId()))
+//             ||
+//             (pump.getTerminalSerialNumber() != null
+//                     && pump.getTerminalSerialNumber()
+//                             .equals(terminal.getTerminalSerialNumber()));
+
+//     if (!terminalBelongsToPump) {
+//         throw new ResourceNotFoundException("Terminal not found");
+//     }
+// }
+
+    if (!Boolean.TRUE.equals(terminal.getActive())) {
+        throw new BadRequestException(
+                "Terminal is inactive");
+    }
+          
         PumpAssignment assignment = new PumpAssignment();
         assignment.setPump(pump);
         assignment.setTerminal(terminal);
@@ -142,6 +325,7 @@ public class PumpAssignmentService {
         PumpAssignment saved = pumpAssignmentRepository.save(assignment);
         return pumpAssignmentMapper.toResponse(saved);
     }
+
 
     @Transactional(readOnly = true)
     public PumpAssignmentResponse getPumpCurrentAssignment(Long attendantId) {
@@ -263,6 +447,34 @@ public class PumpAssignmentService {
 
                 return pumpAssignmentMapper.toResponseList(pumpAssignmentRepository
                                 .findByStation_Merchant_IdAndShiftOrderByAssignmentDateDescStation_NameAscPump_PumpNumberAsc(principal.getMerchantDbId(), shift));
+   }
+
+   @Transactional(readOnly = true)
+   public List<PumpAssignmentResponse> getCurrentAssignmentsByTerminal(String terminalSerialNumber) {
+        MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
+
+        Terminal terminal = terminalRepository.findByTerminalSerialNumberAndStation_Merchant_CamsMerchantId(
+                                terminalSerialNumber, principal.getMerchantId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
+
+        Station station = terminal.getStation();
+
+        if (station.getTerminalMode() != TerminalMode.MULTI_PUMP) {
+                throw new BadRequestException("This endpoint is only available for MULTI_PUMP stations");
+        }
+
+        LocalDate businessDate = ShiftUtil.businessDate(station.getTimeZone());
+        Shift shift = ShiftUtil.currentShift(station.getTimeZone());
+
+        List<PumpAssignment> assignments = pumpAssignmentRepository
+                        .findByTerminal_IdAndAssignmentDateAndShiftAndActiveTrue(
+                                terminal.getId(), businessDate, shift);
+
+        if (assignments.isEmpty()) {
+                throw new ResourceNotFoundException("No active pump assignments found for this terminal");
+        }
+
+        return pumpAssignmentMapper.toResponseList(assignments);
    }
 
 //    private Merchant getAuthenticatedMerchant() {

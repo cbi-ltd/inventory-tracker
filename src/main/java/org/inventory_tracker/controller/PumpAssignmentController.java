@@ -235,5 +235,21 @@ public class PumpAssignmentController {
                         )
                 );
         }
+
+        @GetMapping("/assignments")
+        public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>> getCurrentAssignmentsByTerminal(@RequestParam String terminalSerialNumber) {
+                List<PumpAssignmentResponse> response = pumpAssignmentService.getCurrentAssignmentsByTerminal(terminalSerialNumber);
+                int count = response.size();
+
+                return ResponseEntity.ok(
+                        new ApiSuccessResponse<>(
+                                LocalDateTime.now(),
+                                HttpStatus.OK.value(),
+                                "Current assignments retrieved successfully",
+                                count,
+                                response
+                        )
+                );
+        }
 }
 

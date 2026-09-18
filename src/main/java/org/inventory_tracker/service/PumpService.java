@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.inventory_tracker.repository.ProductRepository;
 import java.util.List;
 import org.inventory_tracker.entity.*;
+import org.inventory_tracker.enums.TerminalMode;
 import org.springframework.stereotype.Service;
 import org.inventory_tracker.repository.TerminalRepository;
 import org.inventory_tracker.security.AuthenticatedUserService;
@@ -29,6 +30,40 @@ public class PumpService {
     private final TerminalRepository terminalRepository;
     private final PumpMapper pumpMapper;
     private final AuthenticatedUserService authenticatedUserService;
+
+    // @Transactional
+    // public PumpResponse createPump(CreatePumpRequest request) {
+    //     Merchant merchant = authenticatedUserService.getCurrentMerchant();
+    //     Station station = getMerchantStation(request.getStationId(), merchant);
+    //     // Station station = stationRepository.findById(request.getStationId())
+    //     //         .orElseThrow(() -> new ResourceNotFoundException("Station not found"));
+
+    //     Product product = productRepository.findById(request.getProductId())
+    //                             .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+
+    //     if (pumpRepository.existsByPumpNumberAndStation_Id(request.getPumpNumber(), station.getId())) {
+    //         throw new DuplicateResourceException("Pump number already exists in this station");
+    //     }
+
+    //     Pump pump = pumpMapper.toEntity(request);
+    //     pump.setStation(station);
+    //     pump.setProduct(product);
+
+    //     if (request.getDefaultTerminalId() != null) {
+    //         Terminal terminal = terminalRepository.findByIdAndStation_Merchant_Id(request.getDefaultTerminalId(), merchant.getId())
+    //                                 .orElseThrow(() ->new ResourceNotFoundException("Terminal not found"));
+
+    //         if (!terminal.getStation().getId().equals(station.getId())) {
+    //             throw new BadRequestException("Terminal does not belong to the selected station");
+    //         }
+
+    //         pump.setDefaultTerminal(terminal);
+    //     }
+
+    //     Pump savedPump = pumpRepository.save(pump);
+    //     return pumpMapper.toResponse(savedPump);
+    // }
+
 
     @Transactional
     public PumpResponse createPump(CreatePumpRequest request) {
@@ -49,19 +84,18 @@ public class PumpService {
         pump.setProduct(product);
 
         if (request.getDefaultTerminalId() != null) {
-            Terminal terminal = terminalRepository.findByIdAndStation_Merchant_Id(request.getDefaultTerminalId(), merchant.getId())
-                                    .orElseThrow(() ->new ResourceNotFoundException("Terminal not found"));
+            Terminal terminal = terminalRepository.findByIdAndStation_Merchant_Id(
+                            request.getDefaultTerminalId(), merchant.getId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
 
-            if (!terminal.getStation().getId().equals(station.getId())) {
-                throw new BadRequestException("Terminal does not belong to the selected station");
-            }
-
+            validateTerminalAssignment(station, terminal, null);
             pump.setDefaultTerminal(terminal);
         }
 
         Pump savedPump = pumpRepository.save(pump);
         return pumpMapper.toResponse(savedPump);
     }
+
 
     @Transactional(readOnly = true)
     public PumpResponse getPumpById(Long id) {
@@ -96,6 +130,12 @@ public class PumpService {
         pumpMapper.updatePumpFromDto(request, pump);
         pump.setStation(targetStation);
 
+        if (request.getStationId() != null && !targetStation.getId().equals(pump.getDefaultTerminal() != null
+                ? pump.getDefaultTerminal().getStation().getId() : null)) {
+
+                pump.setDefaultTerminal(null);
+        }
+
         if (request.getProductId() != null) {
                 Product product = productRepository.findById(request.getProductId())
                         .orElseThrow(() ->
@@ -105,14 +145,11 @@ public class PumpService {
         }
 
         if (request.getDefaultTerminalId() != null) {
-                Terminal terminal = terminalRepository.findByIdAndStation_Merchant_Id(request.getDefaultTerminalId(), merchant.getId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException("Terminal not found"));
-            if (!terminal.getStation().getId().equals(targetStation.getId())) {
-                throw new BadRequestException("Terminal does not belong to the pump's station");
-            }
-                
+            Terminal terminal = terminalRepository
+                    .findByIdAndStation_Merchant_Id(request.getDefaultTerminalId(), merchant.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
 
+            validateTerminalAssignment(targetStation, terminal, pump.getId());
             pump.setDefaultTerminal(terminal);
         }
 
@@ -187,4 +224,59 @@ public class PumpService {
         return stationRepository.findByIdAndMerchantId(stationId, merchant.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Station not found"));
    }
+
+   private void validateTerminalAssignment(
+        Station station,
+        Terminal terminal,
+        Long pumpId) {
+
+    if (terminal == null) {
+        return;
+    }
+
+    // Terminal must belong to the selected station
+    if (!terminal.getStation().getId().equals(station.getId())) {
+        throw new BadRequestException(
+                "Terminal does not belong to the selected station"
+        );
+    }
+
+    // Multi-pump stations allow multiple pumps to share a terminal
+    if (station.getTerminalMode() == TerminalMode.MULTI_PUMP) {
+        return;
+    }
+
+    // Single-pump station:
+    // check whether another pump is already using this terminal
+    boolean alreadyAssigned;
+
+    if (pumpId == null) {
+
+        // Creating a new pump
+        alreadyAssigned =
+                pumpRepository.existsByStation_IdAndDefaultTerminal_Id(
+                        station.getId(),
+                        terminal.getId()
+                );
+
+    } else {
+
+        // Updating an existing pump
+        alreadyAssigned =
+                pumpRepository.existsByStation_IdAndDefaultTerminal_IdAndIdNot(
+                        station.getId(),
+                        terminal.getId(),
+                        pumpId
+                );
+    }
+
+    if (alreadyAssigned) {
+        throw new DuplicateResourceException(
+                "Terminal " + terminal.getTerminalSerialNumber()
+                        + " is already assigned to another pump in this station"
+        );
+    }
+}
+
+
 }

@@ -38,13 +38,8 @@ public class TerminalController {
     }
 
     @GetMapping("/{tid}")
-    public ResponseEntity<ApiSuccessResponse<TerminalResponse>>
-    getTerminalByTid(
-            @PathVariable String tid) {
-
-        TerminalResponse response =
-                terminalService.getTerminalByTid(
-                        tid);
+    public ResponseEntity<ApiSuccessResponse<TerminalResponse>>getTerminalByTid(@PathVariable String tid) {
+        TerminalResponse response = terminalService.getTerminalByTid(tid);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
@@ -57,13 +52,8 @@ public class TerminalController {
     }
 
     @GetMapping("/serial/{terminalSerialNumber}")
-    public ResponseEntity<ApiSuccessResponse<TerminalResponse>>
-    getTerminalByTerminalSerialNumber(
-            @PathVariable String terminalSerialNumber) {
-
-        TerminalResponse response =
-                terminalService.getTerminalByTerminalSerialNumber(
-                        terminalSerialNumber);
+    public ResponseEntity<ApiSuccessResponse<TerminalResponse>>getTerminalByTerminalSerialNumber(@PathVariable String terminalSerialNumber) {
+        TerminalResponse response = terminalService.getTerminalByTerminalSerialNumber(terminalSerialNumber);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
@@ -76,12 +66,8 @@ public class TerminalController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiSuccessResponse<List<TerminalResponse>>>
-    getAllTerminals() {
-
-        List<TerminalResponse> response =
-                terminalService.getAllTerminals();
-
+    public ResponseEntity<ApiSuccessResponse<List<TerminalResponse>>>getAllTerminals() {
+        List<TerminalResponse> response = terminalService.getAllTerminals();
         int count = response.size();
 
         return ResponseEntity.ok(
@@ -96,12 +82,8 @@ public class TerminalController {
     }
 
     @GetMapping("/active")
-    public ResponseEntity<ApiSuccessResponse<List<TerminalResponse>>>
-    getActiveTerminals() {
-
-        List<TerminalResponse> response =
-                terminalService.getActiveTerminals();
-
+    public ResponseEntity<ApiSuccessResponse<List<TerminalResponse>>>getActiveTerminals() {
+        List<TerminalResponse> response = terminalService.getActiveTerminals();
         int count = response.size();
 
         return ResponseEntity.ok(
@@ -116,12 +98,14 @@ public class TerminalController {
     }
 
 
+    //SINGLE PUMP MODE: /api/v1/terminals/session?terminalSerialNumber=T001
+    //MULTI PUMP MODE: /api/v1/terminals/session?terminalSerialNumber=T001&pumpId=2
     @GetMapping("/session")
     public ResponseEntity<ApiSuccessResponse<PosSessionResponse>>getPosSession(
-            @RequestParam(required = false) Long terminalId,
+            @RequestParam(required = false) Long pumpId,
             @RequestParam(required = false) String terminalSerialNumber) {
 
-        PosSessionResponse response = posSessionService.getPosSession(terminalSerialNumber);
+        PosSessionResponse response = posSessionService.getPosSession(terminalSerialNumber, pumpId);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(

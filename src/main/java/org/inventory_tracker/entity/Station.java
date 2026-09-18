@@ -1,6 +1,7 @@
 package org.inventory_tracker.entity;
 
 import java.time.ZoneId;
+import org.inventory_tracker.enums.TerminalMode;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -47,4 +48,8 @@ public class Station extends BaseEntity {
 
     @Column(nullable = false)
     private ZoneId timeZone;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TerminalMode terminalMode = TerminalMode.SINGLE_PUMP;
 }

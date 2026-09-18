@@ -17,33 +17,26 @@ import org.inventory_tracker.enums.Shift;
 @AllArgsConstructor
 public class PosSessionResponse {
 
-    // Station
     private Long stationId;
     private String stationName;
 
-    // Terminal
     private Long terminalId;
     private String terminalSerialNumber;
     private String tid;
 
-    // Pump
     private Long pumpId;
     private String pumpNumber;
     private String pumpName;
 
-    // Product
     private Long productId;
     private String productName;
 
-    // Attendant
     private Long attendantId;
     private String attendantName;
 
-    // Assignment
     private Shift shift;
     private LocalDate businessDate;
 
-    // Meter
     private BigDecimal openingReading;
     private BigDecimal closingReading;
     private Long pumpAuditId;

@@ -19,6 +19,8 @@ import org.inventory_tracker.entity.PumpAudit;
 import org.inventory_tracker.entity.Station;
 import org.inventory_tracker.entity.Terminal;
 import org.inventory_tracker.enums.Shift;
+import org.inventory_tracker.enums.TerminalMode;
+
 import java.util.Objects;
 
 
@@ -118,7 +120,7 @@ public PosSessionResponse getTerminalPosSession(Long terminalId, String terminal
 
 
         @Transactional(readOnly = true)
-        public PosSessionResponse getPosSession(String terminalSerialNumber) {
+        public PosSessionResponse getPosSession(String terminalSerialNumber, Long pumpId) {
                 Terminal terminal = terminalRepository
                                 .findByTerminalSerialNumberAndActiveTrue(terminalSerialNumber)
                                 .orElseThrow(() -> new ResourceNotFoundException("Active terminal not found"));
@@ -138,16 +140,40 @@ public PosSessionResponse getTerminalPosSession(Long terminalId, String terminal
                 LocalDate today = ShiftUtil.businessDate(station.getTimeZone());
                 Shift shift = ShiftUtil.currentShift(station.getTimeZone());
 
-                PumpAssignment assignment = pumpAssignmentRepository
+                PumpAssignment assignment;
+
+                if (station.getTerminalMode() == TerminalMode.MULTI_PUMP) {
+
+                        assignment = pumpAssignmentRepository
+                .findByTerminalIdAndPumpIdAndAssignmentDateAndShiftAndActiveTrue(
+                        terminal.getId(),
+                        pumpId,
+                        today,
+                        shift)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "No active assignment found for this terminal and pump"));
+                }
+                else{
+                        assignment = pumpAssignmentRepository
                                 .findByTerminalIdAndAssignmentDateAndShiftAndActiveTrue(
                                         terminal.getId(),
                                         today,
                                         shift)
                                 .orElseThrow(() -> new ResourceNotFoundException("No active assignment for this terminal"));
+                }
+                
 
                 if (!assignment.getStation().getId().equals(station.getId())) {
                         throw new BadRequestException("Terminal assignment does not belong to terminal's station");
                 }
+
+                    if (assignment.getTerminal() == null ||
+            !assignment.getTerminal().getId().equals(terminal.getId())) {
+
+        throw new BadRequestException(
+                "Assignment does not belong to this terminal");
+    }
 
                 Pump pump = assignment.getPump();
 
@@ -160,6 +186,13 @@ public PosSessionResponse getTerminalPosSession(Long terminalId, String terminal
                 if (product == null) {
                         throw new ResourceNotFoundException("No product configured for this pump");
                 }
+
+                // Attendant attendant = assignment.getAttendant();
+
+                // if (attendant == null) {
+                //         throw new ResourceNotFoundException(
+                // "No attendant assigned to this pump");
+                // }
 
                 PumpAudit audit = pumpAuditRepository
                                 .findByPumpAssignment_Id(assignment.getId())

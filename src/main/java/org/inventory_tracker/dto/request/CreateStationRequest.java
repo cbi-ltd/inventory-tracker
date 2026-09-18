@@ -1,5 +1,6 @@
 package org.inventory_tracker.dto.request;
 
+import org.inventory_tracker.enums.TerminalMode;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,4 +29,6 @@ public class CreateStationRequest {
 
     @NotBlank(message = "Merchant account number is required")
     private String merchantAccountNumber;
+
+    private TerminalMode terminalMode;
 }

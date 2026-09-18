@@ -27,6 +27,8 @@ import org.inventory_tracker.enums.InventoryTransactionType;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
+import org.inventory_tracker.enums.Shift;
+import org.inventory_tracker.enums.TerminalMode;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
@@ -51,6 +53,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -231,165 +234,601 @@ public class PaymentService {
         }
     }
 
+    // @Transactional
+    // public SaleResponse JustChangedcreateSale(CreateSaleRequest request) {
+    //     try {
+    //         Terminal terminal = terminalRepository.findByTerminalSerialNumberAndActiveTrue(request.getTerminalSerialNumber())
+    //                         .orElseThrow(() -> new ResourceNotFoundException("Active terminal not found"));
+
+    //         Station station = terminal.getStation();
+
+    //         if (station == null) {
+    //             throw new ResourceNotFoundException("Terminal is not associated with a station");
+    //         }
+
+    //         Merchant merchant = station.getMerchant();
+
+    //         if (merchant == null) {
+    //             throw new ResourceNotFoundException("Station is not associated with a merchant");
+    //         }
+
+    //         Pump pump = pumpRepository.findByIdAndStation_IdAndStation_Merchant_CamsMerchantId(
+    //                                 request.getPumpId(),
+    //                                 station.getId(),
+    //                                 merchant.getCamsMerchantId())
+    //                         .orElseThrow(() -> new ResourceNotFoundException("Pump not found for this terminal's station"));
+
+    //         PumpAssignment assignment = pumpAssignmentRepository
+    //                         .findFirstByTerminal_IdAndPump_IdAndActiveTrue(terminal.getId(), pump.getId())
+    //                         .orElseThrow(() -> new ResourceNotFoundException( "Pump is not currently assigned to this terminal"));
+
+    //         Attendant attendant = assignment.getAttendant();
+
+    //         if (attendant == null) {
+    //             throw new ResourceNotFoundException("No attendant assigned to this pump");
+    //         }
+
+    //         Product product = pump.getProduct();
+
+    //         if (product == null) {
+    //             throw new ResourceNotFoundException("No product configured for this pump");
+    //         }
+
+    //         StationInventory inventory = stationInventoryRepository
+    //                         .findByStation_IdAndStation_Merchant_CamsMerchantIdAndProduct_Id(
+    //                                 station.getId(),
+    //                                 merchant.getCamsMerchantId(),
+    //                                 product.getId())
+    //                         .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
+
+    //         BigDecimal costPerUnit = inventory.getCostPerUnit();
+    //         BigDecimal sellingPrice = inventory.getSellingPrice();
+
+    //         if (sellingPrice == null) {
+    //             throw new BadRequestException("Selling price is not configured for this product");
+    //         }
+
+    //         BigDecimal quantity;
+    //         BigDecimal grossAmount;
+
+    //         if (request.getQuantity() != null) {
+    //             quantity = request.getQuantity();
+
+    //             if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
+    //                 throw new BadRequestException("Quantity must be greater than zero.");
+    //             }
+    //             grossAmount = quantity.multiply(sellingPrice);
+    //         } 
+    //         else {
+    //             grossAmount = request.getAmount();
+
+    //             if (grossAmount == null || grossAmount.compareTo(BigDecimal.ZERO) <= 0) {
+    //                 throw new BadRequestException("Amount must be greater than zero.");
+    //             }
+
+    //             if (sellingPrice.compareTo(BigDecimal.ZERO) == 0) {
+    //                 throw new BadRequestException("Selling price cannot be zero.");
+    //             }
+
+    //             quantity = grossAmount.divide(sellingPrice, 3, RoundingMode.HALF_UP);
+    //         }
+
+    //         if (inventory.getCurrentQuantity().compareTo(quantity) < 0) {
+    //             throw new BadRequestException("Insufficient stock available.");
+    //         }
+
+    //         Sale sale = saleMapper.toEntity(request);
+    //         sale.setStation(station);
+    //         sale.setPump(pump);
+    //         sale.setTerminal(terminal);
+    //         sale.setAttendant(attendant);
+    //         sale.setProduct(product);
+    //         sale.setSaleNumber(generateSaleNumber(station));
+    //         sale.setReceiptNumber(generateReceiptNumber());
+    //         sale.setSaleTime(LocalDateTime.now());
+    //         sale.setSellingPrice(sellingPrice);
+    //         sale.setShift(assignment.getShift());
+    //         sale.setBusinessDate(assignment.getAssignmentDate());
+    //         sale.setQuantity(quantity);
+    //         sale.setGrossAmount(grossAmount);
+
+    //         BigDecimal discount = request.getDiscountAmount() == null ? BigDecimal.ZERO : request.getDiscountAmount();
+    //         sale.setDiscountAmount(discount);
+    //         sale.setNetAmount(calculateNetAmount(grossAmount, discount));
+    //         sale.setInventoryUpdated(false);
+
+    //         switch (request.getPaymentMethod()) {
+    //             case CASH -> {
+    //                 sale.setPaymentStatus(PaymentStatus.SUCCESS);
+    //                 sale.setSaleStatus(SaleStatus.PENDING);
+    //             }
+
+    //             case CARD, TRANSFER, MIXED -> {
+    //                 sale.setPaymentStatus(PaymentStatus.PENDING);
+    //                 sale.setSaleStatus(SaleStatus.PENDING);
+    //             }
+
+    //             default -> throw new BadRequestException("Unsupported payment method.");
+    //         }
+
+    //         saleRepository.save(sale);
+
+    //         switch (request.getPaymentMethod()) {
+    //             case TRANSFER ->
+    //                     pendingTransferService.registerPendingTransfer(
+    //                             station.getMerchantAccountNumber(),
+    //                             sale.getSaleNumber(),
+    //                             sale.getNetAmount(),
+    //                             terminal.getTerminalSerialNumber());
+
+    //             case CARD ->
+    //                     pendingCardPaymentService.register(
+    //                             sale.getSaleNumber(),
+    //                             sale.getNetAmount(),
+    //                             terminal.getTerminalSerialNumber(),
+    //                             terminal.getTerminalSerialNumber());
+
+    //             case CASH -> {}
+    //             case MIXED -> {}
+    //         }
+
+    //         if (sale.getPaymentMethod() == PaymentMethod.CASH) {
+    //             recordCashPayment(sale.getId());
+    //             return completeCashSale(sale.getId());
+    //         }
+
+    //         return saleMapper.toResponse(sale);
+    //     } 
+    //     catch (ResourceNotFoundException | BadRequestException e) {
+    //         throw e;
+    //     } 
+    //     catch (ArithmeticException e) {
+    //         throw new BadRequestException("Calculation error during transaction: "+ e.getMessage());
+    //     } 
+    //     catch (Exception e) {
+    //         throw new RuntimeException("Failed to process sale due to an internal error: " + e.getMessage(), e);
+    //     }
+    // }
+
     @Transactional
     public SaleResponse createSale(CreateSaleRequest request) {
+
         try {
-            Terminal terminal = terminalRepository.findByTerminalSerialNumberAndActiveTrue(request.getTerminalSerialNumber())
-                            .orElseThrow(() -> new ResourceNotFoundException("Active terminal not found"));
+            if (request.getTerminalSerialNumber() == null
+                    || request.getTerminalSerialNumber().trim().isEmpty()) {
+
+                throw new BadRequestException(
+                        "Terminal serial number is required"
+                );
+            }
+
+            if (request.getPumpId() == null) {
+                throw new BadRequestException(
+                        "Pump ID is required"
+                );
+            }
+
+            if (request.getPaymentMethod() == null) {
+                throw new BadRequestException(
+                        "Payment method is required"
+                );
+            }
+
+            /*
+            * 1. Resolve active terminal
+            */
+            Terminal terminal =
+                    terminalRepository
+                            .findByTerminalSerialNumberAndActiveTrue(
+                                    request.getTerminalSerialNumber()
+                            )
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "Active terminal not found"
+                                    )
+                            );
 
             Station station = terminal.getStation();
 
             if (station == null) {
-                throw new ResourceNotFoundException("Terminal is not associated with a station");
+                throw new ResourceNotFoundException(
+                        "Terminal is not associated with a station"
+                );
             }
 
             Merchant merchant = station.getMerchant();
 
             if (merchant == null) {
-                throw new ResourceNotFoundException("Station is not associated with a merchant");
+                throw new ResourceNotFoundException(
+                        "Station is not associated with a merchant"
+                );
             }
 
-            Pump pump = pumpRepository.findByIdAndStation_IdAndStation_Merchant_CamsMerchantId(
+            /*
+            * 2. Resolve business date and shift
+            */
+            LocalDate businessDate =
+                    ShiftUtil.businessDate(station.getTimeZone());
+
+            Shift shift =
+                    ShiftUtil.currentShift(station.getTimeZone());
+
+            /*
+            * 3. Multi-pump validation
+            */
+            if (station.getTerminalMode() == TerminalMode.MULTI_PUMP
+                    && request.getPumpId() == null) {
+
+                throw new BadRequestException(
+                        "Pump ID is required for multi-pump stations"
+                );
+            }
+
+            /*
+            * 4. Resolve pump belonging to this station and merchant
+            */
+            Pump pump =
+                    pumpRepository
+                            .findByIdAndStation_IdAndStation_Merchant_CamsMerchantId(
                                     request.getPumpId(),
                                     station.getId(),
-                                    merchant.getCamsMerchantId())
-                            .orElseThrow(() -> new ResourceNotFoundException("Pump not found for this terminal's station"));
+                                    merchant.getCamsMerchantId()
+                            )
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "Pump not found for this terminal's station"
+                                    )
+                            );
 
-            PumpAssignment assignment = pumpAssignmentRepository
-                            .findFirstByTerminal_IdAndPump_IdAndActiveTrue(terminal.getId(), pump.getId())
-                            .orElseThrow(() -> new ResourceNotFoundException( "Pump is not currently assigned to this terminal"));
+            if (!Boolean.TRUE.equals(pump.getActive())) {
+                throw new BadRequestException(
+                        "Pump is inactive"
+                );
+            }
+
+            /*
+            * 5. Resolve exact active assignment
+            */
+            PumpAssignment assignment =
+                    pumpAssignmentRepository
+                            .findByTerminal_IdAndPump_IdAndAssignmentDateAndShiftAndActiveTrue(
+                                    terminal.getId(),
+                                    pump.getId(),
+                                    businessDate,
+                                    shift
+                            )
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "Pump is not currently assigned to this terminal for the current shift"
+                                    )
+                            );
+
+            /*
+            * 6. Validate assignment station
+            */
+            if (assignment.getStation() == null
+                    || !assignment.getStation()
+                            .getId()
+                            .equals(station.getId())) {
+
+                throw new BadRequestException(
+                        "Pump assignment does not belong to this station"
+                );
+            }
+
+            /*
+            * 7. Validate assignment terminal
+            */
+            if (assignment.getTerminal() == null
+                    || !assignment.getTerminal()
+                            .getId()
+                            .equals(terminal.getId())) {
+
+                throw new BadRequestException(
+                        "Pump assignment does not belong to this terminal"
+                );
+            }
+
+            /*
+            * 8. Validate assignment pump
+            */
+            if (assignment.getPump() == null
+                    || !assignment.getPump()
+                            .getId()
+                            .equals(pump.getId())) {
+
+                throw new BadRequestException(
+                        "Pump assignment does not belong to this pump"
+                );
+            }
 
             Attendant attendant = assignment.getAttendant();
 
             if (attendant == null) {
-                throw new ResourceNotFoundException("No attendant assigned to this pump");
+                throw new ResourceNotFoundException(
+                        "No attendant assigned to this pump"
+                );
             }
 
+            /*
+            * 9. Resolve product
+            */
             Product product = pump.getProduct();
 
             if (product == null) {
-                throw new ResourceNotFoundException("No product configured for this pump");
+                throw new ResourceNotFoundException(
+                        "No product configured for this pump"
+                );
             }
 
-            StationInventory inventory = stationInventoryRepository
+            /*
+            * 10. Resolve station inventory
+            */
+            StationInventory inventory =
+                    stationInventoryRepository
                             .findByStation_IdAndStation_Merchant_CamsMerchantIdAndProduct_Id(
                                     station.getId(),
                                     merchant.getCamsMerchantId(),
-                                    product.getId())
-                            .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
+                                    product.getId()
+                            )
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "Station inventory not found"
+                                    )
+                            );
 
-            BigDecimal costPerUnit = inventory.getCostPerUnit();
-            BigDecimal sellingPrice = inventory.getSellingPrice();
+            BigDecimal costPerUnit =
+                    inventory.getCostPerUnit();
+
+            BigDecimal sellingPrice =
+                    inventory.getSellingPrice();
 
             if (sellingPrice == null) {
-                throw new BadRequestException("Selling price is not configured for this product");
+                throw new BadRequestException(
+                        "Selling price is not configured for this product"
+                );
             }
 
+            if (sellingPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BadRequestException(
+                        "Selling price must be greater than zero"
+                );
+            }
+
+            /*
+            * 11. Calculate quantity and gross amount
+            */
             BigDecimal quantity;
             BigDecimal grossAmount;
 
             if (request.getQuantity() != null) {
+
                 quantity = request.getQuantity();
 
                 if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new BadRequestException("Quantity must be greater than zero.");
+                    throw new BadRequestException(
+                            "Quantity must be greater than zero"
+                    );
                 }
-                grossAmount = quantity.multiply(sellingPrice);
-            } 
-            else {
+
+                grossAmount =
+                        quantity.multiply(sellingPrice);
+
+            } else {
+
                 grossAmount = request.getAmount();
 
-                if (grossAmount == null || grossAmount.compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new BadRequestException("Amount must be greater than zero.");
+                if (grossAmount == null
+                        || grossAmount.compareTo(BigDecimal.ZERO) <= 0) {
+
+                    throw new BadRequestException(
+                            "Amount must be greater than zero"
+                    );
                 }
 
-                if (sellingPrice.compareTo(BigDecimal.ZERO) == 0) {
-                    throw new BadRequestException("Selling price cannot be zero.");
-                }
-
-                quantity = grossAmount.divide(sellingPrice, 3, RoundingMode.HALF_UP);
+                quantity =
+                        grossAmount.divide(
+                                sellingPrice,
+                                3,
+                                RoundingMode.HALF_UP
+                        );
             }
 
-            if (inventory.getCurrentQuantity().compareTo(quantity) < 0) {
-                throw new BadRequestException("Insufficient stock available.");
+            /*
+            * 12. Validate inventory
+            */
+            if (inventory.getCurrentQuantity() == null) {
+                throw new BadRequestException(
+                        "Current inventory quantity is not configured"
+                );
             }
 
-            Sale sale = saleMapper.toEntity(request);
+            if (inventory.getCurrentQuantity()
+                    .compareTo(quantity) < 0) {
+
+                throw new BadRequestException(
+                        "Insufficient stock available"
+                );
+            }
+
+            /*
+            * 13. Calculate discount and net amount
+            */
+            BigDecimal discount =
+                    request.getDiscountAmount() == null
+                            ? BigDecimal.ZERO
+                            : request.getDiscountAmount();
+
+            if (discount.compareTo(BigDecimal.ZERO) < 0) {
+                throw new BadRequestException(
+                        "Discount cannot be negative"
+                );
+            }
+
+            if (discount.compareTo(grossAmount) > 0) {
+                throw new BadRequestException(
+                        "Discount cannot exceed gross amount"
+                );
+            }
+
+            BigDecimal netAmount =
+                    calculateNetAmount(
+                            grossAmount,
+                            discount
+                    );
+
+            /*
+            * 14. Build sale
+            */
+            Sale sale =
+                    saleMapper.toEntity(request);
+
             sale.setStation(station);
             sale.setPump(pump);
             sale.setTerminal(terminal);
             sale.setAttendant(attendant);
             sale.setProduct(product);
-            sale.setSaleNumber(generateSaleNumber(station));
-            sale.setReceiptNumber(generateReceiptNumber());
-            sale.setSaleTime(LocalDateTime.now());
+
+            sale.setSaleNumber(
+                    generateSaleNumber(station)
+            );
+
+            sale.setReceiptNumber(
+                    generateReceiptNumber()
+            );
+
+            sale.setSaleTime(
+                    LocalDateTime.now(station.getTimeZone())
+            );
+
             sale.setSellingPrice(sellingPrice);
-            sale.setShift(assignment.getShift());
-            sale.setBusinessDate(assignment.getAssignmentDate());
             sale.setQuantity(quantity);
             sale.setGrossAmount(grossAmount);
-
-            BigDecimal discount = request.getDiscountAmount() == null ? BigDecimal.ZERO : request.getDiscountAmount();
             sale.setDiscountAmount(discount);
-            sale.setNetAmount(calculateNetAmount(grossAmount, discount));
+            sale.setNetAmount(netAmount);
+
+            sale.setBusinessDate(
+                    assignment.getAssignmentDate()
+            );
+
+            sale.setShift(
+                    assignment.getShift()
+            );
+
             sale.setInventoryUpdated(false);
 
+            /*
+            * Cost per unit is retained here if your Sale entity
+            * contains this field.
+            */
+            // sale.setCostPerUnit(costPerUnit);
+
+            /*
+            * 15. Set payment status
+            */
             switch (request.getPaymentMethod()) {
+
                 case CASH -> {
-                    sale.setPaymentStatus(PaymentStatus.SUCCESS);
-                    sale.setSaleStatus(SaleStatus.PENDING);
+                    sale.setPaymentStatus(
+                            PaymentStatus.SUCCESS
+                    );
+
+                    sale.setSaleStatus(
+                            SaleStatus.PENDING
+                    );
                 }
 
                 case CARD, TRANSFER, MIXED -> {
-                    sale.setPaymentStatus(PaymentStatus.PENDING);
-                    sale.setSaleStatus(SaleStatus.PENDING);
+                    sale.setPaymentStatus(
+                            PaymentStatus.PENDING
+                    );
+
+                    sale.setSaleStatus(
+                            SaleStatus.PENDING
+                    );
                 }
 
-                default -> throw new BadRequestException("Unsupported payment method.");
+                default -> throw new BadRequestException(
+                        "Unsupported payment method"
+                );
             }
 
-            saleRepository.save(sale);
+            /*
+            * 16. Save sale
+            */
+            Sale savedSale =
+                    saleRepository.save(sale);
 
+            /*
+            * 17. Register external payment where applicable
+            */
             switch (request.getPaymentMethod()) {
-                case TRANSFER ->
-                        pendingTransferService.registerPendingTransfer(
-                                station.getMerchantAccountNumber(),
-                                sale.getSaleNumber(),
-                                sale.getNetAmount(),
-                                terminal.getTerminalSerialNumber());
 
-                case CARD ->
-                        pendingCardPaymentService.register(
-                                sale.getSaleNumber(),
-                                sale.getNetAmount(),
-                                terminal.getTerminalSerialNumber(),
-                                terminal.getTerminalSerialNumber());
+                case TRANSFER -> {
 
-                case CASH -> {}
-                case MIXED -> {}
+                    pendingTransferService.registerPendingTransfer(
+                            station.getMerchantAccountNumber(),
+                            savedSale.getSaleNumber(),
+                            savedSale.getNetAmount(),
+                            terminal.getTerminalSerialNumber()
+                    );
+                }
+
+                case CARD -> {
+
+                    pendingCardPaymentService.register(
+                            savedSale.getSaleNumber(),
+                            savedSale.getNetAmount(),
+                            terminal.getTerminalSerialNumber(),
+                            terminal.getTerminalSerialNumber()
+                    );
+                }
+
+                case CASH, MIXED -> {
+                    // No external payment registration here.
+                }
             }
 
-            if (sale.getPaymentMethod() == PaymentMethod.CASH) {
-                recordCashPayment(sale.getId());
-                return completeCashSale(sale.getId());
+            /*
+            * 18. Complete cash sales immediately
+            */
+            if (savedSale.getPaymentMethod()
+                    == PaymentMethod.CASH) {
+
+                recordCashPayment(savedSale.getId());
+
+                return completeCashSale(
+                        savedSale.getId()
+                );
             }
 
-            return saleMapper.toResponse(sale);
-        } 
-        catch (ResourceNotFoundException | BadRequestException e) {
+            return saleMapper.toResponse(savedSale);
+
+        } catch (ResourceNotFoundException
+                | BadRequestException e) {
+
             throw e;
-        } 
-        catch (ArithmeticException e) {
-            throw new BadRequestException("Calculation error during transaction: "+ e.getMessage());
-        } 
-        catch (Exception e) {
-            throw new RuntimeException("Failed to process sale due to an internal error: " + e.getMessage(), e);
+
+        } catch (ArithmeticException e) {
+
+            throw new BadRequestException(
+                    "Calculation error during transaction: "
+                            + e.getMessage()
+            );
+
+        } catch (Exception e) {
+
+            throw new RuntimeException(
+                    "Failed to process sale due to an internal error: "
+                            + e.getMessage(),
+                    e
+            );
         }
     }
 
     @Transactional
     public SaleResponse completeSale(Long saleId, String transactionReference, PaymentStatus paymentStatus, LocalDateTime paidAt) {
-        Sale sale = saleRepository.findById(saleId).orElseThrow(() -> new ResourceNotFoundException("Sale not found"));
+        Sale sale = saleRepository.findByIdForUpdate(saleId).orElseThrow(() -> new ResourceNotFoundException("Sale not found"));
         // verifySaleOwnership(sale);
 
         if (sale.getInventoryUpdated()) { return saleMapper.toResponse(sale); }
@@ -697,42 +1136,159 @@ public class PaymentService {
             return grossAmount.subtract(discount);
     }
 
-    @Transactional
-    private void updateCurrentPumpAudit(Sale sale) {
-        if (sale == null || sale.getStation() == null) {
-            throw new ResourceNotFoundException("Sale station not found");
-        }
+    // @Transactional
+    // private void JustChangedupdateCurrentPumpAudit(Sale sale) {
+    //     if (sale == null || sale.getStation() == null) {
+    //         throw new ResourceNotFoundException("Sale station not found");
+    //     }
 
-        Station saleStation = sale.getStation();
+    //     Station saleStation = sale.getStation();
 
-        if (saleStation.getMerchant() == null) {
-            throw new ResourceNotFoundException("Sale not found");
-        }
+    //     if (saleStation.getMerchant() == null) {
+    //         throw new ResourceNotFoundException("Sale not found");
+    //     }
 
-        PumpAssignment assignment = pumpAssignmentRepository
-                            .findByPumpIdAndAssignmentDateAndShiftAndActiveTrue(
-                                    sale.getPump().getId(),
+    //     PumpAssignment assignment = pumpAssignmentRepository
+    //                         .findByPumpIdAndAssignmentDateAndShiftAndActiveTrue(
+    //                                 sale.getPump().getId(),
+    //                                 sale.getBusinessDate(),
+    //                                 sale.getShift())
+    //                         .orElseThrow(() -> new ResourceNotFoundException("Pump assignment not found"));
+
+    //     if (assignment.getStation() == null || !assignment.getStation().getId().equals(saleStation.getId())) {
+    //         throw new ResourceNotFoundException("Pump assignment not found");
+    //     }
+
+    //     if (assignment.getStation().getMerchant() == null || !assignment.getStation().getMerchant().getId().equals(saleStation.getMerchant().getId())) {
+    //         throw new ResourceNotFoundException("Pump assignment not found");
+    //     }
+
+    //     PumpAudit audit = pumpAuditRepository.findByPumpAssignment_Id(assignment.getId())
+    //                                 .orElseThrow(() -> new ResourceNotFoundException("Pump audit not found"));
+
+    //     BigDecimal newClosing = audit.getClosingReading().add(sale.getQuantity());
+
+    //     audit.setClosingReading(newClosing);
+    //     audit.setTotalDispensed(newClosing.subtract(audit.getOpeningReading()));
+    //     pumpAuditRepository.save(audit);
+    // }
+
+
+        private void updateCurrentPumpAudit(Sale sale) {
+            if (sale == null
+                    || sale.getStation() == null
+                    || sale.getTerminal() == null
+                    || sale.getPump() == null) {
+
+                throw new ResourceNotFoundException(
+                        "Sale station, terminal, or pump not found"
+                );
+            }
+
+            Station saleStation = sale.getStation();
+            Terminal saleTerminal = sale.getTerminal();
+            Pump salePump = sale.getPump();
+
+            if (saleStation.getMerchant() == null) {
+                throw new ResourceNotFoundException("Sale merchant not found");
+            }
+
+            PumpAssignment assignment =
+                    pumpAssignmentRepository
+                            .findByTerminal_IdAndPump_IdAndAssignmentDateAndShiftAndActiveTrue(
+                                    saleTerminal.getId(),
+                                    salePump.getId(),
                                     sale.getBusinessDate(),
-                                    sale.getShift())
-                            .orElseThrow(() -> new ResourceNotFoundException("Pump assignment not found"));
+                                    sale.getShift()
+                            )
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "Active pump assignment not found"
+                                    )
+                            );
 
-        if (assignment.getStation() == null || !assignment.getStation().getId().equals(saleStation.getId())) {
-            throw new ResourceNotFoundException("Pump assignment not found");
-        }
+            /*
+            * Verify station ownership.
+            */
+            if (assignment.getStation() == null
+                    || !assignment.getStation()
+                            .getId()
+                            .equals(saleStation.getId())) {
 
-        if (assignment.getStation().getMerchant() == null || !assignment.getStation().getMerchant().getId().equals(saleStation.getMerchant().getId())) {
-            throw new ResourceNotFoundException("Pump assignment not found");
-        }
+                throw new ResourceNotFoundException(
+                        "Pump assignment not found"
+                );
+            }
 
-        PumpAudit audit = pumpAuditRepository.findByPumpAssignment_Id(assignment.getId())
-                                    .orElseThrow(() -> new ResourceNotFoundException("Pump audit not found"));
+            /*
+            * Verify merchant ownership.
+            */
+            if (assignment.getStation().getMerchant() == null
+                    || !assignment.getStation()
+                            .getMerchant()
+                            .getId()
+                            .equals(saleStation.getMerchant().getId())) {
 
-        BigDecimal newClosing = audit.getClosingReading().add(sale.getQuantity());
+                throw new ResourceNotFoundException(
+                        "Pump assignment not found"
+                );
+            }
 
-        audit.setClosingReading(newClosing);
-        audit.setTotalDispensed(newClosing.subtract(audit.getOpeningReading()));
-        pumpAuditRepository.save(audit);
+            /*
+            * Verify exact terminal and pump.
+            */
+            if (assignment.getTerminal() == null
+                    || !assignment.getTerminal()
+                            .getId()
+                            .equals(saleTerminal.getId())) {
+
+                throw new ResourceNotFoundException(
+                        "Pump assignment does not belong to sale terminal"
+                );
+            }
+
+            if (assignment.getPump() == null
+                    || !assignment.getPump()
+                            .getId()
+                            .equals(salePump.getId())) {
+
+                throw new ResourceNotFoundException(
+                        "Pump assignment does not belong to sale pump"
+                );
+            }
+
+            PumpAudit audit =
+                    pumpAuditRepository
+                            .findByPumpAssignment_Id(assignment.getId())
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "Pump audit not found"
+                                    )
+                            );
+
+            if (audit.getOpeningReading() == null
+                    || audit.getClosingReading() == null) {
+
+                throw new BadRequestException(
+                        "Pump audit readings are not properly configured"
+                );
+            }
+
+            BigDecimal newClosingReading =
+                    audit.getClosingReading()
+                            .add(sale.getQuantity());
+
+            audit.setClosingReading(newClosingReading);
+
+            audit.setTotalDispensed(
+                    newClosingReading.subtract(
+                            audit.getOpeningReading()
+                    )
+            );
+
+            pumpAuditRepository.save(audit);
     }
+
 
     private void verifySaleOwnership(Sale sale) {
             MerchantPrincipal principal = authenticatedUserService.getCurrentUser();

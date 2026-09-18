@@ -1,6 +1,7 @@
 package org.inventory_tracker.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import org.inventory_tracker.enums.TerminalMode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -24,4 +25,6 @@ public class UpdateStationRequest {
     private String phoneNumber;
 
     private String email;
+
+    private TerminalMode terminalMode;
 }

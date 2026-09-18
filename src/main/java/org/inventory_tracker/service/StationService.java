@@ -5,6 +5,7 @@ import org.inventory_tracker.dto.request.CreateStationRequest;
 import org.inventory_tracker.dto.response.StationResponse;
 import org.inventory_tracker.entity.Merchant;
 import org.inventory_tracker.entity.Station;
+import org.inventory_tracker.enums.TerminalMode;
 // import org.inventory_tracker.entity.security.MerchantContext;
 import org.inventory_tracker.config.mapper.StationMapper;
 import org.inventory_tracker.repository.StationRepository;
@@ -53,8 +54,9 @@ public class StationService {
         Station station = stationMapper.toEntity(request);
         station.setMerchant(merchant);
         station.setTimeZone(ZoneId.of("Africa/Lagos"));
-        Station savedStation = stationRepository.save(station);
+        if (station.getTerminalMode() == null) { station.setTerminalMode(TerminalMode.SINGLE_PUMP); }
 
+        Station savedStation = stationRepository.save(station);
         return stationMapper.toResponse(savedStation);
     }
 

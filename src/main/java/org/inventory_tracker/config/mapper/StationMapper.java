@@ -24,6 +24,5 @@ public interface StationMapper {
 
     StationResponse toResponse(Station station);
 
-    List<StationResponse> toResponseList(
-            List<Station> stations);
+    List<StationResponse> toResponseList(List<Station> stations);
 }

@@ -8,8 +8,10 @@ import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
 import org.inventory_tracker.enums.Shift;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,6 +19,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SaleRepository extends JpaRepository<Sale, Long> {
+   @Lock(LockModeType.PESSIMISTIC_WRITE)
+   @Query("SELECT s FROM Sale s WHERE s.id = :saleId")
+   Optional<Sale> findByIdForUpdate(@Param("saleId") Long saleId);
+
    List<Sale> findByStation_Merchant_CamsMerchantIdAndBusinessDateOrderBySaleTimeDesc(String merchantId, LocalDate businessDate);
 
    @Query("""

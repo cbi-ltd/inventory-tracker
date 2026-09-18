@@ -8,6 +8,10 @@ import java.util.Optional;
 
 @Repository
 public interface PumpRepository extends JpaRepository<Pump, Long> {
+    boolean existsByStation_IdAndDefaultTerminal_Id(Long stationId, Long terminalId);
+
+    boolean existsByStation_IdAndDefaultTerminal_IdAndIdNot(Long stationId, Long terminalId, Long pumpId);
+    
     Optional<Pump>findByIdAndStation_IdAndStation_Merchant_CamsMerchantId(Long pumpId, Long stationId, String camsMerchantId);
     
     long countByStation_Merchant_CamsMerchantId(String merchantId);

@@ -1,6 +1,7 @@
 package org.inventory_tracker.dto.response;
 
 import lombok.*;
+import org.inventory_tracker.enums.TerminalMode;
 
 @Getter
 @Setter
@@ -26,4 +27,6 @@ public class StationResponse {
     private String email;
 
     private Boolean active;
+
+    private TerminalMode terminalMode;
 }

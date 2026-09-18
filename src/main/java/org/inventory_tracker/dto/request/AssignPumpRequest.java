@@ -16,4 +16,6 @@ public class AssignPumpRequest {
 
     // @NotNull(message = "Station ID is required")
     private Long stationId;
+
+    private Long terminalId;
 }
