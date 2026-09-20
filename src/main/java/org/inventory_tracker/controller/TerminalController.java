@@ -98,20 +98,20 @@ public class TerminalController {
     }
 
 
-    //SINGLE PUMP MODE: /api/v1/terminals/session?terminalSerialNumber=T001
-    //MULTI PUMP MODE: /api/v1/terminals/session?terminalSerialNumber=T001&pumpId=2
     @GetMapping("/session")
-    public ResponseEntity<ApiSuccessResponse<PosSessionResponse>>getPosSession(
+    public ResponseEntity<ApiSuccessResponse<List<PosSessionResponse>>>getPosSession(
             @RequestParam(required = false) Long pumpId,
             @RequestParam(required = false) String terminalSerialNumber) {
 
-        PosSessionResponse response = posSessionService.getPosSession(terminalSerialNumber, pumpId);
+        List<PosSessionResponse> response = posSessionService.getPosSession(terminalSerialNumber);
+        int count = response.size();
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "POS session loaded successfully.",
+                        count,
                         response
                 ));
     }

@@ -1,14 +1,19 @@
 package org.inventory_tracker.dto.response;
 
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import org.inventory_tracker.enums.Shift;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ShiftSummaryResponse {
 
     private Long stationId;

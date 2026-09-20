@@ -6,6 +6,7 @@ import org.inventory_tracker.dto.request.PumpAuditFilterRequest;
 import org.inventory_tracker.dto.response.PumpAssignmentResponse;
 import org.inventory_tracker.dto.response.PumpAuditResponse;
 import org.inventory_tracker.dto.response.ShiftSummaryResponse;
+import org.inventory_tracker.enums.Shift;
 import org.inventory_tracker.service.PumpAuditService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -214,16 +215,21 @@ public class PumpAuditController {
 
 
     @GetMapping("/shift-summary")
-    public ResponseEntity<ApiSuccessResponse<ShiftSummaryResponse>>
+    public ResponseEntity<ApiSuccessResponse<List<ShiftSummaryResponse>>>
     getShiftSummary(@RequestParam(required = false) Long terminalId, @RequestParam(required = false)
-            String terminalSerialNumber, @RequestParam(required = false) Long pumpId) {
+            String terminalSerialNumber, @RequestParam(required = false) Long pumpId,
+           @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate businessDate, @RequestParam(required = false)Shift shift
+                 ) {
 
-        ShiftSummaryResponse response = pumpAuditService.getShiftSummary(terminalSerialNumber, pumpId);
+
+        List<ShiftSummaryResponse> response = pumpAuditService.getShiftSummary(terminalId, terminalSerialNumber, pumpId, businessDate, shift);
+        int count = response.size();
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
                         LocalDateTime.now(),
                         HttpStatus.OK.value(),
                         "Shift summary retrieved successfully.",
+                        count,
                         response));
     }
 }

@@ -392,7 +392,6 @@ public class PaymentService {
 
     @Transactional
     public SaleResponse createSale(CreateSaleRequest request) {
-
         try {
             if (request.getTerminalSerialNumber() == null
                     || request.getTerminalSerialNumber().trim().isEmpty()) {
@@ -414,9 +413,6 @@ public class PaymentService {
                 );
             }
 
-            /*
-            * 1. Resolve active terminal
-            */
             Terminal terminal =
                     terminalRepository
                             .findByTerminalSerialNumberAndActiveTrue(
@@ -444,51 +440,35 @@ public class PaymentService {
                 );
             }
 
-            /*
-            * 2. Resolve business date and shift
-            */
-            LocalDate businessDate =
-                    ShiftUtil.businessDate(station.getTimeZone());
+            LocalDate businessDate = ShiftUtil.businessDate(station.getTimeZone());
+            Shift shift = ShiftUtil.currentShift(station.getTimeZone());
 
-            Shift shift =
-                    ShiftUtil.currentShift(station.getTimeZone());
-
-            /*
-            * 3. Multi-pump validation
-            */
             if (station.getTerminalMode() == TerminalMode.MULTI_PUMP
                     && request.getPumpId() == null) {
 
-                throw new BadRequestException(
-                        "Pump ID is required for multi-pump stations"
-                );
+                throw new BadRequestException("Pump ID is required for multi-pump stations");
             }
 
-            /*
-            * 4. Resolve pump belonging to this station and merchant
-            */
-            Pump pump =
-                    pumpRepository
-                            .findByIdAndStation_IdAndStation_Merchant_CamsMerchantId(
-                                    request.getPumpId(),
-                                    station.getId(),
-                                    merchant.getCamsMerchantId()
-                            )
+            Pump pump = pumpRepository.findByIdAndStation_IdAndStation_Merchant_CamsMerchantId(
+                                    request.getPumpId(), station.getId(), merchant.getCamsMerchantId())
                             .orElseThrow(() ->
-                                    new ResourceNotFoundException(
-                                            "Pump not found for this terminal's station"
-                                    )
-                            );
+                                    new ResourceNotFoundException("Pump not found for this terminal's station"));
 
             if (!Boolean.TRUE.equals(pump.getActive())) {
-                throw new BadRequestException(
-                        "Pump is inactive"
-                );
+                throw new BadRequestException("Pump is inactive");
             }
 
-            /*
-            * 5. Resolve exact active assignment
-            */
+            if (station.getTerminalMode() == TerminalMode.SINGLE_PUMP) {
+                boolean terminalConfiguredForPump = (pump.getDefaultTerminal() != null
+                        && pump.getDefaultTerminal().getId().equals(terminal.getId()))
+                || (pump.getTerminalSerialNumber() != null
+                        && pump.getTerminalSerialNumber().equals(terminal.getTerminalSerialNumber()));
+
+                if (!terminalConfiguredForPump) {
+                    throw new BadRequestException("This terminal is not configured for the selected pump");
+                }
+            }
+
             PumpAssignment assignment =
                     pumpAssignmentRepository
                             .findByTerminal_IdAndPump_IdAndAssignmentDateAndShiftAndActiveTrue(
@@ -503,9 +483,6 @@ public class PaymentService {
                                     )
                             );
 
-            /*
-            * 6. Validate assignment station
-            */
             if (assignment.getStation() == null
                     || !assignment.getStation()
                             .getId()
@@ -516,9 +493,6 @@ public class PaymentService {
                 );
             }
 
-            /*
-            * 7. Validate assignment terminal
-            */
             if (assignment.getTerminal() == null
                     || !assignment.getTerminal()
                             .getId()
@@ -529,9 +503,6 @@ public class PaymentService {
                 );
             }
 
-            /*
-            * 8. Validate assignment pump
-            */
             if (assignment.getPump() == null
                     || !assignment.getPump()
                             .getId()
@@ -550,9 +521,6 @@ public class PaymentService {
                 );
             }
 
-            /*
-            * 9. Resolve product
-            */
             Product product = pump.getProduct();
 
             if (product == null) {
@@ -561,9 +529,6 @@ public class PaymentService {
                 );
             }
 
-            /*
-            * 10. Resolve station inventory
-            */
             StationInventory inventory =
                     stationInventoryRepository
                             .findByStation_IdAndStation_Merchant_CamsMerchantIdAndProduct_Id(
@@ -577,11 +542,8 @@ public class PaymentService {
                                     )
                             );
 
-            BigDecimal costPerUnit =
-                    inventory.getCostPerUnit();
-
-            BigDecimal sellingPrice =
-                    inventory.getSellingPrice();
+            // BigDecimal costPerUnit = inventory.getCostPerUnit();
+            BigDecimal sellingPrice = inventory.getSellingPrice();
 
             if (sellingPrice == null) {
                 throw new BadRequestException(
@@ -595,9 +557,6 @@ public class PaymentService {
                 );
             }
 
-            /*
-            * 11. Calculate quantity and gross amount
-            */
             BigDecimal quantity;
             BigDecimal grossAmount;
 
@@ -611,36 +570,20 @@ public class PaymentService {
                     );
                 }
 
-                grossAmount =
-                        quantity.multiply(sellingPrice);
-
-            } else {
-
+                grossAmount = quantity.multiply(sellingPrice);
+            } 
+            else {
                 grossAmount = request.getAmount();
 
-                if (grossAmount == null
-                        || grossAmount.compareTo(BigDecimal.ZERO) <= 0) {
-
-                    throw new BadRequestException(
-                            "Amount must be greater than zero"
-                    );
+                if (grossAmount == null || grossAmount.compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new BadRequestException("Amount must be greater than zero");
                 }
 
-                quantity =
-                        grossAmount.divide(
-                                sellingPrice,
-                                3,
-                                RoundingMode.HALF_UP
-                        );
+                quantity = grossAmount.divide(sellingPrice, 3, RoundingMode.HALF_UP);
             }
 
-            /*
-            * 12. Validate inventory
-            */
             if (inventory.getCurrentQuantity() == null) {
-                throw new BadRequestException(
-                        "Current inventory quantity is not configured"
-                );
+                throw new BadRequestException("Current inventory quantity is not configured");
             }
 
             if (inventory.getCurrentQuantity()
@@ -651,121 +594,52 @@ public class PaymentService {
                 );
             }
 
-            /*
-            * 13. Calculate discount and net amount
-            */
-            BigDecimal discount =
-                    request.getDiscountAmount() == null
-                            ? BigDecimal.ZERO
-                            : request.getDiscountAmount();
+            BigDecimal discount = request.getDiscountAmount() == null ? BigDecimal.ZERO : request.getDiscountAmount();
 
             if (discount.compareTo(BigDecimal.ZERO) < 0) {
-                throw new BadRequestException(
-                        "Discount cannot be negative"
-                );
+                throw new BadRequestException("Discount cannot be negative");
             }
 
             if (discount.compareTo(grossAmount) > 0) {
-                throw new BadRequestException(
-                        "Discount cannot exceed gross amount"
-                );
+                throw new BadRequestException("Discount cannot exceed gross amount");
             }
 
-            BigDecimal netAmount =
-                    calculateNetAmount(
-                            grossAmount,
-                            discount
-                    );
-
-            /*
-            * 14. Build sale
-            */
-            Sale sale =
-                    saleMapper.toEntity(request);
+            BigDecimal netAmount = calculateNetAmount(grossAmount, discount);
+            Sale sale = saleMapper.toEntity(request);
 
             sale.setStation(station);
             sale.setPump(pump);
             sale.setTerminal(terminal);
             sale.setAttendant(attendant);
             sale.setProduct(product);
-
-            sale.setSaleNumber(
-                    generateSaleNumber(station)
-            );
-
-            sale.setReceiptNumber(
-                    generateReceiptNumber()
-            );
-
-            sale.setSaleTime(
-                    LocalDateTime.now(station.getTimeZone())
-            );
-
+            sale.setSaleNumber(generateSaleNumber(station));
+            sale.setReceiptNumber(generateReceiptNumber());
+            sale.setSaleTime(LocalDateTime.now(station.getTimeZone()));
             sale.setSellingPrice(sellingPrice);
             sale.setQuantity(quantity);
             sale.setGrossAmount(grossAmount);
             sale.setDiscountAmount(discount);
             sale.setNetAmount(netAmount);
-
-            sale.setBusinessDate(
-                    assignment.getAssignmentDate()
-            );
-
-            sale.setShift(
-                    assignment.getShift()
-            );
-
+            sale.setBusinessDate(assignment.getAssignmentDate());
+            sale.setShift(assignment.getShift());
             sale.setInventoryUpdated(false);
 
-            /*
-            * Cost per unit is retained here if your Sale entity
-            * contains this field.
-            */
-            // sale.setCostPerUnit(costPerUnit);
-
-            /*
-            * 15. Set payment status
-            */
             switch (request.getPaymentMethod()) {
-
                 case CASH -> {
-                    sale.setPaymentStatus(
-                            PaymentStatus.SUCCESS
-                    );
-
-                    sale.setSaleStatus(
-                            SaleStatus.PENDING
-                    );
+                    sale.setPaymentStatus(PaymentStatus.SUCCESS);
+                    sale.setSaleStatus(SaleStatus.PENDING);
                 }
-
                 case CARD, TRANSFER, MIXED -> {
-                    sale.setPaymentStatus(
-                            PaymentStatus.PENDING
-                    );
-
-                    sale.setSaleStatus(
-                            SaleStatus.PENDING
-                    );
+                    sale.setPaymentStatus(PaymentStatus.PENDING);
+                    sale.setSaleStatus(SaleStatus.PENDING);
                 }
-
-                default -> throw new BadRequestException(
-                        "Unsupported payment method"
-                );
+                default -> throw new BadRequestException("Unsupported payment method");
             }
 
-            /*
-            * 16. Save sale
-            */
-            Sale savedSale =
-                    saleRepository.save(sale);
+            Sale savedSale = saleRepository.save(sale);
 
-            /*
-            * 17. Register external payment where applicable
-            */
             switch (request.getPaymentMethod()) {
-
                 case TRANSFER -> {
-
                     pendingTransferService.registerPendingTransfer(
                             station.getMerchantAccountNumber(),
                             savedSale.getSaleNumber(),
@@ -773,9 +647,7 @@ public class PaymentService {
                             terminal.getTerminalSerialNumber()
                     );
                 }
-
                 case CARD -> {
-
                     pendingCardPaymentService.register(
                             savedSale.getSaleNumber(),
                             savedSale.getNetAmount(),
@@ -783,46 +655,27 @@ public class PaymentService {
                             terminal.getTerminalSerialNumber()
                     );
                 }
-
-                case CASH, MIXED -> {
-                    // No external payment registration here.
+                case CASH -> { // No external payment registration here. 
                 }
+                case MIXED -> { throw new BadRequestException("Mixed payments are not currently supported"); }
             }
 
-            /*
-            * 18. Complete cash sales immediately
-            */
-            if (savedSale.getPaymentMethod()
-                    == PaymentMethod.CASH) {
-
+            if (savedSale.getPaymentMethod() == PaymentMethod.CASH) {
                 recordCashPayment(savedSale.getId());
-
-                return completeCashSale(
-                        savedSale.getId()
-                );
+                return completeCashSale(savedSale.getId());
             }
 
             return saleMapper.toResponse(savedSale);
 
-        } catch (ResourceNotFoundException
-                | BadRequestException e) {
-
+        } 
+        catch (ResourceNotFoundException | BadRequestException e) {
             throw e;
-
-        } catch (ArithmeticException e) {
-
-            throw new BadRequestException(
-                    "Calculation error during transaction: "
-                            + e.getMessage()
-            );
-
-        } catch (Exception e) {
-
-            throw new RuntimeException(
-                    "Failed to process sale due to an internal error: "
-                            + e.getMessage(),
-                    e
-            );
+        } 
+        catch (ArithmeticException e) {
+            throw new BadRequestException("Calculation error during transaction: " + e.getMessage());
+        } 
+        catch (Exception e) {
+            throw new RuntimeException("Failed to process sale due to an internal error: " + e.getMessage(), e);
         }
     }
 

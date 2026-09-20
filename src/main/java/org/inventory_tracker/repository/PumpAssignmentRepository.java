@@ -3,12 +3,17 @@ package org.inventory_tracker.repository;
 import org.inventory_tracker.entity.PumpAssignment;
 import org.inventory_tracker.enums.Shift;
 import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 public interface PumpAssignmentRepository extends JpaRepository<PumpAssignment, Long> {
+    List<PumpAssignment>findAllByTerminalIdAndAssignmentDateAndShiftOrderByIdAsc(Long terminalId, LocalDate assignmentDate, Shift shift);
+
+    Optional<PumpAssignment>findByTerminalIdAndPumpIdAndAssignmentDateAndShift(Long terminalId, Long pumpId, LocalDate assignmentDate, Shift shift);
+
+    List<PumpAssignment>findAllByTerminalIdAndAssignmentDateLessThanOrderByAssignmentDateDesc(Long terminalId, LocalDate businessDate);
+
     List<PumpAssignment> findByTerminal_IdAndAssignmentDateAndShiftAndActiveTrue(Long terminalId, LocalDate assignmentDate, Shift shift);
     
     Optional<PumpAssignment>findByTerminalIdAndPumpIdAndAssignmentDateAndShiftAndActiveTrue(
@@ -109,6 +114,7 @@ public interface PumpAssignmentRepository extends JpaRepository<PumpAssignment, 
     Optional<PumpAssignment> findFirstByTerminal_TerminalSerialNumberAndActiveTrueOrderByAssignmentDateDesc(String terminalSerialNumber);
     
     Optional<PumpAssignment>findByTerminalIdAndAssignmentDateAndShiftAndActiveTrue(Long terminalId, LocalDate assignmentDate, Shift shift);
+    List<PumpAssignment>findAllByTerminalIdAndAssignmentDateAndShiftAndActiveTrue(Long terminalId, LocalDate assignmentDate, Shift shift);
 
     Optional<PumpAssignment> findFirstByAttendantIdAndActiveTrue(Long attendantId);
 

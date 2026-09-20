@@ -1,6 +1,5 @@
 package org.inventory_tracker.repository;
 
-import org.inventory_tracker.entity.PumpAssignment;
 import org.inventory_tracker.entity.Terminal;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
@@ -9,6 +8,8 @@ import java.util.List;
 
 @Repository
 public interface TerminalRepository extends JpaRepository<Terminal, Long> {
+    Optional<Terminal> findByIdAndActiveTrue(Long id);
+
     Optional<Terminal> findByIdAndStation_Merchant_Id(Long id, Long merchantId);
 
     Optional<Terminal>findByTerminalSerialNumberAndActiveTrue(String terminalSerialNumber);
