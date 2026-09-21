@@ -230,6 +230,7 @@ public PosSessionResponse getTerminalPosSession(Long terminalId, String terminal
                                 .closingReading(audit.getClosingReading())
                                 .businessDate(assignment.getAssignmentDate())
                                 .shift(assignment.getShift())
+                                .terminalMode(assignment.getStation().getTerminalMode())
                                 .build();
                 })
                 .toList();

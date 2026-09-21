@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Builder;
 import java.time.LocalDate;
 import org.inventory_tracker.enums.Shift;
+import org.inventory_tracker.enums.TerminalMode;
 
 
 @Getter
@@ -40,4 +41,5 @@ public class PosSessionResponse {
     private BigDecimal openingReading;
     private BigDecimal closingReading;
     private Long pumpAuditId;
+    private TerminalMode terminalMode;
 }
