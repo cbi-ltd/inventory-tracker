@@ -258,34 +258,22 @@ public class PumpAssignmentService {
 
         Terminal terminal;
 
-        if (station.getTerminalMode() == TerminalMode.MULTI_PUMP) {
-
-        // Multi-pump mode requires an explicitly selected terminal.
-        if (request.getTerminalId() == null) {
-            throw new BadRequestException(
-                    "Terminal ID is required for multi-pump stations");
-        }
-
-        terminal = terminalRepository.findById(request.getTerminalId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Terminal not found"));
-
-    }else{
-
-        if (pump.getDefaultTerminal() != null) {
+        if (request.getTerminalSerialNumber() != null) {
+                terminal = terminalRepository.findByTerminalSerialNumber(request.getTerminalSerialNumber())
+                        .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
+        } 
+        else if (pump.getDefaultTerminal() != null) {
                 terminal = pump.getDefaultTerminal();
         } 
         else if (pump.getTerminalSerialNumber() != null) {
-
-        terminal = terminalRepository
-                .findByTerminalSerialNumber(pump.getTerminalSerialNumber())
-                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
+                terminal = terminalRepository
+                        .findByTerminalSerialNumber(pump.getTerminalSerialNumber())
+                        .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
         } 
         else {
                 throw new ResourceNotFoundException("No terminal configured for pump");
         }
-}
+
 
         if (terminal.getStation() == null || !terminal.getStation().getId().equals(station.getId())) {
                 throw new BadRequestException("Terminal does not belong to this station");
