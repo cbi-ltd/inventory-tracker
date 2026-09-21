@@ -17,6 +17,9 @@ public interface PumpAssignmentMapper {
     @Mapping(source = "pump.pumpName", target = "pumpName")
     @Mapping(source = "pump.pumpNumber", target = "pumpNumber")
 
+    @Mapping(source = "pump.product.id", target = "productId")
+    @Mapping(source = "pump.product.name", target = "productName")
+
     @Mapping(source = "attendant.id", target = "attendantId")
     @Mapping(source = "attendant.fullName", target = "attendantName")
     @Mapping(source = "attendant.username", target = "username")

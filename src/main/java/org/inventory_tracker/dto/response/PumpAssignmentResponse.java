@@ -19,6 +19,9 @@ public class PumpAssignmentResponse {
     private String pumpName;
     private String pumpNumber;
 
+    private Long productId;
+    private String productName;
+
     private Long attendantId;
     private String attendantName;
     private String username;
