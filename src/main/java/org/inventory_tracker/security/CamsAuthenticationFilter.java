@@ -103,7 +103,12 @@ public class CamsAuthenticationFilter extends OncePerRequestFilter {
                         ||
 
                         ("PUT".equalsIgnoreCase(method)
-                                && uri.equals("/api/v1/pump-audits/close"));
+                                && uri.equals("/api/v1/pump-audits/close"))
+
+                        ||
+
+                        ("GET".equalsIgnoreCase(method)
+                                && uri.equals("/api/v1/pump-assignments/assignments"));
 
         }
 }
