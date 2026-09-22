@@ -200,9 +200,7 @@ public PosSessionResponse getTerminalPosSession(Long terminalId, String terminal
                                 !assignment.getTerminal().getId()
                                         .equals(terminal.getId())) {
 
-                        throw new BadRequestException(
-                                "Assignment does not belong to this terminal");
-                        }
+                        throw new BadRequestException("Assignment does not belong to this terminal"); }
 
                         PumpAudit audit = pumpAuditRepository
                                 .findByPumpAssignment_Id(assignment.getId())

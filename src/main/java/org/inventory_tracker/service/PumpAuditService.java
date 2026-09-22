@@ -165,175 +165,13 @@ public class PumpAuditService {
         return pumpAuditMapper.toResponse(audit);
     }
 
-    @Transactional
-    public PumpAuditResponse closePmpAudit(String terminalSerialNumber, BigDecimal closingReading) {
-        if (terminalSerialNumber == null || terminalSerialNumber.isBlank()) {
-                throw new BadRequestException("Terminal serial number is required");
-        }
 
-        if (closingReading == null) {
-                throw new BadRequestException("Closing meter reading is required");
-        }
 
-        Terminal terminal = terminalRepository.findByTerminalSerialNumberAndActiveTrue(terminalSerialNumber)
-                                .orElseThrow(() -> new ResourceNotFoundException("Active terminal not found"));
 
-        Station station = terminal.getStation();
-
-        if (station == null) {
-                throw new ResourceNotFoundException("Terminal is not associated with a station");
-        }
-
-        Merchant merchant = station.getMerchant();
-
-        if (merchant == null) {
-                throw new ResourceNotFoundException("Station is not associated with a merchant");
-        }
-
-        // PumpAssignment assignment = pumpAssignmentRepository.findFirstByTerminal_TerminalSerialNumberAndActiveTrueOrderByAssignmentDateDesc(terminalSerialNumber)
-        //             .orElseThrow(() -> new ResourceNotFoundException("No active assignment found for terminal"));
-
-        PumpAssignment assignment = pumpAssignmentRepository
-                .findFirstByTerminal_TerminalSerialNumberAndTerminal_Station_Merchant_CamsMerchantIdAndActiveTrueOrderByAssignmentDateDesc(
-                        terminalSerialNumber,
-                        merchant.getCamsMerchantId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "No active assignment found for terminal"));
-
-        if (!assignment.getActive()) {
-            throw new BadRequestException(
-                    "Pump assignment is already closed");
-        }
-
-        if (!assignment.getTerminal().getId().equals(terminal.getId())) {
-                throw new BadRequestException("Assignment does not belong to this terminal");
-        }
-
-        PumpAudit audit =
-                pumpAuditRepository
-                        .findByPumpAssignment_Id(assignment.getId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Pump audit not found"));
-
-        if (audit.getClockOutTime() != null) {
-                throw new BadRequestException(
-                        "Pump audit is already closed");
-        }
-
-        BigDecimal openingReading = audit.getOpeningReading();
-
-        if (openingReading == null) {
-                throw new BadRequestException(
-                        "Opening meter reading is not set");
-        }
-
-        if (closingReading.compareTo(openingReading) < 0) {
-                throw new BadRequestException(
-                        "Closing reading cannot be less than opening reading");
-        }
-
-        BigDecimal totalDispensed =
-        closingReading.subtract(openingReading);
-
-        audit.setClosingReading(closingReading);
-        audit.setTotalDispensed(totalDispensed);
-        audit.setClockOutTime(
-                LocalDateTime.now(station.getTimeZone()));
-
-        assignment.setActive(false);
-
-        pumpAssignmentRepository.save(assignment);
-
-        PumpAudit savedAudit =
-                pumpAuditRepository.save(audit);
-
-        return pumpAuditMapper.toResponse(savedAudit);
-    }
-
-//     @Transactional
-//     public PumpAuditResponse closePumpAudit(Long pumpAssignmentId, String terminalSerialNumber, Long pumpId,BigDecimal closingReading) {
-//         if (pumpAssignmentId == null) {
-//                 throw new BadRequestException("Pump assignment ID is required");
-//         }
-
-//         if (closingReading == null) {
-//                 throw new BadRequestException("Closing meter reading is required");
-//         }
-
-//         PumpAssignment assignment =
-//                 pumpAssignmentRepository.findById(pumpAssignmentId)
-//                         .orElseThrow(() ->
-//                                 new ResourceNotFoundException(
-//                                         "Pump assignment not found"));
-
-//         Terminal terminal = assignment.getTerminal();
-
-//         if (terminal == null) {
-//                 throw new ResourceNotFoundException("Assignment is not associated with a terminal");
-//         }
-
-//         if (!Boolean.TRUE.equals(terminal.getActive())) {
-//                 throw new BadRequestException("Terminal is inactive");
-//         }
-
-//         Pump pump = assignment.getPump();
-
-//         if (pump == null) {
-//                 throw new ResourceNotFoundException("Assignment is not associated with a pump");
-//         }
-
-//         PumpAudit audit = pumpAuditRepository.findByPumpAssignment_Id(assignment.getId())
-//                                 .orElseThrow(() -> new ResourceNotFoundException("Pump audit not found"));
-
-//         if (audit.getClockOutTime() != null) {
-//                 throw new BadRequestException(
-//                         "Pump audit is already closed");
-//         }
-
-//         BigDecimal openingReading = audit.getOpeningReading();
-
-//         if (openingReading == null) {
-//                 throw new BadRequestException(
-//                         "Opening meter reading is not set");
-//         }
-
-//         if (closingReading.compareTo(openingReading) < 0) {
-//                 throw new BadRequestException(
-//                         "Closing reading cannot be less than opening reading");
-//         }
-
-//         BigDecimal totalDispensed =
-//                 closingReading.subtract(openingReading);
-
-//         audit.setClosingReading(closingReading);
-//         audit.setTotalDispensed(totalDispensed);
-
-//         Station station = assignment.getStation();
-
-//         if (station == null) {
-//                 throw new ResourceNotFoundException(
-//                         "Assignment is not associated with a station");
-//         }
-
-//         audit.setClockOutTime(
-//                 LocalDateTime.now(station.getTimeZone())
-//         );
-
-//         assignment.setActive(false);
-
-//         pumpAssignmentRepository.save(assignment);
-
-//         PumpAudit savedAudit =
-//                 pumpAuditRepository.save(audit);
-
-//         return pumpAuditMapper.toResponse(savedAudit);
-//    }
 
 
         @Transactional
-        public PumpAuditResponse closePumpAudit(Long pumpAssignmentId, String terminalSerialNumber, Long pumpId, BigDecimal closingReading){
+        public PumpAuditResponse aboutToBeChangedClosePumpAudit(Long pumpAssignmentId, String terminalSerialNumber, Long pumpId, BigDecimal closingReading){
                 if (closingReading == null) {
                         throw new BadRequestException("Closing meter reading is required");
                 }
@@ -450,6 +288,163 @@ public class PumpAuditService {
         }
 
 
+        @Transactional
+        public PumpAuditResponse closePumpAuditFromWeb(Long pumpAssignmentId, BigDecimal closingReading) {
+                if (closingReading == null) {
+                        throw new BadRequestException("Closing meter reading is required");
+                }
+
+                if (pumpAssignmentId == null) {
+                        throw new BadRequestException("Pump assignment ID is required");
+                }
+
+                PumpAssignment assignment = pumpAssignmentRepository.findById(pumpAssignmentId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Pump assignment not found"));
+
+                verifyAssignmentOwnership(assignment);
+                return closeAudit(assignment, closingReading);
+        }
+
+
+
+        @Transactional
+        public PumpAuditResponse closePumpAuditFromTerminal(String terminalSerialNumber, Long pumpId, BigDecimal closingReading) {
+                if (closingReading == null) {
+                        throw new BadRequestException("Closing meter reading is required");
+                }
+
+                if (terminalSerialNumber == null || terminalSerialNumber.isBlank()) {
+                        throw new BadRequestException("Terminal serial number is required");
+                }
+
+                Terminal terminal = terminalRepository
+                        .findByTerminalSerialNumberAndActiveTrue(terminalSerialNumber)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Active terminal not found"));
+
+                Station station = terminal.getStation();
+
+                if (station == null) {
+                        throw new ResourceNotFoundException(
+                                "Terminal is not associated with a station");
+                }
+
+                if (station.getMerchant() == null) {
+                        throw new ResourceNotFoundException(
+                                "Station is not associated with a merchant");
+                }
+
+                LocalDate today = ShiftUtil.businessDate(station.getTimeZone());
+                Shift shift = ShiftUtil.currentShift(station.getTimeZone());
+
+                PumpAssignment assignment;
+
+                if (station.getTerminalMode() == TerminalMode.MULTI_PUMP) {
+
+                        if (pumpId == null) {
+                        throw new BadRequestException(
+                                "Pump ID is required for multi-pump stations");
+                        }
+
+                        assignment = pumpAssignmentRepository
+                                .findByTerminalIdAndPumpIdAndAssignmentDateAndShiftAndActiveTrue(
+                                        terminal.getId(),
+                                        pumpId,
+                                        today,
+                                        shift
+                                )
+                                .orElseThrow(() ->
+                                        new ResourceNotFoundException(
+                                                "No active assignment found for this terminal and pump"));
+                } else {
+
+                        assignment = pumpAssignmentRepository
+                                .findByTerminalIdAndAssignmentDateAndShiftAndActiveTrue(
+                                        terminal.getId(),
+                                        today,
+                                        shift
+                                )
+                                .orElseThrow(() ->
+                                        new ResourceNotFoundException(
+                                                "No active assignment for this terminal"));
+                }
+
+                // Extra consistency checks
+                if (assignment.getTerminal() == null ||
+                        !assignment.getTerminal().getId().equals(terminal.getId())) {
+
+                        throw new BadRequestException(
+                                "Assignment does not belong to this terminal");
+                }
+
+                if (assignment.getStation() == null ||
+                        !assignment.getStation().getId().equals(station.getId())) {
+
+                        throw new BadRequestException(
+                                "Assignment does not belong to terminal's station");
+                }
+
+                return closeAudit(assignment, closingReading);
+        }
+
+
+
+    private PumpAuditResponse closeAudit(PumpAssignment assignment, BigDecimal closingReading) {
+        if (!Boolean.TRUE.equals(assignment.getActive())) {
+                throw new BadRequestException("Pump assignment is already closed");
+        }
+
+        Terminal terminal = assignment.getTerminal();
+        if (terminal == null) {
+                throw new ResourceNotFoundException("Assignment is not associated with a terminal");
+        }
+
+        if (!Boolean.TRUE.equals(terminal.getActive())) {
+                throw new BadRequestException("Terminal is inactive");
+        }
+
+        Pump pump = assignment.getPump();
+        if (pump == null) {
+                throw new ResourceNotFoundException("Assignment is not associated with a pump");
+        }
+
+        PumpAudit audit = pumpAuditRepository
+                .findByPumpAssignment_Id(assignment.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Pump audit not found"));
+
+        if (audit.getClockOutTime() != null) {
+                throw new BadRequestException("Pump audit is already closed");
+        }
+
+        BigDecimal openingReading = audit.getOpeningReading();
+        if (openingReading == null) {
+                throw new BadRequestException("Opening meter reading is not set");
+        }
+
+        if (closingReading.compareTo(openingReading) < 0) {
+                throw new BadRequestException("Closing reading cannot be less than opening reading");
+        }
+
+        BigDecimal totalDispensed = closingReading.subtract(openingReading);
+
+        audit.setClosingReading(closingReading);
+        audit.setTotalDispensed(totalDispensed);
+
+        Station station = assignment.getStation();
+
+        if (station == null) {
+                throw new ResourceNotFoundException("Assignment is not associated with a station");
+        }
+
+        audit.setClockOutTime(LocalDateTime.now(station.getTimeZone()));
+        assignment.setActive(false);
+        pumpAssignmentRepository.save(assignment);
+        PumpAudit savedAudit = pumpAuditRepository.save(audit);
+
+        return pumpAuditMapper.toResponse(savedAudit);
+    }
+
+
     @Transactional(readOnly = true)
     public List<PumpAuditResponse> filterPumpAudits(PumpAuditFilterRequest request) {
         MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
@@ -513,323 +508,8 @@ public class PumpAuditService {
         return response;
     }
 
-        // @Transactional(readOnly = true)
-        // public ShiftSummaryResponse PreviouslyChangedgetShiftSummary(String terminalSerialNumber) {
-        //         Terminal terminal = terminalRepository.findByTerminalSerialNumberAndActiveTrue(terminalSerialNumber)
-        //                         .orElseThrow(() -> new ResourceNotFoundException("Active terminal not found"));
-
-        //         Station station = terminal.getStation();
-
-        //         if (station == null) {
-        //                 throw new ResourceNotFoundException("Terminal is not associated with a station");
-        //         }
-
-        //         Merchant merchant = station.getMerchant();
-
-        //         if (merchant == null) {
-        //                 throw new ResourceNotFoundException("Station is not associated with a merchant");
-        //         }
-
-        //         LocalDate today = ShiftUtil.businessDate(station.getTimeZone());
-        //         Shift shift = ShiftUtil.currentShift(station.getTimeZone());
-        //         PumpAssignment assignment = pumpAssignmentRepository
-        //                         .findByTerminalIdAndAssignmentDateAndShiftAndActiveTrue(
-        //                                 terminal.getId(),
-        //                                 today,
-        //                                 shift)
-        //                         .orElseThrow(() -> new ResourceNotFoundException("No active assignment for this terminal"));
-
-        //         if (!assignment.getStation().getId().equals(station.getId())) {
-        //                 throw new BadRequestException("Terminal assignment does not belong to terminal's station");
-        //         }
-
-        //         Pump pump = assignment.getPump();
-        //         if (pump == null) {
-        //                 throw new ResourceNotFoundException("No pump assigned to this terminal");
-        //         }
-
-        //         Product product = pump.getProduct();
-        //         if (product == null) {
-        //                 throw new ResourceNotFoundException("No product configured for this pump");
-        //         }
-
-        //         PumpAudit audit = pumpAuditRepository.findByPumpAssignment_Id(assignment.getId())
-        //                         .orElseThrow(() -> new ResourceNotFoundException("Pump audit not found"));
-
-        //         BigDecimal litresSold = saleRepository.sumQuantityByPumpAndMerchantAndBusinessDateAndShift(
-        //                                 pump.getId(),
-        //                                 merchant.getCamsMerchantId(),
-        //                                 assignment.getAssignmentDate(),
-        //                                 assignment.getShift());
-
-        //         if (litresSold == null) { litresSold = BigDecimal.ZERO; }
-
-        //         BigDecimal revenue = saleRepository.sumNetAmountByPumpAndMerchantAndBusinessDateAndShift(
-        //                                 pump.getId(),
-        //                                 merchant.getCamsMerchantId(),
-        //                                 assignment.getAssignmentDate(),
-        //                                 assignment.getShift());
-
-        //         if (revenue == null) { revenue = BigDecimal.ZERO; }
-
-        //         StationInventory inventory = stationInventoryRepository
-        //                         .findByStation_IdAndStation_Merchant_CamsMerchantIdAndProduct_Id(
-        //                                 station.getId(),
-        //                                 merchant.getCamsMerchantId(),
-        //                                 product.getId())
-        //                         .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
-
-        //         ShiftSummaryResponse response =new ShiftSummaryResponse();
-
-        //         response.setStationId(station.getId());
-        //         response.setStationName(station.getName());
-        //         response.setPumpId(pump.getId());
-        //         response.setPumpNumber(pump.getPumpNumber());
-        //         response.setPumpName(pump.getPumpName());
-        //         response.setAttendantId(assignment.getAttendant().getId());
-        //         response.setAttendantName(assignment.getAttendant().getFullName());
-        //         response.setBusinessDate(assignment.getAssignmentDate());
-        //         response.setShift(assignment.getShift());
-        //         response.setOpeningMeterReading(audit.getOpeningReading());
-        //         response.setClosingMeterReading(audit.getClosingReading());
-        //         response.setTotalLitresSold(litresSold);
-        //         response.setTotalRevenue(revenue);
-        //         response.setCurrentSellingPrice(inventory.getSellingPrice());
-
-        //         return response;
-        // }
-
-//         @Transactional(readOnly = true)
-// public ShiftSummaryResponse JustChangedgetShiftSummary(
-//         String terminalSerialNumber,
-//         Long pumpId) {
-
-//     if (terminalSerialNumber == null
-//             || terminalSerialNumber.trim().isEmpty()) {
-
-//         throw new BadRequestException(
-//                 "Terminal serial number is required"
-//         );
-//     }
-
-//     Terminal terminal =
-//             terminalRepository
-//                     .findByTerminalSerialNumberAndActiveTrue(
-//                             terminalSerialNumber
-//                     )
-//                     .orElseThrow(() ->
-//                             new ResourceNotFoundException(
-//                                     "Active terminal not found"
-//                             )
-//                     );
-
-//     Station station = terminal.getStation();
-
-//     if (station == null) {
-//         throw new ResourceNotFoundException(
-//                 "Terminal is not associated with a station"
-//         );
-//     }
-
-//     Merchant merchant = station.getMerchant();
-
-//     if (merchant == null) {
-//         throw new ResourceNotFoundException(
-//                 "Station is not associated with a merchant"
-//         );
-//     }
-
-//     LocalDate businessDate =
-//             ShiftUtil.businessDate(station.getTimeZone());
-
-//     Shift shift =
-//             ShiftUtil.currentShift(station.getTimeZone());
-
-//     PumpAssignment assignment;
-
-//     /*
-//      * MULTI_PUMP:
-//      * The terminal can serve multiple pumps.
-//      * Therefore, pumpId is required.
-//      */
-//     if (station.getTerminalMode() == TerminalMode.MULTI_PUMP) {
-
-//         if (pumpId == null) {
-//             throw new BadRequestException(
-//                     "pumpId is required for multi-pump stations"
-//             );
-//         }
-
-//         assignment =
-//                 pumpAssignmentRepository
-//                         .findByTerminalIdAndPumpIdAndAssignmentDateAndShiftAndActiveTrue(
-//                                 terminal.getId(),
-//                                 pumpId,
-//                                 businessDate,
-//                                 shift
-//                         )
-//                         .orElseThrow(() ->
-//                                 new ResourceNotFoundException(
-//                                         "No active assignment found for this terminal and pump"
-//                                 )
-//                         );
-
-//     } else {
-
-//         /*
-//          * SINGLE_PUMP:
-//          * The terminal identifies the pump.
-//          */
-//         assignment =
-//                 pumpAssignmentRepository
-//                         .findByTerminalIdAndAssignmentDateAndShiftAndActiveTrue(
-//                                 terminal.getId(),
-//                                 businessDate,
-//                                 shift
-//                         )
-//                         .orElseThrow(() ->
-//                                 new ResourceNotFoundException(
-//                                         "No active assignment for this terminal"
-//                                 )
-//                         );
-//     }
-
-//     Station assignmentStation = assignment.getStation();
-
-//     if (assignmentStation == null
-//             || !assignmentStation.getId().equals(station.getId())) {
-
-//         throw new BadRequestException(
-//                 "Terminal assignment does not belong to terminal's station"
-//         );
-//     }
-
-//     Terminal assignmentTerminal = assignment.getTerminal();
-
-//     if (assignmentTerminal == null
-//             || !assignmentTerminal.getId().equals(terminal.getId())) {
-
-//         throw new BadRequestException(
-//                 "Assignment does not belong to the requested terminal"
-//         );
-//     }
-
-//     Pump pump = assignment.getPump();
-
-//     if (pump == null) {
-//         throw new ResourceNotFoundException(
-//                 "No pump assigned to this terminal"
-//         );
-//     }
-
-//     Product product = pump.getProduct();
-
-//     if (product == null) {
-//         throw new ResourceNotFoundException(
-//                 "No product configured for this pump"
-//         );
-//     }
-
-//     PumpAudit audit =
-//             pumpAuditRepository
-//                     .findByPumpAssignment_Id(assignment.getId())
-//                     .orElseThrow(() ->
-//                             new ResourceNotFoundException(
-//                                     "Pump audit not found"
-//                             )
-//                     );
-
-//     BigDecimal litresSold =
-//             saleRepository
-//                     .sumQuantityByPumpAndMerchantAndBusinessDateAndShift(
-//                             pump.getId(),
-//                             merchant.getCamsMerchantId(),
-//                             assignment.getAssignmentDate(),
-//                             assignment.getShift()
-//                     );
-
-//     if (litresSold == null) {
-//         litresSold = BigDecimal.ZERO;
-//     }
-
-//     BigDecimal revenue =
-//             saleRepository
-//                     .sumNetAmountByPumpAndMerchantAndBusinessDateAndShift(
-//                             pump.getId(),
-//                             merchant.getCamsMerchantId(),
-//                             assignment.getAssignmentDate(),
-//                             assignment.getShift()
-//                     );
-
-//     if (revenue == null) {
-//         revenue = BigDecimal.ZERO;
-//     }
-
-//     StationInventory inventory =
-//             stationInventoryRepository
-//                     .findByStation_IdAndStation_Merchant_CamsMerchantIdAndProduct_Id(
-//                             station.getId(),
-//                             merchant.getCamsMerchantId(),
-//                             product.getId()
-//                     )
-//                     .orElseThrow(() ->
-//                             new ResourceNotFoundException(
-//                                     "Station inventory not found"
-//                             )
-//                     );
-
-//     ShiftSummaryResponse response =
-//             new ShiftSummaryResponse();
-
-//     response.setStationId(station.getId());
-//     response.setStationName(station.getName());
-
-//     response.setPumpId(pump.getId());
-//     response.setPumpNumber(pump.getPumpNumber());
-//     response.setPumpName(pump.getPumpName());
-
-//     response.setTerminalId(terminal.getId());
-//     response.setTerminalSerialNumber(
-//             terminal.getTerminalSerialNumber()
-//     );
-
-//     response.setAttendantId(
-//             assignment.getAttendant().getId()
-//     );
-
-//     response.setAttendantName(
-//             assignment.getAttendant().getFullName()
-//     );
-
-//     response.setBusinessDate(
-//             assignment.getAssignmentDate()
-//     );
-
-//     response.setShift(
-//             assignment.getShift()
-//     );
-
-//     response.setOpeningMeterReading(
-//             audit.getOpeningReading()
-//     );
-
-//     response.setClosingMeterReading(
-//             audit.getClosingReading()
-//     );
-
-//     response.setTotalLitresSold(litresSold);
-//     response.setTotalRevenue(revenue);
-
-//     response.setCurrentSellingPrice(
-//             inventory.getSellingPrice()
-//     );
-
-//     return response;
-// }
-
-
    @Transactional(readOnly = true)
-public List<ShiftSummaryResponse> getShiftSummary(
+   public List<ShiftSummaryResponse> getShiftSummary(
         Long terminalId,
         String terminalSerialNumber,
         Long pumpId,
