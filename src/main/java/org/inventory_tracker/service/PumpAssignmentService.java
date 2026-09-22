@@ -439,12 +439,9 @@ public class PumpAssignmentService {
 
    @Transactional(readOnly = true)
    public List<PumpAssignmentResponse> getCurrentAssignmentsByTerminal(String terminalSerialNumber) {
-
-            if (terminalSerialNumber == null || terminalSerialNumber.isBlank()) {
-        throw new BadRequestException(
-                "Terminal serial number is required"
-        );
-    }
+        if (terminalSerialNumber == null || terminalSerialNumber.isBlank()) {
+                throw new BadRequestException("Terminal serial number is required");
+        }
 
         Terminal terminal = terminalRepository.findByTerminalSerialNumberAndActiveTrue(terminalSerialNumber)
                         .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
@@ -452,14 +449,12 @@ public class PumpAssignmentService {
         Station station = terminal.getStation();
 
         if (station == null) {
-        throw new ResourceNotFoundException(
-                "Terminal is not associated with a station"
-        );
-    }
-
-        if (station.getTerminalMode() != TerminalMode.MULTI_PUMP) {
-                throw new BadRequestException("This endpoint is only available for MULTI_PUMP stations");
+                throw new ResourceNotFoundException("Terminal is not associated with a station");
         }
+
+        // if (station.getTerminalMode() != TerminalMode.MULTI_PUMP) {
+        //         throw new BadRequestException("This endpoint is only available for MULTI_PUMP stations");
+        // }
 
         LocalDate businessDate = ShiftUtil.businessDate(station.getTimeZone());
         Shift shift = ShiftUtil.currentShift(station.getTimeZone());
@@ -474,77 +469,43 @@ public class PumpAssignmentService {
 
         for (PumpAssignment assignment : assignments) {
                 if (assignment.getTerminal() == null) {
-                        throw new ResourceNotFoundException("Pump assignment " + assignment.getId() + " is not associated with a terminal"
-                );
+                        throw new ResourceNotFoundException("Pump assignment " + assignment.getId() + " is not associated with a terminal");
                 }
 
-                if (!assignment.getTerminal()
-                        .getId()
-                        .equals(terminal.getId())) {
-
-                throw new BadRequestException(
-                        "Pump assignment "
+                if (!assignment.getTerminal().getId().equals(terminal.getId())) {
+                        throw new BadRequestException("Pump assignment "
                                 + assignment.getId()
-                                + " does not belong to this terminal"
-                );
+                                + " does not belong to this terminal");
                 }
 
 
                 if (assignment.getStation() == null) {
-                throw new ResourceNotFoundException(
-                        "Pump assignment "
-                                + assignment.getId()
-                                + " is not associated with a station"
-                );
+                        throw new ResourceNotFoundException("Pump assignment "
+                                        + assignment.getId()
+                                        + " is not associated with a station");
                 }
 
-                if (!assignment.getStation()
-                        .getId()
-                        .equals(station.getId())) {
-
-                throw new BadRequestException(
-                        "Pump assignment "
-                                + assignment.getId()
-                                + " does not belong to terminal's station"
-                );
+                if (!assignment.getStation().getId().equals(station.getId())) {
+                        throw new BadRequestException("Pump assignment "
+                                        + assignment.getId()
+                                        + " does not belong to terminal's station");
                 }
 
-
-                /*
-                * Optional but useful validation:
-                * make sure the assignment has a pump.
-                */
 
                 if (assignment.getPump() == null) {
-                throw new ResourceNotFoundException(
-                        "Pump assignment "
-                                + assignment.getId()
-                                + " is not associated with a pump"
-                );
+                        throw new ResourceNotFoundException("Pump assignment "
+                                        + assignment.getId()
+                                        + " is not associated with a pump");
                 }
 
-
-                /*
-                * Make sure the assignment has an attendant.
-                */
-
                 if (assignment.getAttendant() == null) {
-                throw new ResourceNotFoundException(
-                        "Pump assignment "
-                                + assignment.getId()
-                                + " is not associated with an attendant"
-                );
+                        throw new ResourceNotFoundException(
+                                "Pump assignment "
+                                        + assignment.getId()
+                                        + " is not associated with an attendant");
                 }
         }
 
         return pumpAssignmentMapper.toResponseList(assignments);
  }
-
-//    private Merchant getAuthenticatedMerchant() {
-//         Merchant merchant = MerchantContext.getCurrentMerchant();
-//         if (merchant == null) {
-//                 throw new ResourceNotFoundException("Merchant is not authenticated");
-//         }
-//         return merchant;
-//    }
 }

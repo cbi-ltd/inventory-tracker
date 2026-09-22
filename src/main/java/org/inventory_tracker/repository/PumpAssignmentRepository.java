@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PumpAssignmentRepository extends JpaRepository<PumpAssignment, Long> {
+    List<PumpAssignment>findAllByTerminalIdAndAssignmentDateAndShift(Long terminalId, LocalDate assignmentDate, Shift shift);
+    
     List<PumpAssignment>findAllByTerminalIdAndAssignmentDateAndShiftOrderByIdAsc(Long terminalId, LocalDate assignmentDate, Shift shift);
 
     Optional<PumpAssignment>findByTerminalIdAndPumpIdAndAssignmentDateAndShift(Long terminalId, Long pumpId, LocalDate assignmentDate, Shift shift);

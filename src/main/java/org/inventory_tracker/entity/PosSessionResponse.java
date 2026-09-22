@@ -1,6 +1,8 @@
 package org.inventory_tracker.entity;
 
 import java.math.BigDecimal;
+import java.util.List;
+import org.inventory_tracker.entity.PosAssignmentResponse;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.AllArgsConstructor;
@@ -25,21 +27,9 @@ public class PosSessionResponse {
     private String terminalSerialNumber;
     private String tid;
 
-    private Long pumpId;
-    private String pumpNumber;
-    private String pumpName;
-
-    private Long productId;
-    private String productName;
-
-    private Long attendantId;
-    private String attendantName;
-
     private Shift shift;
     private LocalDate businessDate;
 
-    private BigDecimal openingReading;
-    private BigDecimal closingReading;
-    private Long pumpAuditId;
     private TerminalMode terminalMode;
+    private List<PosAssignmentResponse> assignments;
 }

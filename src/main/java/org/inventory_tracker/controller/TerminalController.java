@@ -99,12 +99,12 @@ public class TerminalController {
 
 
     @GetMapping("/session")
-    public ResponseEntity<ApiSuccessResponse<List<PosSessionResponse>>>getPosSession(
+    public ResponseEntity<ApiSuccessResponse<PosSessionResponse>>getPosSession(
             @RequestParam(required = false) Long pumpId,
             @RequestParam(required = false) String terminalSerialNumber) {
 
-        List<PosSessionResponse> response = posSessionService.getPosSession(terminalSerialNumber);
-        int count = response.size();
+        PosSessionResponse response = posSessionService.getPosSession(terminalSerialNumber);
+        int count = response.getAssignments().size();
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
