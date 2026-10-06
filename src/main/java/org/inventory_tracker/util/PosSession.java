@@ -1,13 +1,10 @@
 package org.inventory_tracker.util;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import org.inventory_tracker.entity.Attendant;
 import org.inventory_tracker.entity.Merchant;
 import org.inventory_tracker.entity.PosAssignmentResponse;
 import org.inventory_tracker.exception.*;

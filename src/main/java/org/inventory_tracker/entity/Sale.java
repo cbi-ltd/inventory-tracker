@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
+import org.inventory_tracker.enums.SaleSettlementType;
 import org.inventory_tracker.enums.SaleStatus;
 import org.inventory_tracker.enums.Shift;
 import java.math.BigDecimal;
@@ -100,6 +101,18 @@ public class Sale extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Shift shift;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SaleSettlementType settlementType;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "vehicle_id", nullable = true)
+    private Vehicle vehicle;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "fueling_agreement_id", nullable = true)
+    private FuelingAgreement fuelingAgreement;
 
     @Column(length = 1000)
     private String remarks;
