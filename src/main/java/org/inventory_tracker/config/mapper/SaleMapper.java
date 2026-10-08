@@ -1,7 +1,9 @@
 package org.inventory_tracker.config.mapper;
 
 import org.inventory_tracker.dto.request.CreateSaleRequest;
+import org.inventory_tracker.dto.response.FuelingAgreementSummaryResponse;
 import org.inventory_tracker.dto.response.SaleResponse;
+import org.inventory_tracker.entity.FuelingAgreement;
 import org.inventory_tracker.entity.Sale;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -31,6 +33,9 @@ public interface SaleMapper {
     @Mapping(target = "transactionReference", ignore = true)
     @Mapping(target = "receiptNumber", ignore = true)
     @Mapping(target = "inventoryUpdated", ignore = true)
+    @Mapping(target = "vehicle", ignore = true)
+    @Mapping(target = "fuelingAgreement", ignore = true)
+    @Mapping(target = "settlementType", ignore = true)
     Sale toEntity(CreateSaleRequest request);
 
     @Mapping(source = "station.id", target = "stationId")
@@ -44,4 +49,8 @@ public interface SaleMapper {
     @Mapping(source = "product.id", target = "productId")
     @Mapping(source = "product.name", target = "productName")
     SaleResponse toResponse(Sale sale);
+
+    @Mapping(source = "company.id", target = "companyId")
+    @Mapping(source = "company.name", target = "companyName")
+    FuelingAgreementSummaryResponse toFuelingAgreementSummary(FuelingAgreement agreement);
 }

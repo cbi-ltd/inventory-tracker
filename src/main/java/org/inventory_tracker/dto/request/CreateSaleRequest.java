@@ -27,7 +27,8 @@ public class CreateSaleRequest {
 
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
-    @NotNull
+    private Long vehicleId;
+
     private PaymentMethod paymentMethod;
 
     @AssertTrue(message = "Either quantity or amount must be provided, but not both or neither")
@@ -36,6 +37,14 @@ public class CreateSaleRequest {
         boolean hasAmount = amount != null;
         
         return hasQuantity ^ hasAmount; 
+    }
+
+    @AssertTrue(message = "Either vehicleId or paymentMethod must be provided, but not both or neither")
+    private boolean isVehicleIdOrPaymentMethodProvided() {
+        boolean hasVehicleId = vehicleId != null;
+        boolean hasPaymentMethod = paymentMethod != null;
+
+        return hasVehicleId ^ hasPaymentMethod;
     }
 
     private String remarks;

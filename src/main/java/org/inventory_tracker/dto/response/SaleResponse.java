@@ -66,4 +66,6 @@ public class SaleResponse {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    private FuelingAgreementSummaryResponse fuelingAgreement;
 }

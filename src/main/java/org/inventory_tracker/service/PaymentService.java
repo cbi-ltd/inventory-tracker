@@ -22,8 +22,13 @@ import org.inventory_tracker.entity.Sale;
 import org.inventory_tracker.entity.Station;
 import org.inventory_tracker.entity.StationInventory;
 import org.inventory_tracker.entity.Terminal;
-// import org.inventory_tracker.entity.security.MerchantContext;
-import org.inventory_tracker.enums.InventoryTransactionType;
+import org.inventory_tracker.entity.Vehicle;
+import org.inventory_tracker.entity.FuelingAgreement;
+import org.inventory_tracker.entity.FuelingCompany;
+import org.inventory_tracker.entity.CompanyAccountTransaction;
+import org.inventory_tracker.enums.FuelingSettlementType;
+import org.inventory_tracker.enums.CompanyAccountTransactionType;
+import org.inventory_tracker.enums.SaleSettlementType;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
@@ -39,6 +44,9 @@ import org.inventory_tracker.integration.cams.PendingPayment.transfer.PendingTra
 import org.inventory_tracker.integration.cams.dto.CamsPaymentNotification;
 import org.inventory_tracker.integration.cams.dto.CardPaymentNotification;
 import org.inventory_tracker.repository.PaymentRepository;
+import org.inventory_tracker.repository.FuelingAgreementRepository;
+import org.inventory_tracker.repository.CompanyAccountTransactionRepository;
+import org.inventory_tracker.repository.VehicleRepository;
 import org.inventory_tracker.repository.PumpAssignmentRepository;
 import org.inventory_tracker.repository.PumpAuditRepository;
 import org.inventory_tracker.repository.PumpRepository;
@@ -76,7 +84,9 @@ public class PaymentService {
     private final PumpAssignmentRepository pumpAssignmentRepository;
     private final PumpAuditRepository pumpAuditRepository;
     private final AuthenticatedUserService authenticatedUserService;
-
+    private final VehicleRepository vehicleRepository;
+    private final CompanyAccountTransactionRepository companyAccountTransactionRepository;
+    private final FuelingAgreementRepository fuelingAgreementRepository;
     @Transactional
     public PaymentResponse recordCashPayment(Long saleId) {
         Sale sale = saleRepository.findById(saleId).orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
@@ -396,21 +406,15 @@ public class PaymentService {
             if (request.getTerminalSerialNumber() == null
                     || request.getTerminalSerialNumber().trim().isEmpty()) {
 
-                throw new BadRequestException(
-                        "Terminal serial number is required"
-                );
+                throw new BadRequestException( "Terminal serial number is required");
             }
 
             if (request.getPumpId() == null) {
-                throw new BadRequestException(
-                        "Pump ID is required"
-                );
+                throw new BadRequestException("Pump ID is required");
             }
 
-            if (request.getPaymentMethod() == null) {
-                throw new BadRequestException(
-                        "Payment method is required"
-                );
+            if (request.getPaymentMethod() == null && request.getVehicleId() == null) {
+                throw new BadRequestException("Payment method is required");
             }
 
             Terminal terminal =
@@ -427,17 +431,13 @@ public class PaymentService {
             Station station = terminal.getStation();
 
             if (station == null) {
-                throw new ResourceNotFoundException(
-                        "Terminal is not associated with a station"
-                );
+                throw new ResourceNotFoundException("Terminal is not associated with a station");
             }
 
             Merchant merchant = station.getMerchant();
 
             if (merchant == null) {
-                throw new ResourceNotFoundException(
-                        "Station is not associated with a merchant"
-                );
+                throw new ResourceNotFoundException("Station is not associated with a merchant");
             }
 
             LocalDate businessDate = ShiftUtil.businessDate(station.getTimeZone());
@@ -605,6 +605,102 @@ public class PaymentService {
             }
 
             BigDecimal netAmount = calculateNetAmount(grossAmount, discount);
+
+
+
+        Vehicle vehicle = null;
+        FuelingAgreement agreement = null;
+        BigDecimal projectedOutstanding = null;
+        SaleSettlementType settlementType = SaleSettlementType.IMMEDIATE;
+
+        if (request.getVehicleId() != null) {
+            vehicle = vehicleRepository.findById(request.getVehicleId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found"));
+
+            /*
+             * Make sure the vehicle belongs to this merchant.
+             */
+            if (vehicle.getMerchant() == null
+                    || !vehicle.getMerchant() .getId().equals(merchant.getId())) {
+
+                throw new ResourceNotFoundException("Vehicle not found");
+            }
+
+            if (!Boolean.TRUE.equals(vehicle.getActive())) {
+                throw new BadRequestException("Vehicle is inactive");
+            }
+
+            FuelingCompany company = vehicle.getCompany();
+            agreement = fuelingAgreementRepository
+                            .findFirstByCompany_IdAndMerchant_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByIdDesc(
+                                    company.getId(),
+                                    merchant.getId(),
+                                    businessDate,
+                                    businessDate)
+                                        .orElseThrow(() -> new BadRequestException("No active fueling agreement found for this vehicle's company"));
+
+            if (!Boolean.TRUE.equals(agreement.getActive())) {
+                throw new BadRequestException("Vehicle fueling agreement is inactive");
+            }
+
+            /*
+             * Make sure the agreement belongs to this merchant.
+             */
+            if (agreement.getMerchant() == null
+                    || !agreement.getMerchant()
+                            .getId()
+                            .equals(merchant.getId())) {
+
+                throw new ResourceNotFoundException(
+                        "Fueling agreement not found"
+                );
+            }
+
+            /*
+             * Make sure the sale falls within the agreement period.
+             */
+            if (businessDate.isBefore(
+                        agreement.getStartDate())
+                    || businessDate.isAfter(
+                        agreement.getEndDate())) {
+
+                throw new BadRequestException(
+                        "Vehicle fueling agreement is outside its active period"
+                );
+            }
+
+            /*
+             * PREPAID:
+             * Make sure enough money remains before allowing
+             * the fueling transaction.
+             */
+            if (agreement.getSettlementType() == FuelingSettlementType.PREPAID) {
+                validatePrepaidBalance(agreement, netAmount);
+                settlementType = SaleSettlementType.PREPAID;
+            }
+
+            /*
+             * POSTPAID:
+             * Check the existing outstanding balance against
+             * the company's credit limit.
+             */
+            if (agreement.getSettlementType() == FuelingSettlementType.POSTPAID) {
+                BigDecimal outstanding = agreement.getOutstandingBalance();
+                if (outstanding == null) { outstanding = BigDecimal.ZERO; }
+
+                projectedOutstanding = outstanding.add(netAmount.negate());
+
+                if (agreement.getCreditLimit() != null
+                        && projectedOutstanding.abs().compareTo(agreement.getCreditLimit()) > 0) {
+
+                    throw new BadRequestException("Company credit limit exceeded");
+                }
+                settlementType = SaleSettlementType.POSTPAID;
+            }
+        }
+
+
+
             Sale sale = saleMapper.toEntity(request);
 
             sale.setStation(station);
@@ -623,7 +719,27 @@ public class PaymentService {
             sale.setBusinessDate(assignment.getAssignmentDate());
             sale.setShift(assignment.getShift());
             sale.setInventoryUpdated(false);
+            sale.setSettlementType(settlementType);
 
+
+            if (vehicle != null) {
+                sale.setVehicle(vehicle);
+                sale.setFuelingAgreement(agreement);
+            } 
+
+
+
+        if (vehicle != null) {
+            sale.setPaymentStatus(
+                    agreement.getSettlementType()
+                            == FuelingSettlementType.PREPAID
+                            ? PaymentStatus.SUCCESS
+                            : PaymentStatus.PENDING
+            );
+
+            sale.setSaleStatus(SaleStatus.PENDING);
+        }
+        else{
             switch (request.getPaymentMethod()) {
                 case CASH -> {
                     sale.setPaymentStatus(PaymentStatus.SUCCESS);
@@ -635,9 +751,45 @@ public class PaymentService {
                 }
                 default -> throw new BadRequestException("Unsupported payment method");
             }
+        }
 
             Sale savedSale = saleRepository.save(sale);
 
+            if (vehicle != null) {
+                if (agreement.getSettlementType() == FuelingSettlementType.PREPAID) {
+                    /*
+                    * Deduct the fuel purchase from the prepaid
+                    * balance.
+                    */
+                    agreement.setPrepaidBalance(agreement.getPrepaidBalance().subtract(netAmount)); 
+                }
+                else if (agreement.getSettlementType() == FuelingSettlementType.POSTPAID) {
+                    agreement.setOutstandingBalance(projectedOutstanding);
+                }
+            
+                fuelingAgreementRepository.save(agreement);
+
+                /*
+                * Both PREPAID and POSTPAID fuel purchases should
+                * appear in the company account ledger.
+                *
+                * Negative amount = fuel consumed/purchased.
+                */
+                CompanyAccountTransaction transaction =
+                        CompanyAccountTransaction.builder()
+                                .fuelingAgreement(agreement)
+                                .sale(savedSale)
+                                .type(CompanyAccountTransactionType.FUEL_PURCHASE)
+                                .amount(netAmount.negate())
+                                .transactionDate(LocalDateTime.now(station.getTimeZone()))
+                                .reference(savedSale.getSaleNumber())
+                                .description("Fuel purchase for vehicle " + vehicle.getRegistrationNumber())
+                                .build();
+
+                companyAccountTransactionRepository.save(transaction);
+            }
+
+        if (vehicle == null) {
             switch (request.getPaymentMethod()) {
                 case TRANSFER -> {
                     pendingTransferService.registerPendingTransfer(
@@ -659,10 +811,18 @@ public class PaymentService {
                 }
                 case MIXED -> { throw new BadRequestException("Mixed payments are not currently supported"); }
             }
+        }
 
-            if (savedSale.getPaymentMethod() == PaymentMethod.CASH) {
+
+            if (vehicle == null && savedSale.getPaymentMethod() == PaymentMethod.CASH) {
                 recordCashPayment(savedSale.getId());
+                sale.setSaleStatus(SaleStatus.COMPLETED);
                 return completeCashSale(savedSale.getId());
+            }
+
+            if (vehicle != null) {
+                sale.setSaleStatus(SaleStatus.COMPLETED);
+                return completeSale(savedSale.getId(), savedSale.getSaleNumber(), savedSale.getPaymentStatus(), null);
             }
 
             return saleMapper.toResponse(savedSale);
@@ -1179,9 +1339,17 @@ public class PaymentService {
     }
 
     private void verifySaleTerminalRelationship(Sale sale,Terminal terminal) {
-    if (sale.getTerminal() == null || !sale.getTerminal().getId().equals(terminal.getId())) {
-        throw new BadRequestException("Payment terminal does not match the sale terminal.");
+        if (sale.getTerminal() == null || !sale.getTerminal().getId().equals(terminal.getId())) {
+            throw new BadRequestException("Payment terminal does not match the sale terminal.");
+        }
     }
-}
+
+    private void validatePrepaidBalance(FuelingAgreement agreement,BigDecimal amount) {
+        BigDecimal balance = agreement.getPrepaidBalance();
+        if (balance == null) { balance = BigDecimal.ZERO; }
+        if (balance.compareTo(amount) < 0) {
+            throw new BadRequestException("Insufficient prepaid balance");
+        }
+    }
 
 }

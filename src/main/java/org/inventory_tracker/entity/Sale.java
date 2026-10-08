@@ -81,7 +81,7 @@ public class Sale extends BaseEntity {
     private Boolean inventoryUpdated = false;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    // @Column(nullable = false)
     private PaymentMethod paymentMethod;
 
     @Enumerated(EnumType.STRING)
