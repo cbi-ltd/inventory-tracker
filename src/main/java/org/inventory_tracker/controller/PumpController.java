@@ -10,11 +10,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
+@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Pumps", description = "Pump management APIs")
 @RequestMapping("/api/v1/pumps")
 @RequiredArgsConstructor
 public class PumpController {

@@ -65,11 +65,7 @@ public class FuelingCompanyService {
         );
     }
 
-    public FuelingCompanyResponse update(
-            Long id,
-            FuelingCompanyRequest request
-    ) {
-
+    public FuelingCompanyResponse update(Long id, FuelingCompanyRequest request) {
         Merchant merchant = getCurrentMerchant();
 
         FuelingCompany company = fuelingCompanyRepository

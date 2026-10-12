@@ -6,7 +6,6 @@ import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.inventory_tracker.dto.response.DashboardResponse;
 import org.inventory_tracker.dto.response.report.AttendantReportResponse;
 import org.inventory_tracker.dto.response.report.DeliveryReportResponse;
-import org.inventory_tracker.dto.response.report.ExecutiveSummaryResponse;
 import org.inventory_tracker.dto.response.report.InventoryReportResponse;
 import org.inventory_tracker.dto.response.report.InventoryTransactionReportResponse;
 import org.inventory_tracker.dto.response.report.PaymentDistributionResponse;
@@ -24,6 +23,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,6 +33,8 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/reports")
+@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Reporting", description = "Reporting management APIs")
 public class ReportingController {
 
     private final ReportingService reportingService;

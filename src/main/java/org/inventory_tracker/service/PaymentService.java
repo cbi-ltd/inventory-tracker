@@ -842,7 +842,6 @@ public class PaymentService {
     @Transactional
     public SaleResponse completeSale(Long saleId, String transactionReference, PaymentStatus paymentStatus, LocalDateTime paidAt) {
         Sale sale = saleRepository.findByIdForUpdate(saleId).orElseThrow(() -> new ResourceNotFoundException("Sale not found"));
-        // verifySaleOwnership(sale);
 
         if (sale.getInventoryUpdated()) { return saleMapper.toResponse(sale); }
 
@@ -862,13 +861,6 @@ public class PaymentService {
                 "SALE-" + sale.getSaleNumber(),
                 sale.getStation(),
                 sale.getProduct());
-
-        // inventoryTransactionService.recordTransactionForDashboard(
-        //         inventoryId,
-        //         InventoryTransactionType.SALE,
-        //         sale.getQuantity(),
-        //         sale.getSaleNumber(),
-        //         "SALE-" + sale.getSaleNumber());
 
         sale.setInventoryUpdated(true);
         sale.setPaymentStatus(paymentStatus);

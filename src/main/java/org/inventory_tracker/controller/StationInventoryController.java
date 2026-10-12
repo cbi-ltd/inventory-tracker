@@ -7,6 +7,8 @@ import org.inventory_tracker.service.StationInventoryService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,12 +18,14 @@ import org.inventory_tracker.dto.common.ApiSuccessResponse;
 
 
 @RestController
+@Tag(name = "Station Inventories", description = "Station inventory management APIs")
 @RequestMapping("api/v1/station-inventories")
 @RequiredArgsConstructor
 public class StationInventoryController {
 
     private final StationInventoryService stationInventoryService;
 
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping
     public ResponseEntity<ApiSuccessResponse<StationInventoryResponse>>
     createStationInventory(@Valid @RequestBody CreateStationInventoryRequest request) {
@@ -38,6 +42,7 @@ public class StationInventoryController {
                 );
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @PatchMapping("/{id}")
     public ResponseEntity<ApiSuccessResponse<StationInventoryResponse>>
     updateStationInventory(
@@ -59,6 +64,7 @@ public class StationInventoryController {
         );
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/{id}")
     public ResponseEntity<ApiSuccessResponse<StationInventoryResponse>>
     getInventoryById(@PathVariable Long id) {
@@ -77,6 +83,7 @@ public class StationInventoryController {
         );
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<List<StationInventoryResponse>>>
     getAllInventories() {
@@ -98,6 +105,7 @@ public class StationInventoryController {
         );
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/station/{stationId}")
     public ResponseEntity<ApiSuccessResponse<List<StationInventoryResponse>>>
     getStationInventory(
@@ -120,6 +128,7 @@ public class StationInventoryController {
         );
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/active")
     public ResponseEntity<ApiSuccessResponse<List<StationInventoryResponse>>>
     getActiveInventories() {
@@ -138,6 +147,7 @@ public class StationInventoryController {
         );
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @PatchMapping("/{id}/activate")
     public ResponseEntity<ApiSuccessResponse<StationInventoryResponse>>
     activateInventory(@PathVariable Long id) {
@@ -156,6 +166,7 @@ public class StationInventoryController {
         );
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @PatchMapping("/{id}/deactivate")
     public ResponseEntity<ApiSuccessResponse<StationInventoryResponse>>
     deactivateInventory(@PathVariable Long id) {

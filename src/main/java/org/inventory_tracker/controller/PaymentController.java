@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,6 +27,7 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<List<PaymentResponse>>> filterPayments(
         @RequestParam(required = false) Long stationId, @RequestParam(required = false) Long terminalId,
@@ -59,52 +62,46 @@ public class PaymentController {
                                  "Payments retrieved successfully.", paymentCount, response));
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/{id}")
     public PaymentResponse getPaymentById(@PathVariable Long id) {
         return paymentService.getPaymentById(id);
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/number/{paymentNumber}")
     public PaymentResponse getPaymentByPaymentNumber(@PathVariable String paymentNumber) {
         return paymentService.getPaymentByPaymentNumber(paymentNumber);
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/transaction/{transactionReference}")
     public PaymentResponse getPaymentByTransactionReference(@PathVariable String transactionReference) {
         return paymentService.getPaymentByTransactionReference(transactionReference);
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/sale/{saleId}")
     public PaymentResponse getPaymentBySale(@PathVariable Long saleId) {
         return paymentService.getPaymentBySale(saleId);
     }
 
-    // @GetMapping
-    // public List<PaymentResponse> getAllPayments() {
-    //     return paymentService.getAllPayments();
-    // }
-
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/status/{status}")
     public List<PaymentResponse> getPaymentsByStatus(@PathVariable PaymentStatus status) {
         return paymentService.getPaymentsByStatus(status);
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/method/{method}")
     public List<PaymentResponse> getPaymentsByMethod(@PathVariable PaymentMethod method) {
         return paymentService.getPaymentsByMethod(method);
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{paymentId}/cancel")
     public PaymentResponse cancelPayment(@PathVariable Long paymentId) {
         return paymentService.cancelPayment(paymentId);
     }
-
-    // @PutMapping("/status")
-    // public PaymentResponse updatePaymentStatus(@RequestParam String transactionReference,
-    //         @RequestParam PaymentStatus paymentStatus, @RequestParam(required = false) String responseCode,
-    //         @RequestParam(required = false) String responseMessage) {
-
-    //     return paymentService.updatePaymentStatus(transactionReference, paymentStatus, responseCode, responseMessage);
-    // }
 
 }

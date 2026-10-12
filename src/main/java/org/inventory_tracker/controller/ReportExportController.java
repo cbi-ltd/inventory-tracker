@@ -1,7 +1,6 @@
 package org.inventory_tracker.controller;
 
 import lombok.RequiredArgsConstructor;
-
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.inventory_tracker.dto.response.report.AttendantReportResponse;
 import org.inventory_tracker.dto.response.report.DeliveryReportResponse;
@@ -26,12 +25,19 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.springframework.http.HttpStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+
 @RestController
+@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Report Exports", description = "Report export management APIs")
 @RequestMapping("/api/v1/reports")
 @RequiredArgsConstructor
 public class ReportExportController {

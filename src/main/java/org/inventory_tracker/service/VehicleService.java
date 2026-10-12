@@ -63,7 +63,6 @@ public class VehicleService {
 
     @Transactional(readOnly = true)
     public VehicleResponse get(Long id) {
-
         return vehicleMapper.toResponse(getVehicle(id));
     }
 
@@ -82,7 +81,6 @@ public class VehicleService {
 
     @Transactional(readOnly = true)
     public List<VehicleResponse> getByCompany(Long companyId) {
-
         Merchant merchant = getCurrentMerchant();
 
         // Ensure the company belongs to this merchant.
@@ -92,8 +90,7 @@ public class VehicleService {
                         merchant.getId()
                 )
                 .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Active fueling company not found"
+                        new ResourceNotFoundException("Active fueling company not found"
                         ));
 
         return vehicleMapper.toResponseList(
@@ -105,17 +102,12 @@ public class VehicleService {
         );
     }
 
-    public VehicleResponse update(
-            Long id,
-            VehicleRequest request
-    ) {
-
+    public VehicleResponse update(Long id, VehicleRequest request) {
         Merchant merchant = getCurrentMerchant();
 
         Vehicle vehicle = vehicleRepository
                 .findByIdAndMerchant_Id(id, merchant.getId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Vehicle not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found"));
 
         if (vehicleRepository
                 .existsByMerchant_IdAndRegistrationNumberIgnoreCaseAndIdNot(
@@ -139,38 +131,26 @@ public class VehicleService {
                         ));
 
         vehicleMapper.updateEntity(request, vehicle);
-
         vehicle.setCompany(company);
 
-        return vehicleMapper.toResponse(
-                vehicleRepository.save(vehicle)
-        );
+        return vehicleMapper.toResponse(vehicleRepository.save(vehicle));
     }
 
     public VehicleResponse activate(Long id) {
-
         Vehicle vehicle = getVehicle(id);
-
         vehicle.setActive(true);
 
-        return vehicleMapper.toResponse(
-                vehicleRepository.save(vehicle)
-        );
+        return vehicleMapper.toResponse(vehicleRepository.save(vehicle));
     }
 
     public VehicleResponse deactivate(Long id) {
-
         Vehicle vehicle = getVehicle(id);
-
         vehicle.setActive(false);
 
-        return vehicleMapper.toResponse(
-                vehicleRepository.save(vehicle)
-        );
+        return vehicleMapper.toResponse(vehicleRepository.save(vehicle));
     }
 
     private Vehicle getVehicle(Long id) {
-
         Merchant merchant = getCurrentMerchant();
 
         return vehicleRepository
@@ -180,13 +160,9 @@ public class VehicleService {
     }
 
     private Merchant getCurrentMerchant() {
-
         Merchant merchant = authenticatedUserService.getCurrentMerchant();
-
         if (merchant == null) {
-            throw new ResourceNotFoundException(
-                    "Merchant is not authenticated"
-            );
+            throw new ResourceNotFoundException("Merchant is not authenticated");
         }
 
         return merchant;

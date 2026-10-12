@@ -14,12 +14,18 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 
 @RestController
+@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Deliveries", description = "Delivery management APIs")
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/deliveries")
 public class DeliveryController {

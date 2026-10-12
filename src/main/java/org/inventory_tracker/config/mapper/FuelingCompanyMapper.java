@@ -7,9 +7,10 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import java.util.List;
+import org.mapstruct.NullValuePropertyMappingStrategy;
 
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface FuelingCompanyMapper {
 
     FuelingCompanyResponse toResponse(FuelingCompany company);

@@ -29,9 +29,20 @@ public class CamsAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
+        String uri = request.getRequestURI();
+        String method = request.getMethod();
+
         if (isPosEndpoint(request)) {
             filterChain.doFilter(request, response);
             return;
+        }
+
+        if (uri.equals("/swagger-ui.html")
+            || uri.startsWith("/swagger-ui/")
+            || uri.equals("/v3/api-docs")
+            || uri.startsWith("/v3/api-docs/")) {
+                filterChain.doFilter(request, response);
+                return;
         }
 
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);

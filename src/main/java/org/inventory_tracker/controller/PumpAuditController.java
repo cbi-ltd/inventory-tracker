@@ -3,7 +3,6 @@ package org.inventory_tracker.controller;
 import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.dto.request.CreatePumpAuditRequest;
 import org.inventory_tracker.dto.request.PumpAuditFilterRequest;
-import org.inventory_tracker.dto.response.PumpAssignmentResponse;
 import org.inventory_tracker.dto.response.PumpAuditResponse;
 import org.inventory_tracker.dto.response.ShiftSummaryResponse;
 import org.inventory_tracker.enums.Shift;
@@ -11,23 +10,26 @@ import org.inventory_tracker.service.PumpAuditService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.inventory_tracker.dto.request.ClosePumpAuditRequest;
 import java.util.List;
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.springframework.format.annotation.DateTimeFormat;
 import jakarta.validation.Valid;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 
 @RestController
+@Tag(name = "Pump Audits", description = "Pump audit management APIs")
 @RequestMapping("/api/v1/pump-audits")
 @RequiredArgsConstructor
 public class PumpAuditController {
 
     private final PumpAuditService pumpAuditService;
 
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping
     public ResponseEntity<ApiSuccessResponse<PumpAuditResponse>> createPumpAudit(
             @Valid @RequestBody CreatePumpAuditRequest request) {
@@ -46,6 +48,7 @@ public class PumpAuditController {
                 );
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<List<PumpAuditResponse>>> filterPumpAudits(@ModelAttribute PumpAuditFilterRequest request) {
 
@@ -64,22 +67,7 @@ public class PumpAuditController {
     }
 
 
-//     @GetMapping
-//     public ResponseEntity<ApiSuccessResponse<List<PumpAuditResponse>>> getAllPumpAudits() {
-
-//         List<PumpAuditResponse> response =
-//                 pumpAuditService.getAllPumpAudits();
-
-//         return ResponseEntity.ok(
-//                 new ApiSuccessResponse<>(
-//                         LocalDateTime.now(),
-//                         HttpStatus.OK.value(),
-//                         "Pump audits retrieved successfully",
-//                         response
-//                 )
-//         );
-//     }
-
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/{id}")
     public ResponseEntity<ApiSuccessResponse<PumpAuditResponse>> getPumpAuditById(
             @PathVariable Long id) {
@@ -97,6 +85,7 @@ public class PumpAuditController {
         );
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/assignment/{assignmentId}")
     public ResponseEntity<ApiSuccessResponse<PumpAuditResponse>> getPumpAuditByAssignment(
             @PathVariable Long assignmentId) {
@@ -114,6 +103,7 @@ public class PumpAuditController {
         );
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/station/{stationId}")
     public ResponseEntity<ApiSuccessResponse<List<PumpAuditResponse>>> getPumpAuditsByStation(
             @PathVariable Long stationId) {
@@ -131,6 +121,7 @@ public class PumpAuditController {
         );
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/pump/{pumpId}")
     public ResponseEntity<ApiSuccessResponse<List<PumpAuditResponse>>> getPumpAuditsByPump(
             @PathVariable Long pumpId) {
@@ -148,6 +139,7 @@ public class PumpAuditController {
         );
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/attendant/{attendantId}")
     public ResponseEntity<ApiSuccessResponse<List<PumpAuditResponse>>> getPumpAuditsByAttendant(
             @PathVariable Long attendantId) {
@@ -165,6 +157,7 @@ public class PumpAuditController {
         );
     }
 
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/business-date/{businessDate}")
     public ResponseEntity<ApiSuccessResponse<List<PumpAuditResponse>>> getPumpAuditsByBusinessDate(
             @PathVariable
@@ -185,6 +178,7 @@ public class PumpAuditController {
     }
 
     @PutMapping("/close-audit")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ApiSuccessResponse<PumpAuditResponse>> closePmpAudit(@RequestBody ClosePumpAuditRequest request) {
         PumpAuditResponse response = pumpAuditService.closePumpAuditFromWeb(request.getPumpAssignmentId(), request.getClosingReading());
 

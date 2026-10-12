@@ -14,27 +14,13 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
 
         return new OpenAPI()
-
-                .info(
-                        new Info()
-                                .title(
-                                        "Inventory Tracker API"
-                                )
-                                .version("1.0")
-                )
-
-                .addSecurityItem(
-                        new SecurityRequirement()
-                                .addList("bearerAuth")
-                )
-
-                .schemaRequirement(
-                        "bearerAuth",
+                .info(new Info().title("Inventory Tracker API").version("1.0"))
+                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+                .schemaRequirement("bearerAuth",
                         new SecurityScheme()
                                 .name("bearerAuth")
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
-                                .bearerFormat("JWT")
-                );
+                                .bearerFormat("JWT"));
     }
 }

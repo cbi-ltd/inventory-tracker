@@ -9,12 +9,18 @@ import org.inventory_tracker.service.StationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.inventory_tracker.dto.request.UpdateStationRequest;
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
+@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Stations", description = "Station management APIs")
 @RequestMapping("/api/v1/stations")
 @RequiredArgsConstructor
 public class StationController {

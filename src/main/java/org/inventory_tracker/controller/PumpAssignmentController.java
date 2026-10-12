@@ -14,20 +14,21 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.math.BigDecimal;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
+@Tag(name = "Pump Assignments", description = "Pump assignment management APIs")
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/pump-assignments")
 public class PumpAssignmentController {
 
     private final PumpAssignmentService pumpAssignmentService;
 
-
+        @SecurityRequirement(name = "bearerAuth")
         @PatchMapping("/{assignmentId}/terminal")
         public ResponseEntity<ApiSuccessResponse<PumpAssignmentResponse>>changeTerminalAssignment(
                 @PathVariable Long assignmentId,
@@ -48,7 +49,7 @@ public class PumpAssignmentController {
                 );
         }
 
-
+        @SecurityRequirement(name = "bearerAuth")
         @PostMapping
         public ResponseEntity<ApiSuccessResponse<PumpAssignmentResponse>>assignPumpToAttendant(
                 @Valid @RequestBody AssignPumpRequest request) {
@@ -71,6 +72,7 @@ public class PumpAssignmentController {
 
 
 
+        @SecurityRequirement(name = "bearerAuth")
         @GetMapping("/current/{attendantId}")
         public ResponseEntity<ApiSuccessResponse<PumpAssignmentResponse>> getPumpCurrentAssignment(
                         @PathVariable Long attendantId) {
@@ -90,6 +92,7 @@ public class PumpAssignmentController {
         }
 
 
+        @SecurityRequirement(name = "bearerAuth")
         @GetMapping("/history/{attendantId}")
         public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>>getAttendantPumpAssignmentHistory(
                 @PathVariable Long attendantId) {
@@ -112,6 +115,7 @@ public class PumpAssignmentController {
         }
 
 
+        @SecurityRequirement(name = "bearerAuth")
         @GetMapping("/today/{stationId}")
         public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>>getTodayPumpAssignments(
                 @PathVariable Long stationId) {
@@ -133,6 +137,7 @@ public class PumpAssignmentController {
                 );
         }
 
+        @SecurityRequirement(name = "bearerAuth")
         @GetMapping
         public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>> getAllAssignments() {
 
@@ -150,6 +155,7 @@ public class PumpAssignmentController {
                 );
         }
 
+        @SecurityRequirement(name = "bearerAuth")
         @GetMapping("/{assignmentId}")
         public ResponseEntity<ApiSuccessResponse<PumpAssignmentResponse>> getAssignmentById(@PathVariable Long assignmentId) {
                 PumpAssignmentResponse response = pumpAssignmentService.getAssignmentById(assignmentId);
@@ -165,6 +171,7 @@ public class PumpAssignmentController {
                 );
         }
 
+        @SecurityRequirement(name = "bearerAuth")
         @GetMapping("/station/{stationId}")
         public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>> getAssignmentsByStation(@PathVariable Long stationId) {
 
@@ -180,6 +187,7 @@ public class PumpAssignmentController {
                 );
         }
 
+        @SecurityRequirement(name = "bearerAuth")
         @GetMapping("/pump/{pumpId}")
         public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>> getAssignmentsByPump(@PathVariable Long pumpId) {
 
@@ -198,6 +206,7 @@ public class PumpAssignmentController {
                 );
         }
 
+        @SecurityRequirement(name = "bearerAuth")
         @GetMapping("/by-date")
         public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>> getAssignmentsByDate(
                 @RequestParam
@@ -219,6 +228,7 @@ public class PumpAssignmentController {
         }
         
 
+        @SecurityRequirement(name = "bearerAuth")
         @GetMapping("/shift/{shift}")
         public ResponseEntity<ApiSuccessResponse<List<PumpAssignmentResponse>>> getAssignmentsByShift(@PathVariable Shift shift) {
 
