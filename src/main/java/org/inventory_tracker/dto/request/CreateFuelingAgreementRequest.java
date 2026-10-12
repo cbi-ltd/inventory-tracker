@@ -1,5 +1,6 @@
 package org.inventory_tracker.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,8 +13,11 @@ import java.time.LocalDate;
 @Setter
 public class CreateFuelingAgreementRequest {
 
+    // @NotNull
+    // private Long companyId;
     @NotNull
-    private Long companyId;
+    @Valid
+    private FuelingCompanyRequest company;
 
     @NotNull
     private FuelingSettlementType settlementType;

@@ -11,7 +11,6 @@ public class FuelingCompanyRequest {
     @NotBlank
     private String name;
 
-    @NotBlank
     private String code;
 
     private String contactPerson;

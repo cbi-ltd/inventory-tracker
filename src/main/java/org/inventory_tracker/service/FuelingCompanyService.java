@@ -5,11 +5,15 @@ import org.inventory_tracker.config.mapper.FuelingCompanyMapper;
 import lombok.RequiredArgsConstructor;
 import org.inventory_tracker.dto.request.FuelingCompanyRequest;
 import org.inventory_tracker.dto.response.FuelingCompanyResponse;
+import org.inventory_tracker.entity.FuelingAgreement;
 import org.inventory_tracker.entity.FuelingCompany;
 import org.inventory_tracker.entity.Merchant;
+import org.inventory_tracker.entity.Vehicle;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
+import org.inventory_tracker.repository.FuelingAgreementRepository;
 import org.inventory_tracker.repository.FuelingCompanyRepository;
+import org.inventory_tracker.repository.VehicleRepository;
 import org.inventory_tracker.security.AuthenticatedUserService;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -23,6 +27,8 @@ public class FuelingCompanyService {
     private final FuelingCompanyRepository fuelingCompanyRepository;
     private final FuelingCompanyMapper fuelingCompanyMapper;
     private final AuthenticatedUserService authenticatedUserService;
+    private final FuelingAgreementRepository fuelingAgreementRepository;
+    private final VehicleRepository vehicleRepository;      
 
     public FuelingCompanyResponse create(FuelingCompanyRequest request) {
         Merchant merchant = getCurrentMerchant();
@@ -54,15 +60,11 @@ public class FuelingCompanyService {
 
     @Transactional(readOnly = true)
     public List<FuelingCompanyResponse> getAll() {
-
         Merchant merchant = getCurrentMerchant();
 
         return fuelingCompanyMapper.toResponseList(
                 fuelingCompanyRepository
-                        .findByMerchant_IdAndActiveTrueOrderByNameAsc(
-                                merchant.getId()
-                        )
-        );
+                        .findByMerchant_IdAndActiveTrueOrderByNameAsc(merchant.getId()));
     }
 
     public FuelingCompanyResponse update(Long id, FuelingCompanyRequest request) {
@@ -103,45 +105,47 @@ public class FuelingCompanyService {
     }
 
     public FuelingCompanyResponse activate(Long id) {
-
         FuelingCompany company = getCompany(id);
-
         company.setActive(true);
 
-        return fuelingCompanyMapper.toResponse(
-                fuelingCompanyRepository.save(company)
-        );
+        return fuelingCompanyMapper.toResponse(fuelingCompanyRepository.save(company));
     }
 
+    @Transactional 
     public FuelingCompanyResponse deactivate(Long id) {
-
+        Merchant merchant = getCurrentMerchant();
         FuelingCompany company = getCompany(id);
 
         company.setActive(false);
 
-        return fuelingCompanyMapper.toResponse(
-                fuelingCompanyRepository.save(company)
-        );
+        List<FuelingAgreement> agreements =
+            fuelingAgreementRepository
+                    .findByCompany_IdAndMerchant_IdAndActiveTrue(company.getId(), merchant.getId());
+
+        agreements.forEach(agreement -> agreement.setActive(false));
+        fuelingAgreementRepository.saveAll(agreements);
+
+        List<Vehicle> vehicles = vehicleRepository
+                    .findByCompany_IdAndMerchant_IdAndActiveTrue(company.getId(), merchant.getId());
+
+        vehicles.forEach(vehicle -> vehicle.setActive(false));
+        vehicleRepository.saveAll(vehicles);
+
+        return fuelingCompanyMapper.toResponse(fuelingCompanyRepository.save(company));
     }
 
     private FuelingCompany getCompany(Long id) {
-
         Merchant merchant = getCurrentMerchant();
 
         return fuelingCompanyRepository
                 .findByIdAndMerchant_Id(id, merchant.getId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Fueling company not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Fueling company not found"));
     }
 
     private Merchant getCurrentMerchant() {
-
         Merchant merchant = authenticatedUserService.getCurrentMerchant();
-
         if (merchant == null) {
-            throw new ResourceNotFoundException(
-                    "Merchant is not authenticated"
-            );
+            throw new ResourceNotFoundException("Merchant is not authenticated");
         }
 
         return merchant;

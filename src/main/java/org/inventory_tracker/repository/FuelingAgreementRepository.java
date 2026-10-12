@@ -16,6 +16,8 @@ public interface FuelingAgreementRepository extends JpaRepository<FuelingAgreeme
         LocalDate date2
     );
 
+    List<FuelingAgreement> findByCompany_IdAndMerchant_IdAndActiveTrue(Long companyId, Long merchantId);
+
     List<FuelingAgreement> findByMerchant_IdOrderByStartDateDesc(Long merchantId);
 
     List<FuelingAgreement> findByCompany_IdAndMerchant_IdOrderByStartDateDesc(
