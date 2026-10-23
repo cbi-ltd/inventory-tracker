@@ -25,7 +25,6 @@ public class PosSessionResponse {
 
     private Long terminalId;
     private String terminalSerialNumber;
-    private String tid;
 
     private Shift shift;
     private LocalDate businessDate;

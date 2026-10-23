@@ -16,13 +16,13 @@ public class Terminal extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = true, unique = true)
-    private String tid; //FOR NOW, SAVE SERIAL-NUMBER INTO THIS
+    // @Column(nullable = true, unique = true)
+    // private String tid; //FOR NOW, SAVE SERIAL-NUMBER INTO THIS
 
     @Column(nullable = false, unique = true)
     private String terminalSerialNumber;
 
-    @OneToMany(mappedBy = "defaultTerminal", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "terminal", fetch = FetchType.LAZY)
     private List<Pump> pumps = new ArrayList<>();
 
     @ManyToOne
@@ -35,7 +35,7 @@ public class Terminal extends BaseEntity {
 
     private String manufacturer;
 
-    private Boolean active;
+    private Boolean active = true;
 
     private LocalDateTime lastSyncedAt;
 }

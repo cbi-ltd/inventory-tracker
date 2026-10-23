@@ -23,9 +23,6 @@ public interface PumpAssignmentMapper {
     @Mapping(source = "attendant.id", target = "attendantId")
     @Mapping(source = "attendant.fullName", target = "attendantName")
     @Mapping(source = "attendant.username", target = "username")
-
-    @Mapping(source = "terminal.id", target = "terminalDbId")
-    @Mapping(source = "terminal.tid", target = "tid")
     @Mapping(source = "terminal.terminalSerialNumber", target = "terminalSerialNumber")
 
     PumpAssignmentResponse toResponse(PumpAssignment assignment);

@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class CardPaymentNotification {
 
-    private String terminalId;
+    private String terminalSerialNumber;
 
     private String rrn;
 

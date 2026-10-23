@@ -19,10 +19,6 @@ public class PumpResponse {
 
     private Boolean active;
 
-    private Long defaultTerminalDbId;
-
-    private String tid;
-
     private String terminalSerialNumber;
 
     private Long productId;

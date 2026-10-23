@@ -6,6 +6,7 @@ public enum PaymentMethod {
     CASH,
     CARD,
     TRANSFER,
+    OFFLINE_PAYMENT,
     MIXED;
 
     @JsonCreator

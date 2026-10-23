@@ -16,5 +16,5 @@ public class UpdatePumpRequest {
 
     private Long productId;
 
-    private Long defaultTerminalId;
+    private String terminalSerialNumber;
 }

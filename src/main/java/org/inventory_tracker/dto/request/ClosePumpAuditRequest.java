@@ -4,14 +4,14 @@ import lombok.Getter;
 import lombok.Setter;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
-import org.inventory_tracker.util.ValidTerminalInfo;
+// import org.inventory_tracker.util.ValidTerminalInfo;
 import jakarta.validation.constraints.DecimalMin;
 
 
 
 @Getter
 @Setter
-@ValidTerminalInfo
+// @ValidTerminalInfo
 public class ClosePumpAuditRequest {
 
     @NotNull(message = "Closing reading is required")

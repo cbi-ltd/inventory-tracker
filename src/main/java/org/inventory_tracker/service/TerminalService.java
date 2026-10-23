@@ -53,7 +53,7 @@ public class TerminalService {
         Station station = stationRepository.findByIdAndMerchant_CamsMerchantId(request.getStationId(), principal.getMerchantId())
                                 .orElseThrow(() -> new ResourceNotFoundException("Station not found"));
 
-        Optional.ofNullable(request.getTid()).ifPresent(terminal::setTid);
+        // Optional.ofNullable(request.getTid()).ifPresent(terminal::setTid);
         terminal.setTerminalSerialNumber(request.getTerminalSerialNumber());
         terminal.setManufacturer(request.getManufacturer());
         terminal.setStation(station);
@@ -67,10 +67,10 @@ public class TerminalService {
     }
 
     @Transactional(readOnly = true)
-    public TerminalResponse getTerminalByTid(String tid) {
+    public TerminalResponse getTerminalById(Long id) {
         MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
         Terminal terminal =
-                terminalRepository.findByTidAndStation_Merchant_CamsMerchantId(tid, principal.getMerchantId())
+                terminalRepository.findByIdAndStation_Merchant_CamsMerchantId(id, principal.getMerchantId())
                         .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
 
         return terminalMapper.toResponse(terminal);
@@ -93,7 +93,7 @@ public class TerminalService {
     public List<TerminalResponse> getAllTerminals() {
         MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
         return terminalMapper.toResponseList(
-                terminalRepository.findByStation_Merchant_CamsMerchantIdOrderByTidAsc(principal.getMerchantId())
+                terminalRepository.findByStation_Merchant_CamsMerchantIdOrderByTerminalSerialNumberAsc(principal.getMerchantId())
         );
     }
 
@@ -101,7 +101,7 @@ public class TerminalService {
     public List<TerminalResponse> getActiveTerminals() {
         MerchantPrincipal principal = authenticatedUserService.getCurrentUser();
         return terminalMapper.toResponseList(
-                terminalRepository.findByStation_Merchant_CamsMerchantIdAndActiveTrueOrderByTidAsc(principal.getMerchantId())
+                terminalRepository.findByStation_Merchant_CamsMerchantIdAndActiveTrueOrderByTerminalSerialNumberAsc(principal.getMerchantId())
         );
     }
 
@@ -110,7 +110,6 @@ public class TerminalService {
                                         .orElseGet(Terminal::new);
 
         terminal.setTerminalSerialNumber(terminalSerialNumber);
-        terminal.setTid(tid);
         terminal.setStation(station);
         terminal.setLastSyncedAt(LocalDateTime.now());
 

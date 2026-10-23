@@ -1,12 +1,12 @@
-package org.inventory_tracker.util;
+// package org.inventory_tracker.util;
 
-import jakarta.validation.ConstraintValidator;
-import jakarta.validation.ConstraintValidatorContext;
+// import jakarta.validation.ConstraintValidator;
+// import jakarta.validation.ConstraintValidatorContext;
 
-import org.inventory_tracker.dto.request.ClosePumpAuditRequest;
-import org.inventory_tracker.dto.request.CreatePumpRequest;
+// import org.inventory_tracker.dto.request.ClosePumpAuditRequest;
+// import org.inventory_tracker.dto.request.CreatePumpRequest;
 
-public class TerminalRequiredValidator implements ConstraintValidator<ValidTerminalInfo, Object> {
+// public class TerminalRequiredValidator implements ConstraintValidator<ValidTerminalInfo, Object> {
 
     // @Override
     // public boolean isValid(CreatePumpRequest request, ConstraintValidatorContext context) {
@@ -21,67 +21,67 @@ public class TerminalRequiredValidator implements ConstraintValidator<ValidTermi
     //     return hasTerminalId || hasSerialNumber; 
     // }
 
-    @Override
-    public boolean isValid(Object request, ConstraintValidatorContext context) {
-        if (request == null) {
-            return true;
-        }
+    // @Override
+    // public boolean isValid(Object request, ConstraintValidatorContext context) {
+    //     if (request == null) {
+    //         return true;
+    //     }
 
-        if (request instanceof CreatePumpRequest createPumpRequest) {
-            return isValidCreatePumpRequest(createPumpRequest, context);
-        }
+    //     if (request instanceof CreatePumpRequest createPumpRequest) {
+    //         return isValidCreatePumpRequest(createPumpRequest, context);
+    //     }
 
-        if (request instanceof ClosePumpAuditRequest closePumpAuditRequest) {
-            return isValidClosePumpAuditRequest(closePumpAuditRequest, context);
-        }
+    //     if (request instanceof ClosePumpAuditRequest closePumpAuditRequest) {
+    //         return isValidClosePumpAuditRequest(closePumpAuditRequest, context);
+    //     }
 
-        return true;
-    }
+    //     return true;
+    // }
 
-    private boolean isValidCreatePumpRequest(CreatePumpRequest request, ConstraintValidatorContext context) {
-        boolean hasTerminalId = request.getDefaultTerminalId() != null;
+    // private boolean isValidCreatePumpRequest(CreatePumpRequest request, ConstraintValidatorContext context) {
+    //     boolean hasTerminalId = request.getDefaultTerminalId() != null;
 
-        boolean hasSerialNumber = request.getTerminalSerialNumber() != null && !request.getTerminalSerialNumber().trim().isEmpty();
+    //     boolean hasSerialNumber = request.getTerminalSerialNumber() != null && !request.getTerminalSerialNumber().trim().isEmpty();
 
-        if (!hasTerminalId && !hasSerialNumber) {
-            addViolation(
-                    context,
-                    "Provide either defaultTerminalId or terminalSerialNumber"
-            );
+    //     if (!hasTerminalId && !hasSerialNumber) {
+    //         addViolation(
+    //                 context,
+    //                 "Provide either defaultTerminalId or terminalSerialNumber"
+    //         );
 
-            return false;
-        }
+    //         return false;
+    //     }
 
-        return true;
-    }
+    //     return true;
+    // }
 
-    private boolean isValidClosePumpAuditRequest(ClosePumpAuditRequest request, ConstraintValidatorContext context) {
-        boolean hasTerminalSerialNumber = request.getTerminalSerialNumber() != null
-                        && !request.getTerminalSerialNumber().trim().isEmpty();
+    // private boolean isValidClosePumpAuditRequest(ClosePumpAuditRequest request, ConstraintValidatorContext context) {
+    //     boolean hasTerminalSerialNumber = request.getTerminalSerialNumber() != null
+    //                     && !request.getTerminalSerialNumber().trim().isEmpty();
 
-        boolean hasPumpAssignmentId = request.getPumpAssignmentId() != null;
+    //     boolean hasPumpAssignmentId = request.getPumpAssignmentId() != null;
 
-        boolean hasPumpId =
-                request.getPumpId() != null;
+    //     boolean hasPumpId =
+    //             request.getPumpId() != null;
 
 
-        if (hasPumpAssignmentId == hasTerminalSerialNumber) {
-            addViolation(
-                    context,
-                    "Provide either pumpAssignmentId or terminalSerialNumber, but not both"
-            );
+    //     if (hasPumpAssignmentId == hasTerminalSerialNumber) {
+    //         addViolation(
+    //                 context,
+    //                 "Provide either pumpAssignmentId or terminalSerialNumber, but not both"
+    //         );
 
-            return false;
-        }
+    //         return false;
+    //     }
 
-                if (hasPumpAssignmentId && hasPumpId) {
-            addViolation(
-                    context,
-                    "pumpId must not be provided with pumpAssignmentId"
-            );
+    //             if (hasPumpAssignmentId && hasPumpId) {
+    //         addViolation(
+    //                 context,
+    //                 "pumpId must not be provided with pumpAssignmentId"
+    //         );
 
-            return false;
-        }
+    //         return false;
+    //     }
 
         /*
          * XOR:
@@ -102,17 +102,17 @@ public class TerminalRequiredValidator implements ConstraintValidator<ValidTermi
 
         // return valid;
 
-        return true;
-    }
+//         return true;
+//     }
 
-    private void addViolation(
-            ConstraintValidatorContext context,
-            String message) {
+//     private void addViolation(
+//             ConstraintValidatorContext context,
+//             String message) {
 
-        context.disableDefaultConstraintViolation();
+//         context.disableDefaultConstraintViolation();
 
-        context.buildConstraintViolationWithTemplate(message)
-                .addConstraintViolation();
-    }
-}
+//         context.buildConstraintViolationWithTemplate(message)
+//                 .addConstraintViolation();
+//     }
+// }
 

@@ -8,9 +8,9 @@ import java.util.Optional;
 
 @Repository
 public interface PumpRepository extends JpaRepository<Pump, Long> {
-    boolean existsByStation_IdAndDefaultTerminal_Id(Long stationId, Long terminalId);
+    boolean existsByStation_IdAndTerminal_Id(Long stationId, Long terminalId);
 
-    boolean existsByStation_IdAndDefaultTerminal_IdAndIdNot(Long stationId, Long terminalId, Long pumpId);
+    boolean existsByStation_IdAndTerminal_IdAndIdNot(Long stationId, Long terminalId, Long pumpId);
     
     Optional<Pump>findByIdAndStation_IdAndStation_Merchant_CamsMerchantId(Long pumpId, Long stationId, String camsMerchantId);
     
@@ -22,6 +22,7 @@ public interface PumpRepository extends JpaRepository<Pump, Long> {
 
     List<Pump> findByStation_Merchant_IdOrderByPumpNumberAsc(Long merchantId);
 
+    Optional<Pump> findByTerminalSerialNumberAndStation_Merchant_Id(String terminalSerial, Long merchantId);
     Optional<Pump> findByIdAndStation_Merchant_Id(Long pumpId, Long merchantId);
 
     boolean existsByPumpNumber(String pumpNumber);

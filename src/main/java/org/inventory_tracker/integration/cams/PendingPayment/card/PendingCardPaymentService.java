@@ -14,7 +14,7 @@ public class PendingCardPaymentService {
     private final PendingCardPaymentRepository repository;
 
     @Transactional
-    public void register(String saleNumber, BigDecimal amount, String terminalSerialNumber, String terminalId) {
+    public void register(String saleNumber, BigDecimal amount, String terminalSerialNumber, Long terminalId) {
 
         PendingCardPayment pending = PendingCardPayment.builder()
                 .saleNumber(saleNumber)
@@ -29,13 +29,13 @@ public class PendingCardPaymentService {
 
 
     @Transactional
-    public PendingCardPayment consume(String terminalId, BigDecimal amount) {
+    public PendingCardPayment consume(String terminalSerialNumber, BigDecimal amount) {
 
-        return repository.findFirstByTerminalIdAndAmount(terminalId, amount)
+        return repository.findFirstByTerminalSerialNumberAndAmount(terminalSerialNumber, amount)
                 .map(payment -> {
                     repository.delete(payment);
                     return payment;
                 })
-                .orElseThrow(() -> new ResourceNotFoundException("No Pending Payment For Terminal "+ terminalId));
+                .orElseThrow(() -> new ResourceNotFoundException("No Pending Payment For Terminal "+ terminalSerialNumber));
     }
 }

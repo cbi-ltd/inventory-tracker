@@ -9,6 +9,12 @@ public enum PaymentStatus {
 
     SUCCESS,
 
+    RECONCILIATION_PENDING, 
+
+    OFFLINE_RECEIVED,
+
+    RECONCILED,
+
     FAILED,
 
     CANCELLED,

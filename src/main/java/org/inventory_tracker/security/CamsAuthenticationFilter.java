@@ -30,7 +30,6 @@ public class CamsAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String uri = request.getRequestURI();
-        String method = request.getMethod();
 
         if (isPosEndpoint(request)) {
             filterChain.doFilter(request, response);

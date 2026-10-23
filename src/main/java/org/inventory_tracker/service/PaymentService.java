@@ -119,7 +119,7 @@ public class PaymentService {
         Sale sale = saleRepository.findBySaleNumber(pendingTransfer.getSaleNumber())
                             .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
 
-        Terminal terminal = terminalRepository.findByTid(notification.getDeviceSerial())
+        Terminal terminal = terminalRepository.findByTerminalSerialNumber(notification.getDeviceSerial())
                                 .orElseThrow(() -> new ResourceNotFoundException("Terminal not found."));
 
         paymentRepository.findByGatewayReference(notification.getRequestReference())
@@ -135,7 +135,7 @@ public class PaymentService {
         Sale sale = saleRepository.findBySaleNumber(pendingCardPayment.getSaleNumber())
                         .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
 
-        Terminal terminal = terminalRepository.findByTid(cardPaymentNotification.getTerminalId())
+        Terminal terminal = terminalRepository.findByTerminalSerialNumber(cardPaymentNotification.getTerminalSerialNumber())
                                 .orElseThrow(() -> new ResourceNotFoundException("Terminal not found."));
         verifySaleTerminalRelationship(sale, terminal);
 
@@ -223,7 +223,7 @@ public class PaymentService {
 
                 switch (request.getPaymentMethod()) {
                         case TRANSFER -> pendingTransferService.registerPendingTransfer(station.getMerchantAccountNumber(), sale.getSaleNumber(), sale.getNetAmount(), terminal.getTerminalSerialNumber());
-                        case CARD -> pendingCardPaymentService.register(sale.getSaleNumber(), sale.getNetAmount(),terminal.getTerminalSerialNumber(), terminal.getTid());
+                        case CARD -> pendingCardPaymentService.register(sale.getSaleNumber(), sale.getNetAmount(),terminal.getTerminalSerialNumber(), terminal.getId());
                         case CASH ->  {}
                         case MIXED -> {}
                 }
@@ -459,8 +459,8 @@ public class PaymentService {
             }
 
             if (station.getTerminalMode() == TerminalMode.SINGLE_PUMP) {
-                boolean terminalConfiguredForPump = (pump.getDefaultTerminal() != null
-                        && pump.getDefaultTerminal().getId().equals(terminal.getId()))
+                boolean terminalConfiguredForPump = (pump.getTerminal() != null
+                        && pump.getTerminal().getId().equals(terminal.getId()))
                 || (pump.getTerminalSerialNumber() != null
                         && pump.getTerminalSerialNumber().equals(terminal.getTerminalSerialNumber()));
 
@@ -804,7 +804,7 @@ public class PaymentService {
                             savedSale.getSaleNumber(),
                             savedSale.getNetAmount(),
                             terminal.getTerminalSerialNumber(),
-                            terminal.getTerminalSerialNumber()
+                            terminal.getId()
                     );
                 }
                 case CASH -> { // No external payment registration here. 
@@ -1113,7 +1113,7 @@ public class PaymentService {
 
         saleRepository.save(sale);
         completeSale(sale.getId(), cardPaymentNotification.getRrn(), PaymentStatus.SUCCESS, cardPaymentNotification.getTransactionTime());
-        pendingCardPaymentService.consume(terminal.getTid(), cardPaymentNotification.getAmount());
+        pendingCardPaymentService.consume(terminal.getTerminalSerialNumber(), cardPaymentNotification.getAmount());
         return paymentMapper.toResponse(savedPayment);
     }
 

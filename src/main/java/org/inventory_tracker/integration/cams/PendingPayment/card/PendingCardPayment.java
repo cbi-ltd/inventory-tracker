@@ -22,7 +22,7 @@ public class PendingCardPayment {
     private String saleNumber;
 
     @Column(nullable = false)
-    private String terminalId;
+    private Long terminalId;
 
     @Column(nullable = false)
     private String terminalSerialNumber;

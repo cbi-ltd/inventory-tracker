@@ -6,5 +6,5 @@ import java.util.Optional;
 
 public interface PendingCardPaymentRepository extends JpaRepository<PendingCardPayment, Long> {
 
-    Optional<PendingCardPayment> findFirstByTerminalIdAndAmount(String terminalId, BigDecimal amount);
+    Optional<PendingCardPayment> findFirstByTerminalSerialNumberAndAmount(String terminalSerial, BigDecimal amount);
 }

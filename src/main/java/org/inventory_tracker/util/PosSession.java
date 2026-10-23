@@ -240,7 +240,6 @@ public class PosSession {
                                 .stationName(station.getName())
                                 .terminalId(terminal.getId())
                                 .terminalSerialNumber(terminal.getTerminalSerialNumber())
-                                .tid(terminal.getTid())
                                 .shift(foundShift)
                                 .businessDate(lookupDate)
                                 .terminalMode(station.getTerminalMode())

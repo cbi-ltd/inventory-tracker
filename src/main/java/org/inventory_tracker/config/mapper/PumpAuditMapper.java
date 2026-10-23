@@ -34,8 +34,6 @@ public interface PumpAuditMapper {
     @Mapping(source = "pumpAssignment.assignmentDate", target = "assignmentDate")
     @Mapping(source = "pumpAssignment.shift", target = "shift")
 
-    @Mapping(source="pumpAssignment.terminal.id", target="terminalDbId")
-    @Mapping(source="pumpAssignment.terminal.tid", target="tid")
     @Mapping(source="pumpAssignment.terminal.terminalSerialNumber", target="terminalSerialNumber")
 
     // @Mapping(source = "pumpAssignment.actualTerminalId", target = "terminalId")

@@ -47,7 +47,7 @@ public class CamsWebhookService {
             return;
         }
 
-        PendingCardPayment pending = pendingCardPaymentService.consume(notification.getTerminalId(), notification.getAmount());
+        PendingCardPayment pending = pendingCardPaymentService.consume(notification.getTerminalSerialNumber(), notification.getAmount());
 
         if (pending == null) {
             log.info("Card payment does not belong to FuelFlow.");

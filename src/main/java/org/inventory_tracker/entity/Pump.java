@@ -20,8 +20,8 @@ public class Pump {
     private Boolean active = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "default_terminal_id")
-    private Terminal defaultTerminal;
+    @JoinColumn(name = "terminal_id")
+    private Terminal terminal;
 
     private String terminalSerialNumber;
 

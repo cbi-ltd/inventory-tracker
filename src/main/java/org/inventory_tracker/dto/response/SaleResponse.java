@@ -5,7 +5,6 @@ import lombok.Setter;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -68,4 +67,6 @@ public class SaleResponse {
     private LocalDateTime updatedAt;
 
     private FuelingAgreementSummaryResponse fuelingAgreement;
+
+    private OfflinePaymentResponse offlinePayment;
 }

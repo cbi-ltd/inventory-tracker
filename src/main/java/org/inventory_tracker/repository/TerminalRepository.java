@@ -10,29 +10,25 @@ import java.util.List;
 public interface TerminalRepository extends JpaRepository<Terminal, Long> {
     Optional<Terminal> findByIdAndActiveTrue(Long id);
 
-    Optional<Terminal> findByIdAndStation_Merchant_Id(Long id, Long merchantId);
+    Optional<Terminal> findByTerminalSerialNumberAndStation_Merchant_Id(String serialNumber, Long merchantId);
 
     Optional<Terminal>findByTerminalSerialNumberAndActiveTrue(String terminalSerialNumber);
 
     Optional<Terminal> findByIdAndStation_Merchant_CamsMerchantId(Long terminalId, String camsMerchantId);
 
-    List<Terminal>findByStation_Merchant_CamsMerchantIdAndActiveTrueOrderByTidAsc(String merchantId);
+    List<Terminal>findByStation_Merchant_CamsMerchantIdAndActiveTrueOrderByTerminalSerialNumberAsc(String merchantId);
     
-    List<Terminal>findByStation_Merchant_CamsMerchantIdOrderByTidAsc(String merchantId);
-
-    Optional<Terminal>findByTidAndStation_Merchant_CamsMerchantId(String tid, String merchantId);
+    List<Terminal>findByStation_Merchant_CamsMerchantIdOrderByTerminalSerialNumberAsc(String merchantId);
 
     Optional<Terminal>findByTerminalSerialNumberAndStation_Merchant_CamsMerchantId(String terminalSerialNumber, String merchantId);
 
-    Optional<Terminal> findByTid(String tid);
+    Optional<Terminal> findById(Long terminalId);
 
     Optional<Terminal> findByTerminalSerialNumber(String terminalSerialNumber);
 
-    boolean existsByTid(String tid);
-
     boolean existsByTerminalSerialNumber(String terminalSerialNumber);
 
-    List<Terminal> findAllByOrderByTidAsc();
+    List<Terminal> findAllByOrderByTerminalSerialNumberAsc();
 
-    List<Terminal> findByActiveTrueOrderByTidAsc();
+    List<Terminal> findByActiveTrueOrderByTerminalSerialNumberAsc();
 }

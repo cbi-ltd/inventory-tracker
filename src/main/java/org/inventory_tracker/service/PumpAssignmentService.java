@@ -121,7 +121,7 @@ public class PumpAssignmentService {
 
 
                 if (station.getTerminalMode() == TerminalMode.SINGLE_PUMP) {
-                        boolean terminalBelongsToPump = (pump.getDefaultTerminal() != null && pump.getDefaultTerminal()
+                        boolean terminalBelongsToPump = (pump.getTerminal() != null && pump.getTerminal()
                                                 .getId().equals(terminal.getId()))
                                 ||
                                 (pump.getTerminalSerialNumber() != null
@@ -262,8 +262,8 @@ public class PumpAssignmentService {
                 terminal = terminalRepository.findByTerminalSerialNumber(request.getTerminalSerialNumber())
                         .orElseThrow(() -> new ResourceNotFoundException("Terminal not found"));
         } 
-        else if (pump.getDefaultTerminal() != null) {
-                terminal = pump.getDefaultTerminal();
+        else if (pump.getTerminal() != null) {
+                terminal = pump.getTerminal();
         } 
         else if (pump.getTerminalSerialNumber() != null) {
                 terminal = terminalRepository

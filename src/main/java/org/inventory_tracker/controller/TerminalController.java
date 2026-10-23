@@ -38,8 +38,8 @@ public class TerminalController {
     }
 
     @GetMapping("/{tid}")
-    public ResponseEntity<ApiSuccessResponse<TerminalResponse>>getTerminalByTid(@PathVariable String tid) {
-        TerminalResponse response = terminalService.getTerminalByTid(tid);
+    public ResponseEntity<ApiSuccessResponse<TerminalResponse>>getTerminalById(@PathVariable Long tid) {
+        TerminalResponse response = terminalService.getTerminalById(tid);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(

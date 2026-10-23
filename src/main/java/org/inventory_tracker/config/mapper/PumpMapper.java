@@ -21,7 +21,7 @@ public interface PumpMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "station", ignore = true)
     @Mapping(target = "product", ignore = true)
-    @Mapping(target = "defaultTerminal", ignore = true)
+    @Mapping(target = "terminal", ignore = true)
     @Mapping(target = "active", ignore = true)
     Pump toEntity(CreatePumpRequest request);
 
@@ -29,9 +29,7 @@ public interface PumpMapper {
     @Mapping(source = "station.name", target = "stationName")
     @Mapping(source = "product.id", target = "productId")
     @Mapping(source = "product.name", target = "productName")
-    @Mapping(source = "defaultTerminal.id", target = "defaultTerminalDbId")
-    @Mapping(source = "defaultTerminal.tid", target = "tid")
-    @Mapping(source = "defaultTerminal.terminalSerialNumber", target = "terminalSerialNumber")
+    @Mapping(source = "terminal.terminalSerialNumber", target = "terminalSerialNumber")
     PumpResponse toResponse(Pump pump);
 
 
