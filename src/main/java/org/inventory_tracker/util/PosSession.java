@@ -168,7 +168,8 @@ public class PosSession {
         if (station.getTerminalMode() == TerminalMode.SINGLE_PUMP) {
                 assignments = List.of(assignments.stream()
                                 .max(this::compareAssignmentRecency)
-                                .orElseThrow(() ->new ResourceNotFoundException("No previous assignment found for this terminal")));
+                                .orElse(null));
+                                // .orElseThrow(() ->new ResourceNotFoundException("No previous assignment found for this terminal")));
         }
         else {
                 Map<Long, PumpAssignment> latestByAttendant = assignments.stream()
@@ -214,11 +215,9 @@ public class PosSession {
                                     "No product configured for this pump");
                         }
 
-                        PumpAudit audit =
-                                pumpAuditRepository
-                                        .findByPumpAssignment_Id(assignment.getId())
-                                        .orElseThrow(() ->
-                                                new ResourceNotFoundException("Pump audit not found"));
+                        PumpAudit audit = pumpAuditRepository.findByPumpAssignment_Id(assignment.getId())
+                                        .orElse(null);
+                                        // .orElseThrow(() -> new ResourceNotFoundException("Pump audit not found"));
 
                         return PosAssignmentResponse.builder()
                                 .pumpId(pump.getId())
@@ -228,9 +227,9 @@ public class PosSession {
                                 .productName(product.getName())
                                 .attendantId(assignment.getAttendant().getId())
                                 .attendantName(assignment.getAttendant().getFullName())
-                                .openingReading(audit.getOpeningReading())
-                                .closingReading(audit.getClosingReading())
-                                .pumpAuditId(audit.getId())
+                                .openingReading(audit != null ? audit.getOpeningReading() : null)
+                                .closingReading(audit != null ? audit.getClosingReading() : null)
+                                .pumpAuditId(audit != null ? audit.getId() : null)
                                 .build();
                     })
                 .toList();
