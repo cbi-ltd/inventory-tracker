@@ -33,7 +33,8 @@ public class SecurityConfig {
                                 "/api/v1/station-inventories/price",
                                 "/api/v1/sales",
                                 "/api/v1/pump-audits/close",
-                                "/api/v1/pump-assignments/assignments"
+                                "/api/v1/pump-assignments/assignments",
+                                "/api/v1/corporate-agreement/pos/*"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

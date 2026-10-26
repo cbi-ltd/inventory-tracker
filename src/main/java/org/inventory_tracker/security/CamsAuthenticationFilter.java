@@ -118,7 +118,22 @@ public class CamsAuthenticationFilter extends OncePerRequestFilter {
                         ||
 
                         ("GET".equalsIgnoreCase(method)
-                                && uri.equals("/api/v1/pump-assignments/assignments"));
+                                && uri.equals("/api/v1/pump-assignments/assignments"))
+                                                                                
+                        ||
+
+                        ("GET".equalsIgnoreCase(method)
+                                && uri.matches("/api/v1/corporate-agreement/pos/\\d+"))
+                        
+                        ||
+
+                        ("GET".equalsIgnoreCase(method)
+                                && uri.equals("/api/v1/corporate-agreement/pos/search"))
+                                
+                        ||
+
+                        ("GET".equalsIgnoreCase(method)
+                                && uri.equals("/api/v1/corporate-agreement/pos/fueling-companies"));
 
         }
 }

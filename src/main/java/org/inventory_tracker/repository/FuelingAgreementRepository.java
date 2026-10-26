@@ -3,12 +3,22 @@ package org.inventory_tracker.repository;
 import java.time.LocalDate;
 import java.util.Optional;
 import org.inventory_tracker.entity.FuelingAgreement;
+import org.inventory_tracker.enums.FuelingSettlementType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 
 public interface FuelingAgreementRepository extends JpaRepository<FuelingAgreement, Long> {
     
+    List<FuelingAgreement> findByCompany_NameContainingIgnoreCaseAndMerchant_IdAndActiveTrue(
+        String companyName,
+        Long merchantId
+    );
+
+    List<FuelingAgreement> findByMerchant_IdAndSettlementTypeAndActiveTrue(
+        Long merchantId,
+        FuelingSettlementType settlementType);
+
     Optional<FuelingAgreement> findFirstByCompany_IdAndMerchant_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByIdDesc(
         Long companyId,
         Long merchantId,

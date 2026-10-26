@@ -1,11 +1,12 @@
 package org.inventory_tracker.service;
 
 import lombok.RequiredArgsConstructor;
-
+import java.util.function.Function;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.inventory_tracker.config.mapper.FuelingAgreementMapper;
 import org.inventory_tracker.config.mapper.FuelingCompanyMapper;
 import org.inventory_tracker.dto.request.CreateFuelingAgreementRequest;
@@ -15,11 +16,14 @@ import org.inventory_tracker.dto.request.UpdateFuelingAgreementRequest;
 import org.inventory_tracker.dto.response.CompanyAccountTransactionResponse;
 import org.inventory_tracker.dto.response.FuelingAgreementBalanceResponse;
 import org.inventory_tracker.dto.response.FuelingAgreementResponse;
+import org.inventory_tracker.dto.response.FuelingCompanyResponse;
 import org.inventory_tracker.entity.CompanyAccountTransaction;
 import org.inventory_tracker.entity.FuelingAgreement;
 import org.inventory_tracker.entity.FuelingCompany;
 import org.inventory_tracker.entity.Merchant;
 import org.inventory_tracker.entity.Sale;
+import org.inventory_tracker.entity.Station;
+import org.inventory_tracker.entity.Terminal;
 import org.inventory_tracker.enums.CompanyAccountTransactionType;
 import org.inventory_tracker.enums.FuelingSettlementType;
 import org.inventory_tracker.exception.BadRequestException;
@@ -28,9 +32,11 @@ import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.inventory_tracker.repository.CompanyAccountTransactionRepository;
 import org.inventory_tracker.repository.FuelingAgreementRepository;
 import org.inventory_tracker.repository.FuelingCompanyRepository;
+import org.inventory_tracker.repository.TerminalRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.inventory_tracker.security.*;
+import org.inventory_tracker.util.ShiftUtil;
 
 
 @Service
@@ -41,6 +47,7 @@ public class FuelingAgreementService {
     private final FuelingCompanyMapper fuelingCompanyMapper;
     private final FuelingAgreementRepository fuelingAgreementRepository;
     private final FuelingCompanyRepository fuelingCompanyRepository;
+    private final TerminalRepository terminalRepository;
     private final CompanyAccountTransactionRepository companyAccountTransactionRepository;
     private final FuelingAgreementMapper fuelingAgreementMapper;
     private final AuthenticatedUserService authenticatedUserService;
@@ -109,12 +116,8 @@ public class FuelingAgreementService {
                 Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
                 FuelingAgreement agreement =
-                        fuelingAgreementRepository.findByIdAndMerchant_Id(
-                                id,
-                                merchant.getId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Fueling agreement not found"));
+                        fuelingAgreementRepository.findByIdAndMerchant_Id(id, merchant.getId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Fueling agreement not found"));
 
                 return fuelingAgreementMapper.toResponse(agreement);
         }
@@ -130,6 +133,92 @@ public class FuelingAgreementService {
 
                 return fuelingAgreementMapper.toResponseList(agreements);
         }
+
+
+        @Transactional(readOnly = true)
+        public FuelingAgreementResponse getAgreementForTerminal(String terminalSerialNumber, Long agreementId) {
+
+                Terminal terminal = terminalRepository
+                        .findByTerminalSerialNumberAndActiveTrue(terminalSerialNumber)
+                        .orElseThrow(() -> new ResourceNotFoundException("Active terminal not found"));
+
+                Station station = terminal.getStation();
+                if (station == null || station.getMerchant() == null) {
+                        throw new BadRequestException("Terminal is not associated with a valid station and merchant");
+                }
+
+                FuelingAgreement agreement = fuelingAgreementRepository
+                        .findByIdAndMerchant_Id(agreementId, station.getMerchant().getId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Fueling agreement not found"));
+
+                validateAgreementUsable(agreement, ShiftUtil.businessDate(station.getTimeZone()));
+                return fuelingAgreementMapper.toResponse(agreement);
+        }
+
+        @Transactional(readOnly = true)
+        public List<FuelingAgreementResponse> getAgreementsForTerminalByCompanyName(String terminalSerialNumber, String companyName) {
+
+                if (companyName == null || companyName.isBlank()) {
+                        throw new BadRequestException("Company name is required");
+                }
+
+                Terminal terminal = terminalRepository
+                        .findByTerminalSerialNumberAndActiveTrue(terminalSerialNumber)
+                        .orElseThrow(() -> new ResourceNotFoundException("Active terminal not found"));
+
+                Station station = terminal.getStation();
+
+                if (station == null || station.getMerchant() == null) {
+                        throw new BadRequestException("Terminal is not associated with a valid station and merchant");
+                }
+
+                LocalDate businessDate = ShiftUtil.businessDate(station.getTimeZone());
+
+                return fuelingAgreementRepository
+                        .findByCompany_NameContainingIgnoreCaseAndMerchant_IdAndActiveTrue(
+                                companyName.trim(), station.getMerchant().getId())
+                        .stream()
+                        .filter(agreement -> !agreement.getStartDate().isAfter(businessDate))
+                        .filter(agreement -> agreement.getEndDate() == null
+                                        || !agreement.getEndDate().isBefore(businessDate))
+                        .map(fuelingAgreementMapper::toResponse)
+                        .toList();
+        }
+
+        @Transactional(readOnly = true)
+        public List<FuelingCompanyResponse> getPosFuelingCompaniesBySettlementType(String terminalSerialNumber,FuelingSettlementType settlementType) {
+
+                if (settlementType == null) {
+                        throw new BadRequestException("Settlement type is required");
+                }
+
+                Terminal terminal = terminalRepository
+                        .findByTerminalSerialNumberAndActiveTrue(terminalSerialNumber)
+                        .orElseThrow(() -> new ResourceNotFoundException("Active terminal not found"));
+
+                Station station = terminal.getStation();
+
+                if (station == null || station.getMerchant() == null) {
+                        throw new BadRequestException("Terminal is not associated with a valid station and merchant");
+                }
+
+                LocalDate businessDate = ShiftUtil.businessDate(station.getTimeZone());
+
+                return fuelingAgreementRepository
+                        .findByMerchant_IdAndSettlementTypeAndActiveTrue(station.getMerchant().getId(), settlementType)
+                        .stream()
+                        .filter(agreement -> !agreement.getStartDate().isAfter(businessDate))
+                        .filter(agreement -> agreement.getEndDate() == null
+                                        || !agreement.getEndDate().isBefore(businessDate))
+                        .map(FuelingAgreement::getCompany)
+                        // .distinct()
+                        .collect(Collectors.toMap(FuelingCompany::getId, Function.identity(), (first, second) -> first))
+                        .values()
+                        .stream()
+                        .map(fuelingCompanyMapper::toResponse)
+                        .toList();
+        }
+        
 
         @Transactional(readOnly = true)
         public List<FuelingAgreementResponse> getCompanyAgreements(Long companyId) {
@@ -355,11 +444,8 @@ public class FuelingAgreementService {
 
         public void recordPostpaidFueling(FuelingAgreement agreement, Sale sale) {
 
-                if (agreement.getSettlementType()
-                        != FuelingSettlementType.POSTPAID) {
-
-                        throw new BadRequestException(
-                                "Agreement is not a postpaid agreement");
+                if (agreement.getSettlementType() != FuelingSettlementType.POSTPAID) {
+                        throw new BadRequestException("Agreement is not a postpaid agreement");
                 }
 
                 validateAgreementUsable(agreement, sale.getBusinessDate());
@@ -485,46 +571,36 @@ public class FuelingAgreementService {
         }
     }
 
-private void validateAgreementUsable(
-        FuelingAgreement agreement,
-        LocalDate businessDate) {
+        private void validateAgreementUsable(FuelingAgreement agreement, LocalDate businessDate) {
 
-    if (!Boolean.TRUE.equals(agreement.getActive())) {
-        throw new BadRequestException(
-                "Fueling agreement is inactive");
-    }
+                if (!Boolean.TRUE.equals(agreement.getActive())) {
+                        throw new BadRequestException("Fueling agreement is inactive");
+                }
 
-    if (businessDate.isBefore(agreement.getStartDate())) {
-        throw new BadRequestException(
-                "Fueling agreement has not started");
-    }
+                if (businessDate.isBefore(agreement.getStartDate())) {
+                        throw new BadRequestException("Fueling agreement has not started");
+                }
 
-    if (businessDate.isAfter(agreement.getEndDate())) {
-        throw new BadRequestException(
-                "Fueling agreement has expired");
-    }
-}
+                if (businessDate.isAfter(agreement.getEndDate())) {
+                        throw new BadRequestException("Fueling agreement has expired");
+                }
+        }
 
-@Transactional(readOnly = true)
-public List<CompanyAccountTransactionResponse> getTransactions(Long agreementId) {
-    Merchant merchant = authenticatedUserService.getCurrentMerchant();
+        @Transactional(readOnly = true)
+        public List<CompanyAccountTransactionResponse> getTransactions(Long agreementId) {
+                Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-    FuelingAgreement agreement =
-            fuelingAgreementRepository
-                    .findByIdAndMerchant_Id(
-                            agreementId,
-                            merchant.getId())
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException(
-                                    "Fueling agreement not found"));
+                FuelingAgreement agreement =
+                        fuelingAgreementRepository
+                                .findByIdAndMerchant_Id(agreementId, merchant.getId())
+                                .orElseThrow(() ->new ResourceNotFoundException("Fueling agreement not found"));
 
-    return companyAccountTransactionRepository
-            .findByFuelingAgreement_IdOrderByTransactionDateDesc(
-                    agreement.getId())
-            .stream()
-            .map(this::toTransactionResponse)
-            .toList();
-}
+                return companyAccountTransactionRepository
+                        .findByFuelingAgreement_IdOrderByTransactionDateDesc(agreement.getId())
+                        .stream()
+                        .map(this::toTransactionResponse)
+                        .toList();
+        }
 
 private CompanyAccountTransactionResponse toTransactionResponse(
         CompanyAccountTransaction transaction) {
@@ -542,7 +618,7 @@ private CompanyAccountTransactionResponse toTransactionResponse(
             .transactionDate(transaction.getTransactionDate())
             .reference(transaction.getReference())
             .description(transaction.getDescription())
-            .build();
+             .build();
 }
 
     private void validateSettlementConfiguration(FuelingSettlementType settlementType, BigDecimal prepaidBalance, BigDecimal creditLimit) {
@@ -578,29 +654,29 @@ private CompanyAccountTransactionResponse toTransactionResponse(
         }
     }
 
-private boolean hasOverlappingActiveAgreement(
-        Long companyId,
-        Long merchantId,
-        LocalDate startDate,
-        LocalDate endDate,
-        Long agreementId) {
+        private boolean hasOverlappingActiveAgreement(
+                Long companyId,
+                Long merchantId,
+                LocalDate startDate,
+                LocalDate endDate,
+                Long agreementId) {
 
-    if (agreementId == null) {
+        if (agreementId == null) {
+
+                return fuelingAgreementRepository
+                        .existsByCompany_IdAndMerchant_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                                companyId,
+                                merchantId,
+                                endDate,
+                                startDate);
+        }
 
         return fuelingAgreementRepository
-                .existsByCompany_IdAndMerchant_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                .existsByCompany_IdAndMerchant_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndIdNot(
                         companyId,
                         merchantId,
                         endDate,
-                        startDate);
-    }
-
-    return fuelingAgreementRepository
-            .existsByCompany_IdAndMerchant_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndIdNot(
-                    companyId,
-                    merchantId,
-                    endDate,
-                    startDate,
-                    agreementId);
-}
+                        startDate,
+                        agreementId);
+        }
 }

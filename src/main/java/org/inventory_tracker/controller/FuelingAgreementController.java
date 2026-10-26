@@ -9,6 +9,8 @@ import org.inventory_tracker.dto.request.UpdateFuelingAgreementRequest;
 import org.inventory_tracker.dto.response.CompanyAccountTransactionResponse;
 import org.inventory_tracker.dto.response.FuelingAgreementBalanceResponse;
 import org.inventory_tracker.dto.response.FuelingAgreementResponse;
+import org.inventory_tracker.dto.response.FuelingCompanyResponse;
+import org.inventory_tracker.enums.FuelingSettlementType;
 import org.inventory_tracker.service.FuelingAgreementService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -66,6 +69,62 @@ public class FuelingAgreementController {
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement retrieved successfully.", fuelingAgreementService.getAgreement(id)));
+    }
+
+    @Operation(summary = "Get POS Agreement", description = "Retrieves a fueling agreement by ID for the specified POS terminal.")
+    @GetMapping("/pos/{agreementId}")
+    public ResponseEntity<ApiSuccessResponse<FuelingAgreementResponse>>
+    getPosAgreement(@RequestParam String terminalSerialNumber, @PathVariable Long agreementId) {
+
+        FuelingAgreementResponse response = fuelingAgreementService.getAgreementForTerminal(terminalSerialNumber, agreementId);
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Agreement retrieved successfully.",
+                        response
+                )
+        );
+    }
+
+
+    @Operation(summary = "Search POS Agreements by Company Name", description = "Searches fueling agreements by a case-insensitive, partial company name for the specified POS terminal.")
+    @GetMapping("/pos/search")
+    public ResponseEntity<ApiSuccessResponse<List<FuelingAgreementResponse>>>
+    getPosAgreementsByCompanyName(@RequestParam String terminalSerialNumber, @RequestParam String companyName) {
+
+        List<FuelingAgreementResponse> response =
+                fuelingAgreementService.getAgreementsForTerminalByCompanyName(terminalSerialNumber, companyName);
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Agreements retrieved successfully.",
+                        response
+                )
+        );
+    }
+
+
+    @Operation(summary = "Get POS Fueling Companies by Settlement Type", description = "Retrieves fueling companies with active, currently valid agreements of the specified settlement type.")
+    @GetMapping("/pos/fueling-companies")
+    public ResponseEntity<ApiSuccessResponse<List<FuelingCompanyResponse>>>
+    getPosFuelingCompaniesBySettlementType(
+            @RequestParam String terminalSerialNumber,
+            @RequestParam FuelingSettlementType settlementType) {
+
+        List<FuelingCompanyResponse> response = fuelingAgreementService.getPosFuelingCompaniesBySettlementType(terminalSerialNumber, settlementType);
+
+        return ResponseEntity.ok(
+                new ApiSuccessResponse<>(
+                        LocalDateTime.now(),
+                        HttpStatus.OK.value(),
+                        "Fueling companies retrieved successfully.",
+                        response
+                )
+        );
     }
 
     @Operation(summary = "Update Agreement", description = "This endpoint updates a specific agreement in the database.")
