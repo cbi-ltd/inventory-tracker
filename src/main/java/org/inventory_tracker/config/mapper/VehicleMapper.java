@@ -29,8 +29,5 @@ public interface VehicleMapper {
     @Mapping(target = "company", ignore = true)
     @Mapping(target = "merchant", ignore = true)
     @Mapping(target = "active", ignore = true)
-    void updateEntity(
-            VehicleRequest request,
-            @MappingTarget Vehicle vehicle
-    );
+    void updateEntity(VehicleRequest request, @MappingTarget Vehicle vehicle);
 }

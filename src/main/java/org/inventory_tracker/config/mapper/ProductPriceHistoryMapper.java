@@ -28,7 +28,5 @@ public interface ProductPriceHistoryMapper {
 
     ProductPriceHistoryResponse toResponse(ProductPriceHistory history);
 
-    List<ProductPriceHistoryResponse> toResponseList(
-            List<ProductPriceHistory> histories
-    );
+    List<ProductPriceHistoryResponse> toResponseList(List<ProductPriceHistory> histories);
 }

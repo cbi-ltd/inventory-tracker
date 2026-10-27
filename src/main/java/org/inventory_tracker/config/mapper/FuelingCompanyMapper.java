@@ -25,8 +25,5 @@ public interface FuelingCompanyMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "merchant", ignore = true)
     @Mapping(target = "active", ignore = true)
-    void updateEntity(
-            FuelingCompanyRequest request,
-            @MappingTarget FuelingCompany company
-    );
+    void updateEntity(FuelingCompanyRequest request, @MappingTarget FuelingCompany company);
 }

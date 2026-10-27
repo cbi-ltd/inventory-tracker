@@ -114,6 +114,9 @@ public class Sale extends BaseEntity {
     @JoinColumn(name = "fueling_agreement_id", nullable = true)
     private FuelingAgreement fuelingAgreement;
 
+    @OneToOne(mappedBy = "sale", fetch = FetchType.LAZY)
+    private OfflinePayment offlinePayment;
+
     @Column(length = 1000)
     private String remarks;
 

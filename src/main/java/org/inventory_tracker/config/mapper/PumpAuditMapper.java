@@ -40,7 +40,6 @@ public interface PumpAuditMapper {
     // @Mapping(source = "pumpAssignment.actualTerminalSerialNumber", target = "terminalSerialNumber")
 
     @Mapping(source = "businessDate", target = "businessDate")
-
     PumpAuditResponse toResponse(PumpAudit audit);
 
     List<PumpAuditResponse> toResponseList(List<PumpAudit> audits);

@@ -20,6 +20,5 @@ public interface FuelingAgreementMapper {
     @Mapping(source = "merchant.id", target = "merchantId")
     FuelingAgreementResponse toResponse(FuelingAgreement agreement);
 
-    List<FuelingAgreementResponse> toResponseList(
-            List<FuelingAgreement> agreements);
+    List<FuelingAgreementResponse> toResponseList(List<FuelingAgreement> agreements);
 }

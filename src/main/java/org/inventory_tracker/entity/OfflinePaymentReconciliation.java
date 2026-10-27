@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
+import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.ReconciliationStatus;
 
 
@@ -54,9 +56,13 @@ public class OfflinePaymentReconciliation {
     @Column(nullable = false)
     private String destinationAccountNumber;
 
+    // @Enumerated(EnumType.STRING)
+    // @Column(nullable = false)
+    // private ReconciliationStatus status;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ReconciliationStatus status;
+    private PaymentStatus status;
 
     private String initiatedBy;
     private String confirmedBy;

@@ -28,9 +28,9 @@ public class VehicleController {
     @Operation(summary = "Create Vehicle", description = "This endpoint creates a new vehicle in the database.")
     @PostMapping
     public ResponseEntity<ApiSuccessResponse<VehicleResponse>> create(
-            @Valid @RequestBody VehicleRequest request
+            @Valid @RequestBody VehicleRequest request, @RequestParam Long companyId
     ) {
-        VehicleResponse response = vehicleService.create(request);
+        VehicleResponse response = vehicleService.create(request, companyId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(
                         new ApiSuccessResponse<>(

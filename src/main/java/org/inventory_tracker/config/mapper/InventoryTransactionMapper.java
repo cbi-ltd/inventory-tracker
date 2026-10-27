@@ -20,23 +20,14 @@ public interface InventoryTransactionMapper {
     @Mapping(target = "balanceBeforeTransaction", ignore = true)
     @Mapping(target = "balanceAfterTransaction", ignore = true)
     @Mapping(target = "referenceNumber", ignore = true)
-    InventoryTransaction toEntity(
-            CreateInventoryTransactionRequest request
-    );
+    InventoryTransaction toEntity(CreateInventoryTransactionRequest request);
 
     @Mapping(source = "stationInventory.id", target = "stationInventoryId")
-
     @Mapping(source = "station.id", target = "stationId")
     @Mapping(source = "station.name", target = "stationName")
-
     @Mapping(source = "product.id", target = "productId")
     @Mapping(source = "product.name", target = "productName")
+    InventoryTransactionResponse toResponse(InventoryTransaction transaction);
 
-    InventoryTransactionResponse toResponse(
-            InventoryTransaction transaction
-    );
-
-    List<InventoryTransactionResponse> toResponseList(
-            List<InventoryTransaction> transactions
-    );
+    List<InventoryTransactionResponse> toResponseList(List<InventoryTransaction> transactions);
 }

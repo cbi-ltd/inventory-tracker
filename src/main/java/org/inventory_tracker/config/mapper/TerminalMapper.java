@@ -20,6 +20,5 @@ public interface TerminalMapper {
     @Mapping(source = "station.name", target = "stationName")
     TerminalResponse toResponse(Terminal terminal);
 
-    List<TerminalResponse> toResponseList(
-            List<Terminal> terminals);
+    List<TerminalResponse> toResponseList(List<Terminal> terminals);
 }

@@ -23,9 +23,7 @@ public interface StockAdjustmentMapper {
     @Mapping(target = "balanceAfterAdjustment", ignore = true)
     @Mapping(target = "unitPrice", ignore = true)
     @Mapping(target = "totalAdjustmentValue", ignore = true)
-    StockAdjustment toEntity(
-            CreateStockAdjustmentRequest request
-    );
+    StockAdjustment toEntity(CreateStockAdjustmentRequest request);
 
     @Mapping(source = "stationInventory.id", target = "stationInventoryId")
     @Mapping(source = "station.id", target = "stationId")
@@ -34,11 +32,7 @@ public interface StockAdjustmentMapper {
     @Mapping(source = "product.name", target = "productName")
     @Mapping(source = "stockCount.id", target = "stockCountId")
     @Mapping(source = "stockCount.countNumber", target = "stockCountNumber")
-    StockAdjustmentResponse toResponse(
-            StockAdjustment adjustment
-    );
+    StockAdjustmentResponse toResponse(StockAdjustment adjustment);
 
-    List<StockAdjustmentResponse> toResponseList(
-            List<StockAdjustment> adjustments
-    );
+    List<StockAdjustmentResponse> toResponseList(List<StockAdjustment> adjustments);
 }

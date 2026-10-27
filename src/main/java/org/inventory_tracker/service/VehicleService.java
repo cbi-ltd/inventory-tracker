@@ -26,39 +26,26 @@ public class VehicleService {
     private final VehicleMapper vehicleMapper;
     private final AuthenticatedUserService authenticatedUserService;
 
-    public VehicleResponse create(VehicleRequest request) {
+    public VehicleResponse create(VehicleRequest request, Long companyId) {
 
         Merchant merchant = getCurrentMerchant();
 
-        if (vehicleRepository
-                .existsByMerchant_IdAndRegistrationNumberIgnoreCase(
-                        merchant.getId(),
-                        request.getRegistrationNumber())) {
+        if (vehicleRepository.existsByMerchant_IdAndRegistrationNumberIgnoreCase(
+                        merchant.getId(), request.getRegistrationNumber())) {
 
-            throw new DuplicateResourceException(
-                    "Vehicle with this registration number already exists"
-            );
+            throw new DuplicateResourceException("Vehicle with this registration number already exists");
         }
 
         FuelingCompany company = fuelingCompanyRepository
-                .findByIdAndMerchant_IdAndActiveTrue(
-                        request.getCompanyId(),
-                        merchant.getId()
-                )
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Active fueling company not found"
-                        ));
+                .findByIdAndMerchant_IdAndActiveTrue(companyId, merchant.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Active fueling company not found"));
 
         Vehicle vehicle = vehicleMapper.toEntity(request);
-
         vehicle.setMerchant(merchant);
         vehicle.setCompany(company);
         vehicle.setActive(true);
 
-        return vehicleMapper.toResponse(
-                vehicleRepository.save(vehicle)
-        );
+        return vehicleMapper.toResponse(vehicleRepository.save(vehicle));
     }
 
     @Transactional(readOnly = true)
@@ -121,14 +108,8 @@ public class VehicleService {
         }
 
         FuelingCompany company = fuelingCompanyRepository
-                .findByIdAndMerchant_IdAndActiveTrue(
-                        request.getCompanyId(),
-                        merchant.getId()
-                )
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Active fueling company not found"
-                        ));
+                .findByIdAndMerchant_IdAndActiveTrue(request.getCompanyId(), merchant.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Active fueling company not found"));
 
         vehicleMapper.updateEntity(request, vehicle);
         vehicle.setCompany(company);

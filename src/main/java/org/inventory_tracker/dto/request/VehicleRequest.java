@@ -12,7 +12,7 @@ public class VehicleRequest {
     @NotBlank
     private String registrationNumber;
 
-    @NotNull
+    // @NotNull
     private Long companyId;
 
     private String make;

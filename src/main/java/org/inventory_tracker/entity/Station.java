@@ -52,4 +52,13 @@ public class Station extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TerminalMode terminalMode = TerminalMode.SINGLE_PUMP;
+
+    @Column(name = "offline_payment_account_number")
+    private String offlinePaymentAccountNumber;
+
+    @Column(name = "offline_payment_account_name")
+    private String offlinePaymentAccountName;
+
+    @Column(name = "offline_payment_bank")
+    private String offlinePaymentBank;
 }
