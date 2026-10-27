@@ -34,8 +34,7 @@ public class PumpAuditController {
     public ResponseEntity<ApiSuccessResponse<PumpAuditResponse>> createPumpAudit(
             @Valid @RequestBody CreatePumpAuditRequest request) {
 
-        PumpAuditResponse response =
-                pumpAuditService.createPumpAudit(request);
+        PumpAuditResponse response = pumpAuditService.createPumpAudit(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(

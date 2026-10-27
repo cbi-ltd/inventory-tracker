@@ -100,7 +100,7 @@ public class TerminalController {
 
     @GetMapping("/session")
     public ResponseEntity<ApiSuccessResponse<PosSessionResponse>>getPosSession(
-            @RequestParam(required = false) Long pumpId,
+        //     @RequestParam(required = false) Long pumpId,
             @RequestParam(required = false) String terminalSerialNumber) {
 
         PosSessionResponse response = posSessionService.getPosSession(terminalSerialNumber);

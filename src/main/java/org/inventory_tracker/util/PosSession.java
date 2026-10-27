@@ -37,23 +37,19 @@ public class PosSession {
     private final TerminalRepository terminalRepository;
 
 
- @Transactional(readOnly = true)
+     @Transactional(readOnly = true)
      public PosSessionResponse getPosSession(String terminalSerialNumber) {
 
         Terminal terminal = terminalRepository
                 .findByTerminalSerialNumberAndActiveTrue(terminalSerialNumber)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Active terminal not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Active terminal not found"));
 
         Station station = terminal.getStation();
-
         if (station == null) {
                 throw new ResourceNotFoundException("Terminal is not associated with a station");
         }
 
         Merchant merchant = station.getMerchant();
-
         if (merchant == null) {
                 throw new ResourceNotFoundException("Station is not associated with a merchant");
         }
@@ -63,134 +59,172 @@ public class PosSession {
         LocalDate lookupDate = today;
         List<ShiftLookup> lookups;
 
-            switch (currentShift) {
+        switch (currentShift) {
+                case MORNING -> lookups = List.of(
+                        new ShiftLookup(
+                                today.minusDays(1),
+                                Shift.OVERNIGHT
+                        ),
+                        new ShiftLookup(
+                                today.minusDays(1),
+                                Shift.AFTERNOON
+                        ),
+                        new ShiftLookup(
+                                today.minusDays(1),
+                                Shift.MORNING
+                        ),
+                        new ShiftLookup(
+                                today.minusDays(2),
+                                Shift.OVERNIGHT
+                        ));
 
-        case MORNING -> lookups = List.of(
-                new ShiftLookup(
-                        today.minusDays(1),
-                        Shift.OVERNIGHT
-                ),
-                new ShiftLookup(
-                        today.minusDays(1),
-                        Shift.AFTERNOON
-                ),
-                new ShiftLookup(
-                        today.minusDays(1),
-                        Shift.MORNING
-                ),
-                new ShiftLookup(
-                        today.minusDays(2),
-                        Shift.OVERNIGHT
-                )
-        );
+                case AFTERNOON -> lookups = List.of(
+                        new ShiftLookup(
+                                today,
+                                Shift.MORNING
+                        ),
+                        new ShiftLookup(
+                                today.minusDays(1),
+                                Shift.OVERNIGHT
+                        ),
+                        new ShiftLookup(
+                                today.minusDays(1),
+                                Shift.AFTERNOON
+                        ),
+                        new ShiftLookup(
+                                today.minusDays(1),
+                                Shift.MORNING
+                        ));
 
-        case AFTERNOON -> lookups = List.of(
-                new ShiftLookup(
-                        today,
-                        Shift.MORNING
-                ),
-                new ShiftLookup(
-                        today.minusDays(1),
-                        Shift.OVERNIGHT
-                ),
-                new ShiftLookup(
-                        today.minusDays(1),
-                        Shift.AFTERNOON
-                ),
-                new ShiftLookup(
-                        today.minusDays(1),
-                        Shift.MORNING
-                )
-        );
+                case OVERNIGHT -> lookups = List.of(
+                        new ShiftLookup(today, Shift.OVERNIGHT),
+                        new ShiftLookup(
+                                today,
+                                Shift.AFTERNOON
+                        ),
+                        new ShiftLookup(
+                                today,
+                                Shift.MORNING
+                        ),
+                        new ShiftLookup(
+                                today.minusDays(1),
+                                Shift.OVERNIGHT
+                        ),
+                        new ShiftLookup(
+                                today.minusDays(1),
+                                Shift.AFTERNOON
+                        ));
 
-        case OVERNIGHT -> lookups = List.of(
-                new ShiftLookup(
-                        today,
-                        Shift.AFTERNOON
-                ),
-                new ShiftLookup(
-                        today,
-                        Shift.MORNING
-                ),
-                new ShiftLookup(
-                        today.minusDays(1),
-                        Shift.OVERNIGHT
-                ),
-                new ShiftLookup(
-                        today.minusDays(1),
-                        Shift.AFTERNOON
-                )
-        );
-
-        default -> throw new BadRequestException(
-                "Unable to determine current shift"
-        );
-    }
+                        default -> throw new BadRequestException("Unable to determine current shift");
+        }
 
         List<PumpAssignment> assignments = new ArrayList<>();
 
-    LocalDate foundDate = null;
-    Shift foundShift = null;
+        LocalDate foundDate = null;
+        Shift foundShift = null;
 
-    for (ShiftLookup lookup : lookups) {
+        for (ShiftLookup lookup : lookups) {
+                log.info("Looking for previous assignment: terminalId={}, date={}, shift={}", terminal.getId(), lookup.date(), lookup.shift());
 
-        log.info("Looking for previous assignment: terminalId={}, date={}, shift={}",
-                terminal.getId(),
-                lookup.date(),
-                lookup.shift()
-        );
+                assignments = pumpAssignmentRepository.findAllByTerminalIdAndAssignmentDateAndShift(
+                                terminal.getId(), lookup.date(), lookup.shift());
 
-        assignments =
-                pumpAssignmentRepository
-                        .findAllByTerminalIdAndAssignmentDateAndShift(
+                if (!assignments.isEmpty()) {
+                        foundDate = lookup.date();
+                        foundShift = lookup.shift();
+
+                        log.info("Previous assignment found: terminalId={}, date={}, shift={}, count={}",
                                 terminal.getId(),
-                                lookup.date(),
-                                lookup.shift()
+                                foundDate,
+                                foundShift,
+                                assignments.size()
                         );
-
-        if (!assignments.isEmpty()) {
-
-            foundDate = lookup.date();
-            foundShift = lookup.shift();
-
-            log.info(
-                    "Previous assignment found: terminalId={}, date={}, shift={}, count={}",
-                    terminal.getId(),
-                    foundDate,
-                    foundShift,
-                    assignments.size()
-            );
-
-            break;
+                        break;
+                }
         }
-    }
+
+        // No assignment exists: return a valid session for terminal preparation.
+        if (assignments.isEmpty()) {
+        return PosSessionResponse.builder()
+                .stationId(station.getId())
+                .stationName(station.getName())
+                .terminalId(terminal.getId())
+                .terminalSerialNumber(terminal.getTerminalSerialNumber())
+                .shift(currentShift)
+                .businessDate(today)
+                .terminalMode(station.getTerminalMode())
+                .assignments(List.of())
+                .build();
+        }
+
+        lookupDate = foundDate;
 
         if (station.getTerminalMode() == TerminalMode.SINGLE_PUMP) {
                 assignments = List.of(assignments.stream()
                                 .max(this::compareAssignmentRecency)
-                                .orElse(null));
-                                // .orElseThrow(() ->new ResourceNotFoundException("No previous assignment found for this terminal")));
-        }
+                                .orElseThrow(() -> new ResourceNotFoundException("No previous assignment found for this terminal")));
+        } 
         else {
                 Map<Long, PumpAssignment> latestByAttendant = assignments.stream()
-                                .collect(Collectors.toMap( assignment -> assignment.getAttendant().getId(),
-                                        assignment -> assignment,
-                                        (current, candidate) -> compareAssignmentRecency(candidate, current) > 0 ? candidate : current,
-                                        LinkedHashMap::new));
+                        .collect(Collectors.toMap(
+                                assignment -> assignment.getAttendant().getId(),
+                                assignment -> assignment,
+                                (current, candidate) ->
+                                        compareAssignmentRecency(candidate, current) > 0 ? candidate : current,
+                                LinkedHashMap::new
+                        ));
 
                 assignments = new ArrayList<>(latestByAttendant.values());
         }
 
-        List<PosAssignmentResponse> assignmentResponses =
-            assignments.stream()
-                    .map(assignment -> {
+        // LocalDate foundDate = null;
+        // Shift foundShift = null;
 
-                        if (assignment.getStation() == null
-                                || !assignment.getStation().getId()
+        // for (ShiftLookup lookup : lookups) {
+        //         log.info("Looking for previous assignment: terminalId={}, date={}, shift={}",
+        //                 terminal.getId(), lookup.date(), lookup.shift());
+
+        //         assignments = pumpAssignmentRepository
+        //                         .findAllByTerminalIdAndAssignmentDateAndShift(terminal.getId(), lookup.date(),lookup.shift());
+
+        //         if (!assignments.isEmpty()) {
+        //                 foundDate = lookup.date();
+        //                 foundShift = lookup.shift();
+
+        //                 log.info(
+        //                         "Previous assignment found: terminalId={}, date={}, shift={}, count={}",
+        //                         terminal.getId(),
+        //                         foundDate,
+        //                         foundShift,
+        //                         assignments.size()
+        //                 );
+        //                 break;
+        //         }
+        // }
+
+        // if (station.getTerminalMode() == TerminalMode.SINGLE_PUMP) {
+        //         assignments = List.of(assignments.stream()
+        //                         .max(this::compareAssignmentRecency)
+        //                         .orElse(null));
+        //                         // .orElseThrow(() ->new ResourceNotFoundException("No previous assignment found for this terminal")));
+        // }
+        // else {
+        //         Map<Long, PumpAssignment> latestByAttendant = assignments.stream()
+        //                         .collect(Collectors.toMap( assignment -> assignment.getAttendant().getId(),
+        //                                 assignment -> assignment,
+        //                                 (current, candidate) -> compareAssignmentRecency(candidate, current) > 0 ? candidate : current,
+        //                                 LinkedHashMap::new));
+
+        //         assignments = new ArrayList<>(latestByAttendant.values());
+        // }
+
+        List<PosAssignmentResponse> assignmentResponses =
+            assignments.stream().map(assignment -> {
+
+                        if (assignment.getStation() == null || !assignment.getStation().getId()
                                         .equals(station.getId())) {
 
-                            throw new BadRequestException(
-                                    "Terminal assignment does not belong to terminal's station");
+                            throw new BadRequestException("Terminal assignment does not belong to terminal's station");
                         }
 
                         if (assignment.getTerminal() == null
@@ -204,15 +238,13 @@ public class PosSession {
                         Pump pump = assignment.getPump();
 
                         if (pump == null) {
-                            throw new ResourceNotFoundException(
-                                    "No pump assigned to this terminal");
+                            throw new ResourceNotFoundException("No pump assigned to this terminal");
                         }
 
                         Product product = pump.getProduct();
 
                         if (product == null) {
-                            throw new ResourceNotFoundException(
-                                    "No product configured for this pump");
+                            throw new ResourceNotFoundException("No product configured for this pump");
                         }
 
                         PumpAudit audit = pumpAuditRepository.findByPumpAssignment_Id(assignment.getId())

@@ -28,8 +28,7 @@ public class PumpController {
     public ResponseEntity<ApiSuccessResponse<PumpResponse>> createPump(
             @Valid @RequestBody CreatePumpRequest request) {
 
-        PumpResponse response =
-                pumpService.createPump(request);
+        PumpResponse response = pumpService.createPump(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(

@@ -54,8 +54,7 @@ public class PumpAssignmentController {
         public ResponseEntity<ApiSuccessResponse<PumpAssignmentResponse>>assignPumpToAttendant(
                 @Valid @RequestBody AssignPumpRequest request) {
 
-                PumpAssignmentResponse response =
-                        pumpAssignmentService.assignPumpToAttendant(request);
+                PumpAssignmentResponse response = pumpAssignmentService.assignPumpToAttendant(request);
 
                 return ResponseEntity.status(HttpStatus.CREATED)
                         .body(
