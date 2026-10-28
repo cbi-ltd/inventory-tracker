@@ -1,155 +1,135 @@
-// package org.inventory_tracker.service;
+package org.inventory_tracker.service;
 
-// import org.springframework.stereotype.Service;
-// import lombok.RequiredArgsConstructor;
-// import org.inventory_tracker.entity.OfflinePayment;
-// import org.inventory_tracker.entity.Sale;
-// import org.inventory_tracker.entity.Merchant;
-// import org.inventory_tracker.entity.Station;
-// import org.inventory_tracker.enums.PaymentStatus;
-// import org.inventory_tracker.repository.OfflinePaymentRepository;
-// import org.inventory_tracker.exception.ResourceNotFoundException;
-// import org.inventory_tracker.exception.BadRequestException;
-// import org.inventory_tracker.exception.DuplicateResourceException;
-// import org.inventory_tracker.dto.response.OfflinePaymentResponse;
-// import org.inventory_tracker.security.*;
-// import org.springframework.transaction.annotation.Transactional;
-// import java.time.LocalDateTime;
-// import java.util.UUID;
-// import java.util.Optional;
-// import org.springframework.data.domain.Page;
-// import org.springframework.data.domain.Pageable;
-// import org.springframework.data.domain.PageRequest;
-// import org.springframework.data.domain.Sort;
-// import org.springframework.data.domain.Sort.Direction;
-// import org.springframework.data.domain.PageImpl;
-// import java.util.List;
-// import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
+import org.inventory_tracker.entity.OfflinePayment;
+import org.inventory_tracker.entity.Sale;
+import org.inventory_tracker.entity.Merchant;
+import org.inventory_tracker.entity.Station;
+import org.inventory_tracker.enums.PaymentStatus;
+import org.inventory_tracker.repository.OfflinePaymentRepository;
+import org.inventory_tracker.exception.BadRequestException;
+import org.inventory_tracker.exception.DuplicateResourceException;
+import org.inventory_tracker.exception.ResourceNotFoundException;
+import org.inventory_tracker.dto.response.OfflinePaymentResponse;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.UUID;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import org.inventory_tracker.security.AuthenticatedUserService;
 
 
-// @Service
-// @RequiredArgsConstructor
-// public class OfflinePaymentService {
+@Service
+@RequiredArgsConstructor
+public class OfflinePaymentService {
+    private final OfflinePaymentRepository offlinePaymentRepository;
+    private final AuthenticatedUserService authenticatedUserService;
 
-//     private final OfflinePaymentRepository offlinePaymentRepository;
-//     private final AuthenticatedUserService authenticatedUserService;
+    @Transactional
+    public OfflinePaymentResponse createForSale(Sale sale, Station station, Merchant merchant) {
 
+        if (station.getOfflinePaymentAccountNumber() == null
+                || station.getOfflinePaymentAccountNumber().isBlank()
+                || station.getOfflinePaymentAccountName() == null
+                || station.getOfflinePaymentAccountName().isBlank()
+                || station.getOfflinePaymentBank() == null
+                || station.getOfflinePaymentBank().isBlank()) {
 
-//     @Transactional
-//     public OfflinePaymentResponse createForSale(Sale sale) {
+            throw new BadRequestException("Offline payment account is not configured for this station");
+        }
 
-//         Merchant merchant = authenticatedUserService.getCurrentMerchant();
-//         if (merchant == null) {
-//             throw new ResourceNotFoundException("Merchant is not authenticated");
-//         }
+        if (sale.getNetAmount() == null || sale.getNetAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Sale amount must be greater than zero");
+        }
 
-//         Station station = sale.getPump().getStation();
-//         if (station == null) {
-//             throw new BadRequestException("The sale is not associated with a station");
-//         }
+        if (offlinePaymentRepository.existsBySale_Id(sale.getId())) {
+            throw new DuplicateResourceException("An offline payment already exists for this sale");
+        }
 
-//         if (offlinePaymentRepository.existsBySale_Id(sale.getId())) {
-//             throw new DuplicateResourceException("An offline payment already exists for this sale");
-//         }
+        OfflinePayment payment = OfflinePayment.builder()
+                .reference("OFF-" + UUID.randomUUID())
+                .sale(sale)
+                .station(station)
+                .merchant(merchant)
+                .amount(sale.getNetAmount())
+                .status(PaymentStatus.PENDING)
+                .destinationBankName(station.getOfflinePaymentBank())
+                .destinationAccountNumber(station.getOfflinePaymentAccountNumber())
+                .destinationAccountName(station.getOfflinePaymentAccountName())
+                .build();
 
-//         // OfflinePaymentAccount account = accountRepository
-//         //         .findByStation_IdAndMerchant_IdAndActiveTrue(
-//         //                 station.getId(), merchant.getId())
-//         //         .stream()
-//         //         .findFirst()
-//         //         .orElseThrow(() -> new ResourceNotFoundException(
-//         //                 "No active offline payment account is configured "
-//         //                 + "for this station"));
+        OfflinePayment savedPayment = offlinePaymentRepository.save(payment);
+        sale.setOfflinePayment(savedPayment);
 
-//         if (sale.getNetAmount() == null || sale.getNetAmount().signum() <= 0) {
-//             throw new BadRequestException("Sale amount must be greater than zero");
-//         }
+        return toResponse(savedPayment);
+    }
 
-//         OfflinePayment payment = OfflinePayment.builder()
-//                 .reference("OFF-" + UUID.randomUUID())
-//                 .sale(sale)
-//                 .station(station)
-//                 .merchant(merchant)
-//                 .offlinePaymentAccount(account)
-//                 .amount(sale.getNetAmount())
-//                 .status(PaymentStatus.PENDING)
-//                 .destinationBankName(account.getBankName())
-//                 .destinationAccountNumber(account.getAccountNumber())
-//                 .destinationAccountName(account.getAccountName())
-//                 .build();
+    private OfflinePaymentResponse toResponse(OfflinePayment payment) {
+        return OfflinePaymentResponse.builder()
+                .id(payment.getId())
+                .reference(payment.getReference())
+                .saleId(payment.getSale().getId())
+                .stationId(payment.getStation().getId())
+                .amount(payment.getAmount())
+                .status(payment.getStatus())
+                .bankName(payment.getDestinationBankName())
+                .accountNumber(payment.getDestinationAccountNumber())
+                .accountName(payment.getDestinationAccountName())
+                .customerTransferReference(payment.getCustomerTransferReference())
+                .receivedAt(payment.getReceivedAt())
+                .build();
+    }
 
-//         return toResponse(offlinePaymentRepository.save(payment));
-//     }
+    @Transactional
+    public OfflinePaymentResponse markReceived(Long id, String customerTransferReference) {
+        Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-//     @Transactional(readOnly = true)
-//     public OfflinePaymentResponse getById(Long id) {
+        if (merchant == null) {
+            throw new ResourceNotFoundException("Merchant is not authenticated");
+        }
 
-//         Merchant merchant = authenticatedUserService.getCurrentMerchant();
-//         if (merchant == null) {
-//             throw new ResourceNotFoundException("Merchant is not authenticated");
-//         }
+        OfflinePayment offlinePayment = offlinePaymentRepository
+                .findByIdAndMerchant_Id(id, merchant.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Offline payment not found"));
 
-//         OfflinePayment payment = offlinePaymentRepository
-//                 .findByIdAndMerchant_Id(id, merchant.getId())
-//                 .orElseThrow(() -> new ResourceNotFoundException("Offline payment not found"));
+        if (offlinePayment.getStatus() != PaymentStatus.PENDING) {
+            throw new BadRequestException("Only pending offline payments can be marked as received");
+        }
 
-//         return toResponse(payment);
-//     }
+        if (customerTransferReference == null || customerTransferReference.isBlank()) {
+            throw new BadRequestException("Customer transfer reference is required");
+        }
 
-//                                 // @Transactional
-//                                 // public OfflinePaymentResponse confirmReceipt(Long id, ConfirmOfflinePaymentRequest request) {
+        offlinePayment.setCustomerTransferReference(customerTransferReference.trim());
+        offlinePayment.setReceivedAt(LocalDateTime.now());
+        offlinePayment.setStatus(PaymentStatus.OFFLINE_RECEIVED);
+        offlinePayment.setConfirmedBy(offlinePayment.getSale().getAttendant().getFullName());
 
-//                                 //     Merchant merchant = authenticatedUserService.getCurrentMerchant();
+        Sale sale = offlinePayment.getSale();
+        sale.setPaymentStatus(PaymentStatus.OFFLINE_RECEIVED);
+        offlinePaymentRepository.save(offlinePayment);
 
-//                                 //     if (merchant == null) {
-//                                 //         throw new ResourceNotFoundException("Merchant is not authenticated");
-//                                 //     }
+        return toResponse(offlinePayment);
+    }
 
-//                                 //     OfflinePayment payment = offlinePaymentRepository
-//                                 //             .findByIdAndMerchant_Id(id, merchant.getId())
-//                                 //             .orElseThrow(() -> new ResourceNotFoundException(
-//                                 //                     "Offline payment not found"));
+    @Transactional(readOnly = true)
+    public OfflinePaymentResponse getOfflinePayment(Long id) {
+        Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-//                                 //     if (payment.getStatus() != OfflinePaymentStatus.PENDING) {
-//                                 //         throw new BadRequestException(
-//                                 //                 "Only pending payments can be confirmed");
-//                                 //     }
+        OfflinePayment payment = offlinePaymentRepository.findByIdAndMerchant_Id(id, merchant.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Offline payment not found"));
 
-//                                 //     /*
-//                                 //      * IMPORTANT:
-//                                 //      * Verify the bank credit before reaching this point.
-//                                 //      * Do not treat the customer's supplied reference as verification.
-//                                 //      */
+        return toResponse(payment);
+    }
 
-//                                 //     payment.setCustomerTransferReference(
-//                                 //             request.getCustomerTransferReference().trim());
+    @Transactional(readOnly = true)
+    public Page<OfflinePaymentResponse> getOfflinePayments(Pageable pageable) {
+        Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-//                                 //     payment.setReceivedAt(LocalDateTime.now());
+        return offlinePaymentRepository.findAllByMerchant_Id(merchant.getId(), pageable)
+                .map(this::toResponse);
+    }
 
-//                                 //     // Replace with the authenticated operator's actual ID/username.
-//                                 //     payment.setConfirmedBy("AUTHORIZED_OPERATOR");
-
-//                                 //     payment.setStatus(
-//                                 //             OfflinePaymentStatus.RECONCILIATION_PENDING);
-
-//                                 //     return toResponse(offlinePaymentRepository.save(payment));
-//                                 // }
-
-//     private OfflinePaymentResponse toResponse(OfflinePayment payment) {
-
-//         return OfflinePaymentResponse.builder()
-//                 .id(payment.getId())
-//                 .reference(payment.getReference())
-//                 .saleId(payment.getSale().getId())
-//                 .stationId(payment.getStation().getId())
-//                 .amount(payment.getAmount())
-//                 .status(payment.getStatus())
-//                 .bankName(payment.getDestinationBankName())
-//                 .accountNumber(payment.getDestinationAccountNumber())
-//                 .accountName(payment.getDestinationAccountName())
-//                 .customerTransferReference(
-//                         payment.getCustomerTransferReference())
-//                 .receivedAt(payment.getReceivedAt())
-//                 .build();
-//     }
-// }
+}

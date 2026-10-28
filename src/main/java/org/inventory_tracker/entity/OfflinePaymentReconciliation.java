@@ -62,7 +62,7 @@ public class OfflinePaymentReconciliation {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private PaymentStatus status;
+    private ReconciliationStatus status;
 
     private String initiatedBy;
     private String confirmedBy;

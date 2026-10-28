@@ -9,6 +9,7 @@ import org.inventory_tracker.dto.request.PaymentFilterRequest;
 import org.inventory_tracker.entity.specification.PaymentSpecification;
 import org.inventory_tracker.config.mapper.PaymentMapper;
 import org.inventory_tracker.config.mapper.SaleMapper;
+import org.inventory_tracker.dto.response.OfflinePaymentResponse;
 import org.inventory_tracker.dto.response.PaymentResponse;
 import org.inventory_tracker.dto.response.SaleResponse;
 import org.inventory_tracker.entity.Attendant;
@@ -87,6 +88,9 @@ public class PaymentService {
     private final VehicleRepository vehicleRepository;
     private final CompanyAccountTransactionRepository companyAccountTransactionRepository;
     private final FuelingAgreementRepository fuelingAgreementRepository;
+    private final OfflinePaymentService offlinePaymentService;
+
+
     @Transactional
     public PaymentResponse recordCashPayment(Long saleId) {
         Sale sale = saleRepository.findById(saleId).orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
@@ -244,161 +248,6 @@ public class PaymentService {
         }
     }
 
-    // @Transactional
-    // public SaleResponse JustChangedcreateSale(CreateSaleRequest request) {
-    //     try {
-    //         Terminal terminal = terminalRepository.findByTerminalSerialNumberAndActiveTrue(request.getTerminalSerialNumber())
-    //                         .orElseThrow(() -> new ResourceNotFoundException("Active terminal not found"));
-
-    //         Station station = terminal.getStation();
-
-    //         if (station == null) {
-    //             throw new ResourceNotFoundException("Terminal is not associated with a station");
-    //         }
-
-    //         Merchant merchant = station.getMerchant();
-
-    //         if (merchant == null) {
-    //             throw new ResourceNotFoundException("Station is not associated with a merchant");
-    //         }
-
-    //         Pump pump = pumpRepository.findByIdAndStation_IdAndStation_Merchant_CamsMerchantId(
-    //                                 request.getPumpId(),
-    //                                 station.getId(),
-    //                                 merchant.getCamsMerchantId())
-    //                         .orElseThrow(() -> new ResourceNotFoundException("Pump not found for this terminal's station"));
-
-    //         PumpAssignment assignment = pumpAssignmentRepository
-    //                         .findFirstByTerminal_IdAndPump_IdAndActiveTrue(terminal.getId(), pump.getId())
-    //                         .orElseThrow(() -> new ResourceNotFoundException( "Pump is not currently assigned to this terminal"));
-
-    //         Attendant attendant = assignment.getAttendant();
-
-    //         if (attendant == null) {
-    //             throw new ResourceNotFoundException("No attendant assigned to this pump");
-    //         }
-
-    //         Product product = pump.getProduct();
-
-    //         if (product == null) {
-    //             throw new ResourceNotFoundException("No product configured for this pump");
-    //         }
-
-    //         StationInventory inventory = stationInventoryRepository
-    //                         .findByStation_IdAndStation_Merchant_CamsMerchantIdAndProduct_Id(
-    //                                 station.getId(),
-    //                                 merchant.getCamsMerchantId(),
-    //                                 product.getId())
-    //                         .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
-
-    //         BigDecimal costPerUnit = inventory.getCostPerUnit();
-    //         BigDecimal sellingPrice = inventory.getSellingPrice();
-
-    //         if (sellingPrice == null) {
-    //             throw new BadRequestException("Selling price is not configured for this product");
-    //         }
-
-    //         BigDecimal quantity;
-    //         BigDecimal grossAmount;
-
-    //         if (request.getQuantity() != null) {
-    //             quantity = request.getQuantity();
-
-    //             if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-    //                 throw new BadRequestException("Quantity must be greater than zero.");
-    //             }
-    //             grossAmount = quantity.multiply(sellingPrice);
-    //         } 
-    //         else {
-    //             grossAmount = request.getAmount();
-
-    //             if (grossAmount == null || grossAmount.compareTo(BigDecimal.ZERO) <= 0) {
-    //                 throw new BadRequestException("Amount must be greater than zero.");
-    //             }
-
-    //             if (sellingPrice.compareTo(BigDecimal.ZERO) == 0) {
-    //                 throw new BadRequestException("Selling price cannot be zero.");
-    //             }
-
-    //             quantity = grossAmount.divide(sellingPrice, 3, RoundingMode.HALF_UP);
-    //         }
-
-    //         if (inventory.getCurrentQuantity().compareTo(quantity) < 0) {
-    //             throw new BadRequestException("Insufficient stock available.");
-    //         }
-
-    //         Sale sale = saleMapper.toEntity(request);
-    //         sale.setStation(station);
-    //         sale.setPump(pump);
-    //         sale.setTerminal(terminal);
-    //         sale.setAttendant(attendant);
-    //         sale.setProduct(product);
-    //         sale.setSaleNumber(generateSaleNumber(station));
-    //         sale.setReceiptNumber(generateReceiptNumber());
-    //         sale.setSaleTime(LocalDateTime.now());
-    //         sale.setSellingPrice(sellingPrice);
-    //         sale.setShift(assignment.getShift());
-    //         sale.setBusinessDate(assignment.getAssignmentDate());
-    //         sale.setQuantity(quantity);
-    //         sale.setGrossAmount(grossAmount);
-
-    //         BigDecimal discount = request.getDiscountAmount() == null ? BigDecimal.ZERO : request.getDiscountAmount();
-    //         sale.setDiscountAmount(discount);
-    //         sale.setNetAmount(calculateNetAmount(grossAmount, discount));
-    //         sale.setInventoryUpdated(false);
-
-    //         switch (request.getPaymentMethod()) {
-    //             case CASH -> {
-    //                 sale.setPaymentStatus(PaymentStatus.SUCCESS);
-    //                 sale.setSaleStatus(SaleStatus.PENDING);
-    //             }
-
-    //             case CARD, TRANSFER, MIXED -> {
-    //                 sale.setPaymentStatus(PaymentStatus.PENDING);
-    //                 sale.setSaleStatus(SaleStatus.PENDING);
-    //             }
-
-    //             default -> throw new BadRequestException("Unsupported payment method.");
-    //         }
-
-    //         saleRepository.save(sale);
-
-    //         switch (request.getPaymentMethod()) {
-    //             case TRANSFER ->
-    //                     pendingTransferService.registerPendingTransfer(
-    //                             station.getMerchantAccountNumber(),
-    //                             sale.getSaleNumber(),
-    //                             sale.getNetAmount(),
-    //                             terminal.getTerminalSerialNumber());
-
-    //             case CARD ->
-    //                     pendingCardPaymentService.register(
-    //                             sale.getSaleNumber(),
-    //                             sale.getNetAmount(),
-    //                             terminal.getTerminalSerialNumber(),
-    //                             terminal.getTerminalSerialNumber());
-
-    //             case CASH -> {}
-    //             case MIXED -> {}
-    //         }
-
-    //         if (sale.getPaymentMethod() == PaymentMethod.CASH) {
-    //             recordCashPayment(sale.getId());
-    //             return completeCashSale(sale.getId());
-    //         }
-
-    //         return saleMapper.toResponse(sale);
-    //     } 
-    //     catch (ResourceNotFoundException | BadRequestException e) {
-    //         throw e;
-    //     } 
-    //     catch (ArithmeticException e) {
-    //         throw new BadRequestException("Calculation error during transaction: "+ e.getMessage());
-    //     } 
-    //     catch (Exception e) {
-    //         throw new RuntimeException("Failed to process sale due to an internal error: " + e.getMessage(), e);
-    //     }
-    // }
 
     @Transactional
     public SaleResponse createSale(CreateSaleRequest request) {
@@ -529,8 +378,7 @@ public class PaymentService {
                 );
             }
 
-            StationInventory inventory =
-                    stationInventoryRepository
+            StationInventory inventory = stationInventoryRepository
                             .findByStation_IdAndStation_Merchant_CamsMerchantIdAndProduct_Id(
                                     station.getId(),
                                     merchant.getCamsMerchantId(),
@@ -617,9 +465,6 @@ public class PaymentService {
             vehicle = vehicleRepository.findById(request.getVehicleId())
                             .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found"));
 
-            /*
-             * Make sure the vehicle belongs to this merchant.
-             */
             if (vehicle.getMerchant() == null
                     || !vehicle.getMerchant() .getId().equals(merchant.getId())) {
 
@@ -643,47 +488,23 @@ public class PaymentService {
                 throw new BadRequestException("Vehicle fueling agreement is inactive");
             }
 
-            /*
-             * Make sure the agreement belongs to this merchant.
-             */
-            if (agreement.getMerchant() == null
-                    || !agreement.getMerchant()
-                            .getId()
-                            .equals(merchant.getId())) {
-
-                throw new ResourceNotFoundException(
-                        "Fueling agreement not found"
-                );
+            if (agreement.getMerchant() == null || !agreement.getMerchant().getId().equals(merchant.getId())) {
+                throw new ResourceNotFoundException("Fueling agreement not found");
             }
 
-            /*
-             * Make sure the sale falls within the agreement period.
-             */
             if (businessDate.isBefore(
                         agreement.getStartDate())
                     || businessDate.isAfter(
                         agreement.getEndDate())) {
 
-                throw new BadRequestException(
-                        "Vehicle fueling agreement is outside its active period"
-                );
+                throw new BadRequestException("Vehicle fueling agreement is outside its active period");
             }
 
-            /*
-             * PREPAID:
-             * Make sure enough money remains before allowing
-             * the fueling transaction.
-             */
             if (agreement.getSettlementType() == FuelingSettlementType.PREPAID) {
                 validatePrepaidBalance(agreement, netAmount);
                 settlementType = SaleSettlementType.PREPAID;
             }
 
-            /*
-             * POSTPAID:
-             * Check the existing outstanding balance against
-             * the company's credit limit.
-             */
             if (agreement.getSettlementType() == FuelingSettlementType.POSTPAID) {
                 BigDecimal outstanding = agreement.getOutstandingBalance();
                 if (outstanding == null) { outstanding = BigDecimal.ZERO; }
@@ -699,43 +520,34 @@ public class PaymentService {
             }
         }
 
-
-
-            Sale sale = saleMapper.toEntity(request);
-
-            sale.setStation(station);
-            sale.setPump(pump);
-            sale.setTerminal(terminal);
-            sale.setAttendant(attendant);
-            sale.setProduct(product);
-            sale.setSaleNumber(generateSaleNumber(station));
-            sale.setReceiptNumber(generateReceiptNumber());
-            sale.setSaleTime(LocalDateTime.now(station.getTimeZone()));
-            sale.setSellingPrice(sellingPrice);
-            sale.setQuantity(quantity);
-            sale.setGrossAmount(grossAmount);
-            sale.setDiscountAmount(discount);
-            sale.setNetAmount(netAmount);
-            sale.setBusinessDate(assignment.getAssignmentDate());
-            sale.setShift(assignment.getShift());
-            sale.setInventoryUpdated(false);
-            sale.setSettlementType(settlementType);
-
-
-            if (vehicle != null) {
-                sale.setVehicle(vehicle);
-                sale.setFuelingAgreement(agreement);
-            } 
-
+        Sale sale = saleMapper.toEntity(request);
+        sale.setStation(station);
+        sale.setPump(pump);
+        sale.setTerminal(terminal);
+        sale.setAttendant(attendant);
+        sale.setProduct(product);
+        sale.setSaleNumber(generateSaleNumber(station));
+        sale.setReceiptNumber(generateReceiptNumber());
+        sale.setSaleTime(LocalDateTime.now(station.getTimeZone()));
+        sale.setSellingPrice(sellingPrice);
+        sale.setQuantity(quantity);
+        sale.setGrossAmount(grossAmount);
+        sale.setDiscountAmount(discount);
+        sale.setNetAmount(netAmount);
+        sale.setBusinessDate(assignment.getAssignmentDate());
+        sale.setShift(assignment.getShift());
+        sale.setInventoryUpdated(false);
+        sale.setSettlementType(settlementType);
 
 
         if (vehicle != null) {
-            sale.setPaymentStatus(
-                    agreement.getSettlementType()
-                            == FuelingSettlementType.PREPAID
-                            ? PaymentStatus.SUCCESS
-                            : PaymentStatus.PENDING
-            );
+            sale.setVehicle(vehicle);
+            sale.setFuelingAgreement(agreement);
+        } 
+
+        if (vehicle != null) {
+            sale.setPaymentStatus(agreement.getSettlementType() == FuelingSettlementType.PREPAID
+                            ? PaymentStatus.SUCCESS : PaymentStatus.PENDING);
 
             sale.setSaleStatus(SaleStatus.PENDING);
         }
@@ -749,18 +561,23 @@ public class PaymentService {
                     sale.setPaymentStatus(PaymentStatus.PENDING);
                     sale.setSaleStatus(SaleStatus.PENDING);
                 }
+                case OFFLINE_PAYMENT -> {
+                    sale.setPaymentStatus(PaymentStatus.PENDING);
+                    sale.setSaleStatus(SaleStatus.PENDING);
+                }
                 default -> throw new BadRequestException("Unsupported payment method");
             }
         }
 
-            Sale savedSale = saleRepository.save(sale);
+        Sale savedSale = saleRepository.save(sale);
 
-            if (vehicle != null) {
+        OfflinePaymentResponse offlinePaymentResponse = null;
+        if (vehicle == null && savedSale.getPaymentMethod() == PaymentMethod.OFFLINE_PAYMENT) {
+                offlinePaymentResponse = offlinePaymentService.createForSale(savedSale, station, merchant);
+       }
+
+        if (vehicle != null) {
                 if (agreement.getSettlementType() == FuelingSettlementType.PREPAID) {
-                    /*
-                    * Deduct the fuel purchase from the prepaid
-                    * balance.
-                    */
                     agreement.setPrepaidBalance(agreement.getPrepaidBalance().subtract(netAmount)); 
                 }
                 else if (agreement.getSettlementType() == FuelingSettlementType.POSTPAID) {
@@ -769,12 +586,6 @@ public class PaymentService {
             
                 fuelingAgreementRepository.save(agreement);
 
-                /*
-                * Both PREPAID and POSTPAID fuel purchases should
-                * appear in the company account ledger.
-                *
-                * Negative amount = fuel consumed/purchased.
-                */
                 CompanyAccountTransaction transaction =
                         CompanyAccountTransaction.builder()
                                 .fuelingAgreement(agreement)
@@ -787,7 +598,7 @@ public class PaymentService {
                                 .build();
 
                 companyAccountTransactionRepository.save(transaction);
-            }
+        }
 
         if (vehicle == null) {
             switch (request.getPaymentMethod()) {
@@ -809,28 +620,37 @@ public class PaymentService {
                 }
                 case CASH -> { // No external payment registration here. 
                 }
+                case OFFLINE_PAYMENT -> {
+                    // The OfflinePayment record has already been created above.
+                    // No CAMS card or transfer registration is performed here.
+                }
                 case MIXED -> { throw new BadRequestException("Mixed payments are not currently supported"); }
             }
         }
 
 
-            if (vehicle == null && savedSale.getPaymentMethod() == PaymentMethod.CASH) {
-                recordCashPayment(savedSale.getId());
-                sale.setSaleStatus(SaleStatus.COMPLETED);
-                return completeCashSale(savedSale.getId());
-            }
+        if (vehicle == null && savedSale.getPaymentMethod() == PaymentMethod.CASH) {
+            recordCashPayment(savedSale.getId());
+            sale.setSaleStatus(SaleStatus.COMPLETED);
+            return completeCashSale(savedSale.getId());
+        }
 
-            if (vehicle != null) {
-                sale.setSaleStatus(SaleStatus.COMPLETED);
-                return completeSale(savedSale.getId(), savedSale.getSaleNumber(), savedSale.getPaymentStatus(), null);
-            }
+        if (vehicle != null && (savedSale.getSettlementType() == SaleSettlementType.POSTPAID || savedSale.getSettlementType() == SaleSettlementType.PREPAID)) {
+            sale.setSaleStatus(SaleStatus.COMPLETED);
+            return completeSale(savedSale.getId(), savedSale.getSaleNumber(), savedSale.getPaymentStatus(), null);
+        }
+
+        if (offlinePaymentResponse != null && savedSale.getPaymentMethod() == PaymentMethod.OFFLINE_PAYMENT) {
+            SaleResponse response = saleMapper.toResponse(savedSale);
+            response.setOfflinePayment(offlinePaymentResponse);
+            return response;
+        }
 
             return saleMapper.toResponse(savedSale);
 
         } 
-        catch (ResourceNotFoundException | BadRequestException e) {
-            throw e;
-        } 
+        catch (ResourceNotFoundException | BadRequestException e) { throw e; } 
+
         catch (ArithmeticException e) {
             throw new BadRequestException("Calculation error during transaction: " + e.getMessage());
         } 

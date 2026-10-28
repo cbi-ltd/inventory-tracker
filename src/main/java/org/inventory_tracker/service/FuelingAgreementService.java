@@ -66,10 +66,8 @@ public class FuelingAgreementService {
 
         FuelingCompanyRequest companyRequest = request.getCompany();
 
-        if (fuelingCompanyRepository.existsByMerchant_IdAndNameIgnoreCase(
-            merchant.getId(), companyRequest.getName())) {
-        throw new DuplicateResourceException(
-                "Fueling company with this name already exists");
+        if (fuelingCompanyRepository.existsByMerchant_IdAndNameIgnoreCase(merchant.getId(), companyRequest.getName())) {
+                throw new DuplicateResourceException("Fueling company with this name already exists");
         }
 
         validateAgreementDates(request.getStartDate(), request.getEndDate());
@@ -127,9 +125,7 @@ public class FuelingAgreementService {
                 Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
                 List<FuelingAgreement> agreements =
-                        fuelingAgreementRepository
-                                .findByMerchant_IdOrderByStartDateDesc(
-                                        merchant.getId());
+                        fuelingAgreementRepository.findByMerchant_IdOrderByStartDateDesc(merchant.getId());
 
                 return fuelingAgreementMapper.toResponseList(agreements);
         }

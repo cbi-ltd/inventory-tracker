@@ -1,7 +1,9 @@
 package org.inventory_tracker.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
+
 import org.inventory_tracker.enums.TerminalMode;
+
+import jakarta.persistence.Column;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -27,4 +29,10 @@ public class UpdateStationRequest {
     private String email;
 
     private TerminalMode terminalMode;
+
+    private String offlinePaymentAccountNumber;
+
+    private String offlinePaymentAccountName;
+
+    private String offlinePaymentBank;
 }

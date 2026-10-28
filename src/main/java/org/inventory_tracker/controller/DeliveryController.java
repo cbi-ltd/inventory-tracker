@@ -69,11 +69,9 @@ public class DeliveryController {
 
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<ApiSuccessResponse<DeliveryResponse>>
-    cancelDelivery(
-            @PathVariable Long id) {
+    cancelDelivery(@PathVariable Long id) {
 
-        DeliveryResponse response =
-                deliveryService.cancelDelivery(id);
+        DeliveryResponse response = deliveryService.cancelDelivery(id);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
@@ -111,8 +109,7 @@ public class DeliveryController {
             @PathVariable String deliveryNumber) {
 
         DeliveryResponse response =
-                deliveryService.getDeliveryByDeliveryNumber(
-                        deliveryNumber);
+                deliveryService.getDeliveryByDeliveryNumber(deliveryNumber);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
@@ -185,8 +182,7 @@ public class DeliveryController {
 
     @PatchMapping("/{id}/reverse")
     public ResponseEntity<ApiSuccessResponse<DeliveryResponse>>reverseDelivery(@PathVariable Long id,
-                @Valid
-                @RequestBody ReverseDeliveryRequest request) {
+                @Valid @RequestBody ReverseDeliveryRequest request) {
 
         DeliveryResponse response = deliveryService.reverseDelivery(id, request);
 
@@ -222,11 +218,9 @@ public class DeliveryController {
 
     @GetMapping("/station/{stationId}")
     public ResponseEntity<ApiSuccessResponse<List<DeliveryResponse>>>
-    getStationDeliveries(
-            @PathVariable Long stationId) {
+    getStationDeliveries(@PathVariable Long stationId) {
 
-        List<DeliveryResponse> response =
-                deliveryService.getStationDeliveries(stationId);
+        List<DeliveryResponse> response = deliveryService.getStationDeliveries(stationId);
         int deliveryCount = response.size();
 
         return ResponseEntity.ok(
@@ -243,8 +237,7 @@ public class DeliveryController {
 
     @GetMapping("/product/{productId}")
     public ResponseEntity<ApiSuccessResponse<List<DeliveryResponse>>>
-    getProductDeliveries(
-            @PathVariable Long productId) {
+    getProductDeliveries(@PathVariable Long productId) {
 
         List<DeliveryResponse> response = deliveryService.getProductDeliveries(productId);
         int deliveryCount = response.size();
@@ -263,12 +256,9 @@ public class DeliveryController {
 
     @GetMapping("/inventory/{stationInventoryId}")
     public ResponseEntity<ApiSuccessResponse<List<DeliveryResponse>>>
-    getInventoryDeliveries(
-            @PathVariable Long stationInventoryId) {
+    getInventoryDeliveries(@PathVariable Long stationInventoryId) {
 
-        List<DeliveryResponse> response =
-                deliveryService.getInventoryDeliveries(
-                        stationInventoryId);
+        List<DeliveryResponse> response = deliveryService.getInventoryDeliveries(stationInventoryId);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
@@ -283,14 +273,11 @@ public class DeliveryController {
 
     @GetMapping("/status/{status}")
     public ResponseEntity<ApiSuccessResponse<List<DeliveryResponse>>>
-    getDeliveriesByStatus(
-            @PathVariable String status) {
+    getDeliveriesByStatus(@PathVariable String status) {
 
-        DeliveryStatus deliveryStatus =
-            DeliveryStatus.valueOf(status.toUpperCase());
+        DeliveryStatus deliveryStatus = DeliveryStatus.valueOf(status.toUpperCase());
 
-        List<DeliveryResponse> response =
-                deliveryService.getDeliveriesByStatus(deliveryStatus);
+        List<DeliveryResponse> response = deliveryService.getDeliveriesByStatus(deliveryStatus);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(
@@ -315,11 +302,7 @@ public class DeliveryController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate endDate) {
 
-        List<DeliveryResponse> response =
-                deliveryService.getDeliveriesBetweenDates(
-                        startDate,
-                        endDate);
-        
+        List<DeliveryResponse> response = deliveryService.getDeliveriesBetweenDates(startDate, endDate);
         int recordCount = response.size();
 
         return ResponseEntity.ok(

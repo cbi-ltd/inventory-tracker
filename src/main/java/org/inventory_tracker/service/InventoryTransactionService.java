@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 
 
 
@@ -114,9 +113,7 @@ public class InventoryTransactionService {
 
         StationInventory stationInventory =
                 stationInventoryRepository.findById(stationInventoryId)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Station inventory not found"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
 
         Station station = stationInventory.getStation();
 
@@ -126,61 +123,39 @@ public class InventoryTransactionService {
         }
 
         if (station.getMerchant() == null) {
-            throw new ResourceNotFoundException(
-                    "Station is not associated with a merchant");
+            throw new ResourceNotFoundException("Station is not associated with a merchant");
         }
 
         // Make sure the inventory belongs to the sale's station.
         if (!station.getId().equals(expectedStation.getId())) {
-            throw new ResourceNotFoundException(
-                    "Station inventory not found");
+            throw new ResourceNotFoundException("Station inventory not found");
         }
 
         // Make sure the inventory is for the sale's product.
-        if (!stationInventory.getProduct().getId()
-                .equals(expectedProduct.getId())) {
+        if (!stationInventory.getProduct().getId().equals(expectedProduct.getId())) {
 
-            throw new ResourceNotFoundException(
-                    "Station inventory not found");
+            throw new ResourceNotFoundException("Station inventory not found");
         }
 
-        BigDecimal balanceBefore =
-                stationInventory.getCurrentQuantity();
+        BigDecimal balanceBefore = stationInventory.getCurrentQuantity();
+        validateTransaction(balanceBefore, quantity, InventoryTransactionType.SALE);
 
-        validateTransaction(
-                balanceBefore,
-                quantity,
-                InventoryTransactionType.SALE);
-
-        BigDecimal balanceAfter =
-                calculateNewBalance(
-                        balanceBefore,
-                        quantity,
-                        InventoryTransactionType.SALE);
-
+        BigDecimal balanceAfter = calculateNewBalance(balanceBefore, quantity, InventoryTransactionType.SALE);
         stationInventory.setCurrentQuantity(balanceAfter);
-
         stationInventoryRepository.save(stationInventory);
 
-        InventoryTransaction transaction =
-                new InventoryTransaction();
-
+        InventoryTransaction transaction =new InventoryTransaction();
         transaction.setStationInventory(stationInventory);
         transaction.setStation(stationInventory.getStation());
         transaction.setProduct(stationInventory.getProduct());
-        transaction.setTransactionType(
-                InventoryTransactionType.SALE);
+        transaction.setTransactionType(InventoryTransactionType.SALE);
         transaction.setQuantity(quantity);
-        transaction.setBalanceBeforeTransaction(
-                balanceBefore);
-        transaction.setBalanceAfterTransaction(
-                balanceAfter);
+        transaction.setBalanceBeforeTransaction(balanceBefore);
+        transaction.setBalanceAfterTransaction(balanceAfter);
         transaction.setRemarks(remarks);
         transaction.setReferenceNumber(referenceNumber);
-        transaction.setBusinessDate(
-                ShiftUtil.businessDate(station.getTimeZone()));
-        transaction.setTransactionTime(
-                LocalDateTime.now(station.getTimeZone()));
+        transaction.setBusinessDate(ShiftUtil.businessDate(station.getTimeZone()));
+        transaction.setTransactionTime(LocalDateTime.now(station.getTimeZone()));
 
         return inventoryTransactionRepository.save(transaction);
     }
