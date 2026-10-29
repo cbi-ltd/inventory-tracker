@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.inventory_tracker.config.mapper.FuelingAgreementMapper;
 import org.inventory_tracker.config.mapper.FuelingCompanyMapper;
+import org.inventory_tracker.config.mapper.VehicleMapper;
 import org.inventory_tracker.dto.request.CreateFuelingAgreementRequest;
 import org.inventory_tracker.dto.request.FuelingCompanyRequest;
 import org.inventory_tracker.dto.request.RecordPaymentRequest;
@@ -17,6 +18,7 @@ import org.inventory_tracker.dto.response.CompanyAccountTransactionResponse;
 import org.inventory_tracker.dto.response.FuelingAgreementBalanceResponse;
 import org.inventory_tracker.dto.response.FuelingAgreementResponse;
 import org.inventory_tracker.dto.response.FuelingCompanyResponse;
+import org.inventory_tracker.dto.response.VehicleResponse;
 import org.inventory_tracker.entity.CompanyAccountTransaction;
 import org.inventory_tracker.entity.FuelingAgreement;
 import org.inventory_tracker.entity.FuelingCompany;
@@ -33,6 +35,7 @@ import org.inventory_tracker.repository.CompanyAccountTransactionRepository;
 import org.inventory_tracker.repository.FuelingAgreementRepository;
 import org.inventory_tracker.repository.FuelingCompanyRepository;
 import org.inventory_tracker.repository.TerminalRepository;
+import org.inventory_tracker.repository.VehicleRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.inventory_tracker.security.*;
@@ -51,6 +54,9 @@ public class FuelingAgreementService {
     private final CompanyAccountTransactionRepository companyAccountTransactionRepository;
     private final FuelingAgreementMapper fuelingAgreementMapper;
     private final AuthenticatedUserService authenticatedUserService;
+    private final VehicleMapper vehicleMapper;
+    private final VehicleRepository vehicleRepository;
+
 
     @Transactional 
     public FuelingAgreementResponse createAgreement(CreateFuelingAgreementRequest request) {
@@ -88,8 +94,7 @@ public class FuelingAgreementService {
         //     throw new DuplicateResourceException("An active fueling agreement already exists for this company for the selected period");
         // }
 
-        FuelingCompany savedCompany =
-            fuelingCompanyRepository.save(company);
+        FuelingCompany savedCompany = fuelingCompanyRepository.save(company);
 
         FuelingAgreement agreement = FuelingAgreement.builder()
                 .company(savedCompany)
@@ -206,12 +211,29 @@ public class FuelingAgreementService {
                         .filter(agreement -> !agreement.getStartDate().isAfter(businessDate))
                         .filter(agreement -> agreement.getEndDate() == null
                                         || !agreement.getEndDate().isBefore(businessDate))
-                        .map(FuelingAgreement::getCompany)
+                        // .map(FuelingAgreement::getCompany)
                         // .distinct()
-                        .collect(Collectors.toMap(FuelingCompany::getId, Function.identity(), (first, second) -> first))
+                        // .collect(Collectors.toMap(FuelingCompany::getId, Function.identity(), (first, second) -> first))
+                        .collect(Collectors.toMap(agreement -> agreement.getCompany().getId(), Function.identity(), (first, second) -> first))
                         .values()
                         .stream()
-                        .map(fuelingCompanyMapper::toResponse)
+                        // .map(fuelingCompanyMapper::toResponse)
+                        .map(agreement -> {
+                                FuelingCompany company = agreement.getCompany();
+                                FuelingCompanyResponse response = fuelingCompanyMapper.toResponse(company);
+
+                                response.setOutstandingBalance(agreement.getOutstandingBalance());
+                                response.setCreditLimit(agreement.getCreditLimit());
+                                response.setPrepaidBalance(agreement.getPrepaidBalance());
+                                response.setSettlementType(agreement.getSettlementType());
+
+                                List<VehicleResponse> vehicles = vehicleRepository
+                                                .findByCompany_IdAndActiveTrue(company.getId())
+                                                .stream().map(vehicleMapper::toResponse).toList();
+
+                                response.setVehicles(vehicles);
+                                return response;
+                        })
                         .toList();
         }
         

@@ -1,6 +1,9 @@
 package org.inventory_tracker.entity;
 
 
+import java.util.ArrayList;
+import java.util.List;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -37,6 +40,9 @@ public class FuelingCompany extends BaseEntity {
     private String email;
 
     private String address;
+
+    @OneToMany(mappedBy = "company", fetch = FetchType.LAZY)
+    private List<Vehicle> vehicles = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "merchant_id", nullable = false)

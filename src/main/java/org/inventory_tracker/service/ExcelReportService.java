@@ -38,8 +38,7 @@ public class ExcelReportService {
     public byte[] generateReportWorkbook(ReportExportData data) {
 
         try (Workbook workbook = new XSSFWorkbook();
-             ByteArrayOutputStream outputStream =
-                     new ByteArrayOutputStream()) {
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 
             createAttendantsSheet(workbook, data.getAttendants());
             createDeliveriesSheet(workbook, data.getDeliveries());
@@ -64,9 +63,7 @@ public class ExcelReportService {
     }
 
 
-    private void createAttendantsSheet(
-            Workbook workbook,
-            List<AttendantReportResponse> reports) {
+    private void createAttendantsSheet(Workbook workbook, List<AttendantReportResponse> reports) {
 
         String[] headers = {
                 "Attendant ID",
@@ -82,12 +79,7 @@ public class ExcelReportService {
                 "Transfers Initiated"
         };
 
-        Sheet sheet = createSheet(
-                workbook,
-                "Attendants",
-                headers
-        );
-
+        Sheet sheet = createSheet(workbook, "Attendants", headers);
         int rowIndex = 1;
 
         for (AttendantReportResponse report : reports) {
@@ -111,9 +103,7 @@ public class ExcelReportService {
     }
 
 
-    private void createDeliveriesSheet(
-            Workbook workbook,
-            List<DeliveryReportResponse> reports) {
+    private void createDeliveriesSheet(Workbook workbook, List<DeliveryReportResponse> reports) {
 
         String[] headers = {
                 "Delivery ID",
@@ -134,12 +124,7 @@ public class ExcelReportService {
                 "Reversal Reason"
         };
 
-        Sheet sheet = createSheet(
-                workbook,
-                "Deliveries",
-                headers
-        );
-
+        Sheet sheet = createSheet(workbook, "Deliveries",headers);
         int rowIndex = 1;
 
         for (DeliveryReportResponse report : reports) {
@@ -171,9 +156,7 @@ public class ExcelReportService {
     }
 
 
-    private void createInventorySheet(
-            Workbook workbook,
-            List<InventoryReportResponse> reports) {
+    private void createInventorySheet(Workbook workbook, List<InventoryReportResponse> reports) {
 
         String[] headers = {
                 "Station ID",
@@ -187,12 +170,7 @@ public class ExcelReportService {
                 "Below Reorder Level"
         };
 
-        Sheet sheet = createSheet(
-                workbook,
-                "Inventory",
-                headers
-        );
-
+        Sheet sheet = createSheet(workbook, "Inventory", headers);
         int rowIndex = 1;
 
         for (InventoryReportResponse report : reports) {
@@ -214,9 +192,7 @@ public class ExcelReportService {
     }
 
 
-    private void createInventoryTransactionsSheet(
-            Workbook workbook,
-            List<InventoryTransactionReportResponse> reports) {
+    private void createInventoryTransactionsSheet(Workbook workbook, List<InventoryTransactionReportResponse> reports) {
 
         String[] headers = {
                 "Transaction ID",
@@ -235,12 +211,7 @@ public class ExcelReportService {
                 "Transaction Time"
         };
 
-        Sheet sheet = createSheet(
-                workbook,
-                "Inventory Transactions",
-                headers
-        );
-
+        Sheet sheet = createSheet(workbook,"Inventory Transactions",headers);
         int rowIndex = 1;
 
         for (InventoryTransactionReportResponse report : reports) {
@@ -835,9 +806,7 @@ public class ExcelReportService {
 
     public byte[] exportDeliveryReport(List<DeliveryReportResponse> reports) {
 
-        return createWorkbook(
-                "Delivery Report",
-                "Deliveries",
+        return createWorkbook("Delivery Report", "Deliveries",
                 new String[]{
                         "Delivery ID",
                         "Delivery Number",
@@ -878,8 +847,7 @@ public class ExcelReportService {
         );
     }
 
-    public byte[] exportInventoryReport(
-            List<InventoryReportResponse> reports) {
+    public byte[] exportInventoryReport(List<InventoryReportResponse> reports) {
 
         return createWorkbook(
                 "Inventory Report",
@@ -910,8 +878,7 @@ public class ExcelReportService {
         );
     }
 
-    public byte[] exportInventoryTransactionReport(
-            List<InventoryTransactionReportResponse> reports) {
+    public byte[] exportInventoryTransactionReport(List<InventoryTransactionReportResponse> reports) {
 
         return createWorkbook(
                 "Inventory Transaction Report",
@@ -952,8 +919,7 @@ public class ExcelReportService {
         );
     }
 
-    public byte[] exportPaymentReport(
-            List<PaymentReportResponse> reports) {
+    public byte[] exportPaymentReport(List<PaymentReportResponse> reports) {
 
         return createWorkbook(
                 "Payment Report",
@@ -996,8 +962,7 @@ public class ExcelReportService {
         );
     }
 
-    public byte[] exportPriceHistoryReport(
-            List<PriceHistoryReportResponse> reports) {
+    public byte[] exportPriceHistoryReport(List<PriceHistoryReportResponse> reports) {
 
         return createWorkbook(
                 "Price History Report",
@@ -1032,8 +997,7 @@ public class ExcelReportService {
         );
     }
 
-    public byte[] exportProductReport(
-            List<ProductReportResponse> reports) {
+    public byte[] exportProductReport(List<ProductReportResponse> reports) {
 
         return createWorkbook(
                 "Product Report",
@@ -1069,8 +1033,7 @@ public class ExcelReportService {
     }
 
 
-    public byte[] exportPumpAssignmentReport(
-            List<PumpAssignmentReportResponse> reports) {
+    public byte[] exportPumpAssignmentReport(List<PumpAssignmentReportResponse> reports) {
 
         return createWorkbook(
                 "Pump Assignment Report",
@@ -1109,8 +1072,7 @@ public class ExcelReportService {
         );
     }
 
-    public byte[] exportPumpAuditReport(
-            List<PumpAuditReportResponse> reports) {
+    public byte[] exportPumpAuditReport(List<PumpAuditReportResponse> reports) {
 
         return createWorkbook(
                 "Pump Audit Report",
@@ -1193,8 +1155,7 @@ public class ExcelReportService {
         );
     }
 
-    public byte[] exportPumpReport(
-            List<PumpReportResponse> reports) {
+    public byte[] exportPumpReport(List<PumpReportResponse> reports) {
 
         return createWorkbook(
                 "Pump Report",
@@ -1225,8 +1186,7 @@ public class ExcelReportService {
         );
     }
 
-    public byte[] exportStationReport(
-            List<StationReportResponse> reports) {
+    public byte[] exportStationReport(List<StationReportResponse> reports) {
 
         return createWorkbook(
                 "Station Report",
@@ -1274,90 +1234,55 @@ public class ExcelReportService {
 
         try (
                 Workbook workbook = new XSSFWorkbook();
-                ByteArrayOutputStream outputStream =
-                        new ByteArrayOutputStream()
-        ) {
-
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream()
+        ) 
+        {
             Sheet sheet = workbook.createSheet(sheetName);
-
-            createHeaderRow(
-                    workbook,
-                    sheet,
-                    headers
-            );
+            createHeaderRow(workbook, sheet, headers);
 
             int rowIndex = 1;
-
             for (T report : reports) {
-
                 Row row = sheet.createRow(rowIndex++);
-
                 rowWriter.write(row, report);
             }
 
-            formatSheet(
-                    sheet,
-                    headers.length,
-                    rowIndex
-            );
-
+            formatSheet(sheet, headers.length, rowIndex);
             workbook.write(outputStream);
 
             return outputStream.toByteArray();
 
-        } catch (IOException e) {
-
-            throw new IllegalStateException(
-                    "Failed to generate " + reportTitle,
-                    e
-            );
+        } 
+        catch (IOException e) {
+            throw new IllegalStateException("Failed to generate " + reportTitle, e);
         }
     }
 
-    private void createHeaderRow(
-            Workbook workbook,
-            Sheet sheet,
-            String[] headers) {
-
+    private void createHeaderRow(Workbook workbook, Sheet sheet, String[] headers) {
         Row headerRow = sheet.createRow(0);
-
-        CellStyle headerStyle =
-                workbook.createCellStyle();
+        CellStyle headerStyle = workbook.createCellStyle();
 
         Font font = workbook.createFont();
         font.setBold(true);
 
         headerStyle.setFont(font);
+        headerStyle.setAlignment(HorizontalAlignment.CENTER);
 
-        headerStyle.setAlignment(
-                HorizontalAlignment.CENTER
-        );
-
-        headerStyle.setVerticalAlignment(
-                VerticalAlignment.CENTER
-        );
+        headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
 
         for (int i = 0; i < headers.length; i++) {
-
             Cell cell = headerRow.createCell(i);
-
             cell.setCellValue(headers[i]);
-
             cell.setCellStyle(headerStyle);
         }
     }
 
-    private void formatSheet(
-            Sheet sheet,
-            int columnCount,
-            int rowCount) {
+    private void formatSheet(Sheet sheet, int columnCount, int rowCount) {
 
         // Keep header visible while scrolling
         sheet.createFreezePane(0, 1);
 
         // Enable Excel filtering
         if (rowCount > 1) {
-
             sheet.setAutoFilter(
                     new org.apache.poi.ss.util.CellRangeAddress(
                             0,
@@ -1370,22 +1295,17 @@ public class ExcelReportService {
 
         // Automatically size columns
         for (int i = 0; i < columnCount; i++) {
-
             sheet.autoSizeColumn(i);
 
             // Prevent extremely wide columns
             int width = sheet.getColumnWidth(i);
 
-            sheet.setColumnWidth(
-                    i,
-                    Math.min(width + 500, 15000)
-                                );
+            sheet.setColumnWidth(i, Math.min(width + 500, 15000));
         }
     }
 
    @FunctionalInterface
     private interface RowWriter<T> {
-
         void write(Row row, T data);
     }
 }
