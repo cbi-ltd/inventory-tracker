@@ -54,9 +54,9 @@ public class FuelingAgreementController {
     @Operation(summary = "Get Agreements", description = "This endpoint retrieves all agreements from the database.")
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<List<FuelingAgreementResponse>>>
-    getAgreements(@RequestParam Long stationId) {
+    getAgreements() {
 
-        List<FuelingAgreementResponse> response = fuelingAgreementService.getAgreements(stationId);
+        List<FuelingAgreementResponse> response = fuelingAgreementService.getAgreements();
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreements retrieved successfully.", response));

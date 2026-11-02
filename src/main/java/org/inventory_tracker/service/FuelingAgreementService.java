@@ -132,11 +132,11 @@ public class FuelingAgreementService {
         }
 
         @Transactional(readOnly = true)
-        public List<FuelingAgreementResponse> getAgreements(Long stationId) {
+        public List<FuelingAgreementResponse> getAgreements() {
                 Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
                 List<FuelingAgreement> agreements =
-                        fuelingAgreementRepository.findByMerchant_IdAndStation_IdOrderByStartDateDesc(merchant.getId(), stationId);
+                        fuelingAgreementRepository.findByMerchant_IdOrderByStartDateDesc(merchant.getId());
 
                 return fuelingAgreementMapper.toResponseList(agreements);
         }
