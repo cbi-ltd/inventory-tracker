@@ -9,15 +9,35 @@ import java.util.List;
 
 
 public interface FuelingAgreementRepository extends JpaRepository<FuelingAgreement, Long> {
-    
-    List<FuelingAgreement> findByCompany_NameContainingIgnoreCaseAndMerchant_IdAndActiveTrue(
-        String companyName,
-        Long merchantId
+
+    Optional<FuelingAgreement>
+    findFirstByCompany_IdAndMerchant_IdAndStation_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByIdDesc(  
+        Long companyId,
+        Long merchantId,
+        Long stationId,
+        LocalDate businessDate,
+        LocalDate businessDate2
     );
 
-    List<FuelingAgreement> findByMerchant_IdAndSettlementTypeAndActiveTrue(
-        Long merchantId,
-        FuelingSettlementType settlementType);
+    Optional<FuelingAgreement> findByIdAndMerchant_IdAndStation_IdAndActiveTrue(Long companyId, Long merchantId, Long stationId);
+
+    Optional<FuelingAgreement> findByIdAndMerchant_IdAndStation_Id(Long id, Long merchantId, Long stationId);
+
+    List<FuelingAgreement> findByMerchant_IdAndStation_IdOrderByStartDateDesc(Long merchantId, Long stationId);
+
+    List<FuelingAgreement>findByCompany_IdAndMerchant_IdAndStation_IdOrderByStartDateDesc(
+                Long companyId,
+                Long merchantId,
+                Long stationId);
+
+    List<FuelingAgreement>findByMerchant_IdAndStation_IdAndSettlementTypeAndActiveTrue(
+                Long merchantId,
+                Long stationId,
+                FuelingSettlementType settlementType);
+    
+    List<FuelingAgreement> findByCompany_NameContainingIgnoreCaseAndMerchant_IdAndActiveTrue(String companyName, Long merchantId);
+
+    List<FuelingAgreement> findByMerchant_IdAndSettlementTypeAndActiveTrue(Long merchantId, FuelingSettlementType settlementType);
 
     Optional<FuelingAgreement> findFirstByCompany_IdAndMerchant_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByIdDesc(
         Long companyId,
@@ -30,23 +50,21 @@ public interface FuelingAgreementRepository extends JpaRepository<FuelingAgreeme
 
     List<FuelingAgreement> findByMerchant_IdOrderByStartDateDesc(Long merchantId);
 
-    List<FuelingAgreement> findByCompany_IdAndMerchant_IdOrderByStartDateDesc(
-            Long companyId,
-            Long merchantId);
+    List<FuelingAgreement> findByCompany_IdAndMerchant_IdOrderByStartDateDesc(Long companyId, Long merchantId);
 
-    Optional<FuelingAgreement> findByIdAndMerchant_Id(
-            Long id,
-            Long merchantId);
+    Optional<FuelingAgreement> findByIdAndMerchant_Id(Long id, Long merchantId);
 
-    boolean existsByCompany_IdAndMerchant_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+    boolean existsByCompany_IdAndMerchant_IdAndStation_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
             Long companyId,
             Long merchantId,
+            Long stationId,
             LocalDate date1,
             LocalDate date2);
 
-    boolean existsByCompany_IdAndMerchant_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndIdNot(
+    boolean existsByCompany_IdAndMerchant_IdAndStation_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndIdNot(
             Long companyId,
             Long merchantId,
+            Long stationId,
             LocalDate date1,
             LocalDate date2,
             Long agreementId);

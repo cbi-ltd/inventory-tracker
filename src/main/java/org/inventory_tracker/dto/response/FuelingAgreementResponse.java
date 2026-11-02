@@ -23,6 +23,8 @@ public class FuelingAgreementResponse {
     private String companyName;
 
     private Long merchantId;
+    private Long stationId;
+    private String stationName;
 
     private FuelingSettlementType settlementType;
 

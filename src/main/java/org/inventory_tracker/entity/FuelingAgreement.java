@@ -32,6 +32,10 @@ public class FuelingAgreement extends BaseEntity {
     @JoinColumn(name = "merchant_id", nullable = false)
     private Merchant merchant;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "station_id", nullable = false)
+    private Station station;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private FuelingSettlementType settlementType;

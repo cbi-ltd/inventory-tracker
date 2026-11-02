@@ -3,11 +3,9 @@ package org.inventory_tracker.service;
 
 import org.inventory_tracker.entity.InventoryTransaction;
 import org.inventory_tracker.entity.Product;
-// import org.inventory_tracker.entity.Merchant;
 import org.inventory_tracker.repository.InventoryTransactionRepository;
 import org.inventory_tracker.enums.InventoryTransactionType;
 import org.inventory_tracker.entity.StationInventory;
-// import org.inventory_tracker.entity.security.MerchantContext;
 import org.inventory_tracker.repository.StationInventoryRepository;
 import org.inventory_tracker.security.AuthenticatedUserService;
 import org.inventory_tracker.security.MerchantPrincipal;

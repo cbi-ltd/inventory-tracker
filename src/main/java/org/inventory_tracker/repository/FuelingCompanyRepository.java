@@ -13,20 +13,11 @@ public interface FuelingCompanyRepository extends JpaRepository<FuelingCompany, 
 
     Optional<FuelingCompany> findByIdAndMerchant_Id(Long id, Long merchantId);
 
-
     boolean existsByMerchant_IdAndNameIgnoreCase(Long merchantId, String name);
 
     boolean existsByMerchant_IdAndCodeIgnoreCase(Long merchantId, String code);
 
-    boolean existsByMerchant_IdAndNameIgnoreCaseAndIdNot(
-            Long merchantId,
-            String name,
-            Long id
-    );
+    boolean existsByMerchant_IdAndNameIgnoreCaseAndIdNot(Long merchantId, String name, Long id);
 
-    boolean existsByMerchant_IdAndCodeIgnoreCaseAndIdNot(
-            Long merchantId,
-            String code,
-            Long id
-    );
+    boolean existsByMerchant_IdAndCodeIgnoreCaseAndIdNot(Long merchantId, String code, Long id);
 }

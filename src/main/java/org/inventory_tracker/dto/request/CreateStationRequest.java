@@ -31,4 +31,10 @@ public class CreateStationRequest {
     private String merchantAccountNumber;
 
     private TerminalMode terminalMode;
+
+    private String offlinePaymentAccountNumber;
+
+    private String offlinePaymentAccountName;
+
+    private String offlinePaymentBank;
 }

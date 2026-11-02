@@ -266,25 +266,16 @@ public class PaymentService {
                 throw new BadRequestException("Payment method is required");
             }
 
-            Terminal terminal =
-                    terminalRepository
-                            .findByTerminalSerialNumberAndActiveTrue(
-                                    request.getTerminalSerialNumber()
-                            )
-                            .orElseThrow(() ->
-                                    new ResourceNotFoundException(
-                                            "Active terminal not found"
-                                    )
-                            );
+            Terminal terminal = terminalRepository
+                            .findByTerminalSerialNumberAndActiveTrue(request.getTerminalSerialNumber())
+                            .orElseThrow(() -> new ResourceNotFoundException("Active terminal not found"));
 
             Station station = terminal.getStation();
-
             if (station == null) {
                 throw new ResourceNotFoundException("Terminal is not associated with a station");
             }
 
             Merchant merchant = station.getMerchant();
-
             if (merchant == null) {
                 throw new ResourceNotFoundException("Station is not associated with a merchant");
             }
@@ -292,16 +283,13 @@ public class PaymentService {
             LocalDate businessDate = ShiftUtil.businessDate(station.getTimeZone());
             Shift shift = ShiftUtil.currentShift(station.getTimeZone());
 
-            if (station.getTerminalMode() == TerminalMode.MULTI_PUMP
-                    && request.getPumpId() == null) {
-
+            if (station.getTerminalMode() == TerminalMode.MULTI_PUMP && request.getPumpId() == null) {
                 throw new BadRequestException("Pump ID is required for multi-pump stations");
             }
 
             Pump pump = pumpRepository.findByIdAndStation_IdAndStation_Merchant_CamsMerchantId(
                                     request.getPumpId(), station.getId(), merchant.getCamsMerchantId())
-                            .orElseThrow(() ->
-                                    new ResourceNotFoundException("Pump not found for this terminal's station"));
+                                        .orElseThrow(() -> new ResourceNotFoundException("Pump not found for this terminal's station"));
 
             if (!Boolean.TRUE.equals(pump.getActive())) {
                 throw new BadRequestException("Pump is inactive");
@@ -321,61 +309,33 @@ public class PaymentService {
             PumpAssignment assignment =
                     pumpAssignmentRepository
                             .findByTerminal_IdAndPump_IdAndAssignmentDateAndShiftAndActiveTrue(
-                                    terminal.getId(),
-                                    pump.getId(),
-                                    businessDate,
-                                    shift
-                            )
-                            .orElseThrow(() ->
-                                    new ResourceNotFoundException(
-                                            "Pump is not currently assigned to this terminal for the current shift"
-                                    )
-                            );
+                                    terminal.getId(),pump.getId(),businessDate,shift)
+                            .orElseThrow(() -> new ResourceNotFoundException("Pump is not currently assigned to this terminal for the current shift"));
 
             if (assignment.getStation() == null
-                    || !assignment.getStation()
-                            .getId()
-                            .equals(station.getId())) {
+                    || !assignment.getStation().getId().equals(station.getId())) {
 
-                throw new BadRequestException(
-                        "Pump assignment does not belong to this station"
-                );
+                throw new BadRequestException("Pump assignment does not belong to this station");
             }
 
-            if (assignment.getTerminal() == null
-                    || !assignment.getTerminal()
-                            .getId()
-                            .equals(terminal.getId())) {
-
-                throw new BadRequestException(
-                        "Pump assignment does not belong to this terminal"
-                );
+            if (assignment.getTerminal() == null|| !assignment.getTerminal().getId().equals(terminal.getId())) {
+                throw new BadRequestException("Pump assignment does not belong to this terminal");
             }
 
-            if (assignment.getPump() == null
-                    || !assignment.getPump()
-                            .getId()
-                            .equals(pump.getId())) {
-
-                throw new BadRequestException(
-                        "Pump assignment does not belong to this pump"
-                );
+            if (assignment.getPump() == null || !assignment.getPump().getId().equals(pump.getId())) {
+                throw new BadRequestException("Pump assignment does not belong to this pump");
             }
 
             Attendant attendant = assignment.getAttendant();
 
             if (attendant == null) {
-                throw new ResourceNotFoundException(
-                        "No attendant assigned to this pump"
-                );
+                throw new ResourceNotFoundException("No attendant assigned to this pump");
             }
 
             Product product = pump.getProduct();
 
             if (product == null) {
-                throw new ResourceNotFoundException(
-                        "No product configured for this pump"
-                );
+                throw new ResourceNotFoundException("No product configured for this pump");
             }
 
             StationInventory inventory = stationInventoryRepository
@@ -384,38 +344,27 @@ public class PaymentService {
                                     merchant.getCamsMerchantId(),
                                     product.getId()
                             )
-                            .orElseThrow(() ->
-                                    new ResourceNotFoundException(
-                                            "Station inventory not found"
-                                    )
-                            );
+                            .orElseThrow(() -> new ResourceNotFoundException("Station inventory not found"));
 
             // BigDecimal costPerUnit = inventory.getCostPerUnit();
             BigDecimal sellingPrice = inventory.getSellingPrice();
 
             if (sellingPrice == null) {
-                throw new BadRequestException(
-                        "Selling price is not configured for this product"
-                );
+                throw new BadRequestException("Selling price is not configured for this product");
             }
 
             if (sellingPrice.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new BadRequestException(
-                        "Selling price must be greater than zero"
-                );
+                throw new BadRequestException("Selling price must be greater than zero");
             }
 
             BigDecimal quantity;
             BigDecimal grossAmount;
 
             if (request.getQuantity() != null) {
-
                 quantity = request.getQuantity();
 
                 if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new BadRequestException(
-                            "Quantity must be greater than zero"
-                    );
+                    throw new BadRequestException("Quantity must be greater than zero");
                 }
 
                 grossAmount = quantity.multiply(sellingPrice);
@@ -465,9 +414,7 @@ public class PaymentService {
             vehicle = vehicleRepository.findById(request.getVehicleId())
                             .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found"));
 
-            if (vehicle.getMerchant() == null
-                    || !vehicle.getMerchant() .getId().equals(merchant.getId())) {
-
+            if (vehicle.getMerchant() == null || !vehicle.getMerchant() .getId().equals(merchant.getId())) {
                 throw new ResourceNotFoundException("Vehicle not found");
             }
 
@@ -477,12 +424,13 @@ public class PaymentService {
 
             FuelingCompany company = vehicle.getCompany();
             agreement = fuelingAgreementRepository
-                            .findFirstByCompany_IdAndMerchant_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByIdDesc(
+                            .findFirstByCompany_IdAndMerchant_IdAndStation_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByIdDesc(
                                     company.getId(),
                                     merchant.getId(),
+                                    station.getId(),
                                     businessDate,
                                     businessDate)
-                                        .orElseThrow(() -> new BadRequestException("No active fueling agreement found for this vehicle's company"));
+                                        .orElseThrow(() -> new BadRequestException("No active fueling agreement found for this vehicle's company at this station"));
 
             if (!Boolean.TRUE.equals(agreement.getActive())) {
                 throw new BadRequestException("Vehicle fueling agreement is inactive");
@@ -492,11 +440,11 @@ public class PaymentService {
                 throw new ResourceNotFoundException("Fueling agreement not found");
             }
 
-            if (businessDate.isBefore(
-                        agreement.getStartDate())
-                    || businessDate.isAfter(
-                        agreement.getEndDate())) {
+            if (agreement.getStation() == null || !agreement.getStation().getId().equals(station.getId())) {
+                throw new BadRequestException("Fueling agreement does not belong to this station");
+            }
 
+            if (businessDate.isBefore(agreement.getStartDate()) || businessDate.isAfter(agreement.getEndDate())) {
                 throw new BadRequestException("Vehicle fueling agreement is outside its active period");
             }
 
@@ -726,8 +674,8 @@ public class PaymentService {
                     .and((root, query, criteriaBuilder) -> criteriaBuilder.equal(
                                     root.get("sale").get("station")
                                             .get("merchant").get("id"), principal.getMerchantDbId()));
-        return paymentRepository.findAll(specification).stream()
-                        .map(paymentMapper::toResponse).toList();
+
+        return paymentRepository.findAll(specification).stream().map(paymentMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)

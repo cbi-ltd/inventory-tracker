@@ -29,4 +29,10 @@ public class StationResponse {
     private Boolean active;
 
     private TerminalMode terminalMode;
+
+    private String offlinePaymentAccountNumber;
+
+    private String offlinePaymentAccountName;
+
+    private String offlinePaymentBank;
 }

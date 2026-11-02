@@ -9,15 +9,14 @@ import java.util.List;
 
 
 
-@Mapper(
-        componentModel = "spring",
-        unmappedTargetPolicy = ReportingPolicy.IGNORE
-)
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface FuelingAgreementMapper {
 
     @Mapping(source = "company.id", target = "companyId")
     @Mapping(source = "company.name", target = "companyName")
     @Mapping(source = "merchant.id", target = "merchantId")
+    @Mapping(source = "station.id", target = "stationId")
+    @Mapping(source = "station.name", target = "stationName")
     FuelingAgreementResponse toResponse(FuelingAgreement agreement);
 
     List<FuelingAgreementResponse> toResponseList(List<FuelingAgreement> agreements);

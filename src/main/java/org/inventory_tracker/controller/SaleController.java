@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
 import java.util.List;
@@ -29,11 +30,13 @@ public class SaleController {
     private final PaymentService paymentService;
 
     @PostMapping
+    @SecurityRequirements
     public SaleResponse createSale(@Valid @RequestBody CreateSaleRequest request) {
         return paymentService.createSale(request);
     }
 
     @PostMapping("/{saleId}/complete-cash")
+    @SecurityRequirements
     public SaleResponse completeCashSale(@PathVariable Long saleId) {
         return paymentService.completeCashSale(saleId);
     }

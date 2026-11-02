@@ -10,8 +10,7 @@ import java.util.List;
 
 public class DeliverySpecification {
 
-    private DeliverySpecification() {
-    }
+    private DeliverySpecification() {}
 
     public static Specification<Delivery> filter(DeliveryFilterRequest request, Long merchantDbId) {
 

@@ -37,16 +37,10 @@ public class StationService {
         //                         .orElseThrow(() -> new ResourceNotFoundException("Merchant not found"));
 
         stationRepository.findByCodeIgnoreCase(request.getCode())
-                .ifPresent(station -> {
-                    throw new DuplicateResourceException(
-                            "Station code already exists");
-                });
+                .ifPresent(station -> { throw new DuplicateResourceException("Station code already exists");});
 
         stationRepository.findByNameIgnoreCase(request.getName())
-                .ifPresent(station -> {
-                    throw new DuplicateResourceException(
-                            "Station name already exists");
-                });
+                .ifPresent(station -> { throw new DuplicateResourceException("Station name already exists"); });
 
                 // HAVE TO VERIFY THIS IF IT IS PROVIDED
         // if(request.getMerchantAccountNumber() != merchant.getAccountNumber()){}

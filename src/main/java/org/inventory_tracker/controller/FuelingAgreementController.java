@@ -54,9 +54,9 @@ public class FuelingAgreementController {
     @Operation(summary = "Get Agreements", description = "This endpoint retrieves all agreements from the database.")
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<List<FuelingAgreementResponse>>>
-    getAgreements() {
+    getAgreements(@RequestParam Long stationId) {
 
-        List<FuelingAgreementResponse> response = fuelingAgreementService.getAgreements();
+        List<FuelingAgreementResponse> response = fuelingAgreementService.getAgreements(stationId);
 
         return ResponseEntity.ok(
                 new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreements retrieved successfully.", response));
@@ -65,10 +65,10 @@ public class FuelingAgreementController {
     @Operation(summary = "Get Agreement", description = "This endpoint retrieves a specific agreement from the database.")
     @GetMapping("/{id}")
     public ResponseEntity<ApiSuccessResponse<FuelingAgreementResponse>>
-    getAgreement(@PathVariable Long id) {
+    getAgreement(@PathVariable Long id, @RequestParam Long stationId) {
 
         return ResponseEntity.ok(
-                new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement retrieved successfully.", fuelingAgreementService.getAgreement(id)));
+                new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement retrieved successfully.", fuelingAgreementService.getAgreement(id, stationId)));
     }
 
     @Operation(summary = "Get POS Agreement", description = "Retrieves a fueling agreement by ID for the specified POS terminal.")
@@ -130,60 +130,50 @@ public class FuelingAgreementController {
     @Operation(summary = "Update Agreement", description = "This endpoint updates a specific agreement in the database.")
     @PutMapping("/{id}")
     public ResponseEntity<ApiSuccessResponse<FuelingAgreementResponse>>
-    updateAgreement(@PathVariable Long id, @Valid @RequestBody UpdateFuelingAgreementRequest request) {
-        return ResponseEntity.ok(
-                new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement updated successfully.", fuelingAgreementService.updateAgreement(
-                                id,
-                                request)));
+    updateAgreement(@PathVariable Long id, @RequestParam Long stationId, @Valid @RequestBody UpdateFuelingAgreementRequest request) {
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement updated successfully.", fuelingAgreementService.updateAgreement(id, stationId, request)));
     }
 
     @Operation(summary = "Activate Agreement", description = "This endpoint activates a specific agreement in the database.")
     @PatchMapping("/{id}/activate")
-    public ResponseEntity<ApiSuccessResponse<FuelingAgreementResponse>>
-    activateAgreement(@PathVariable Long id) {
+    public ResponseEntity<ApiSuccessResponse<FuelingAgreementResponse>>activateAgreement(@PathVariable Long id, @RequestParam Long stationId) {
 
-        return ResponseEntity.ok(
-                new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement activated successfully.", fuelingAgreementService.activateAgreement(id)));
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement activated successfully.", fuelingAgreementService.activateAgreement(id, stationId)));
     }
 
     @Operation(summary = "Deactivate Agreement", description = "This endpoint deactivates a specific agreement in the database.")
     @PatchMapping("/{id}/deactivate")
     public ResponseEntity<ApiSuccessResponse<FuelingAgreementResponse>>
-    deactivateAgreement(@PathVariable Long id) {
+    deactivateAgreement(@PathVariable Long id, @RequestParam Long stationId) {
 
-        return ResponseEntity.ok(
-                new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement deactivated successfully.", fuelingAgreementService.deactivateAgreement(id)));
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement deactivated successfully.", fuelingAgreementService.deactivateAgreement(id, stationId)));
     }
 
     @Operation(summary = "Get Agreement Balance", description = "This endpoint retrieves the balance of a specific agreement from the database.")
     @GetMapping("/{id}/balance")
     public ResponseEntity<ApiSuccessResponse<FuelingAgreementBalanceResponse>>
-    getBalance(@PathVariable Long id) {
+    getBalance(@PathVariable Long id, @RequestParam Long stationId) {
 
-        return ResponseEntity.ok(
-                new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement balance retrieved successfully.", fuelingAgreementService.getAgreementBalance(id)));
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement balance retrieved successfully.", fuelingAgreementService.getAgreementBalance(id, stationId)));
     }
 
     @Operation(summary = "Get Agreement Transactions", description = "This endpoint retrieves the transactions for a specific agreement from the database.")
     @GetMapping("/{id}/transactions")
     public ResponseEntity<ApiSuccessResponse<List<CompanyAccountTransactionResponse>>>
-    getTransactions(@PathVariable Long id) {
+    getTransactions(@RequestParam Long agreementId, @PathVariable Long stationId) {
 
-        List<CompanyAccountTransactionResponse> response =
-                fuelingAgreementService.getTransactions(id);
+        List<CompanyAccountTransactionResponse> response =fuelingAgreementService.getTransactions(agreementId, stationId);
 
-        return ResponseEntity.ok(
-                new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement transactions retrieved successfully.", response));
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement transactions retrieved successfully.", response));
     }
 
     @Operation(summary = "Get Company Agreements", description = "This endpoint retrieves all agreements for a specific company from the database.")
     @GetMapping("/{companyId}/agreements")
     public ResponseEntity<ApiSuccessResponse<List<FuelingAgreementResponse>>>
-    getCompanyAgreements(@PathVariable Long companyId) {
+    getCompanyAgreements(@PathVariable Long companyId, @RequestParam Long stationId) {
 
-        List<FuelingAgreementResponse> response = fuelingAgreementService.getCompanyAgreements(companyId);
+        List<FuelingAgreementResponse> response = fuelingAgreementService.getCompanyAgreements(companyId, stationId);
 
-        return ResponseEntity.ok(
-                new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Company agreements retrieved successfully.", response));
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Company agreements retrieved successfully.", response));
     }
 }

@@ -19,6 +19,8 @@ public class CreateFuelingAgreementRequest {
     @Valid
     private FuelingCompanyRequest company;
 
+    private Long stationId;
+
     @NotNull
     private FuelingSettlementType settlementType;
 
