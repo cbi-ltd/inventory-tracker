@@ -538,10 +538,6 @@ public class FuelingAgreementService {
         }
 
     private void validateAgreementDates(LocalDate startDate, LocalDate endDate) {
-        if (startDate == null || endDate == null) {
-            throw new BadRequestException("Start date and end date are required");
-        }
-
         if (startDate.isAfter(endDate)) {
             throw new BadRequestException("Start date cannot be after end date");
         }

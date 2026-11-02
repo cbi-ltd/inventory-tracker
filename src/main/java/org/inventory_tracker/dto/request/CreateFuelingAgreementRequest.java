@@ -5,12 +5,15 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import org.inventory_tracker.enums.FuelingSettlementType;
+import org.inventory_tracker.util.ValidFuelingAgreementDates;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 
 @Getter
 @Setter
+@ValidFuelingAgreementDates
 public class CreateFuelingAgreementRequest {
 
     // @NotNull
@@ -27,7 +30,6 @@ public class CreateFuelingAgreementRequest {
     @NotNull
     private LocalDate startDate;
 
-    @NotNull
     private LocalDate endDate;
 
     private BigDecimal prepaidBalance;
