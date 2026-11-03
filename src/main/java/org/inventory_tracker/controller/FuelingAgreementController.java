@@ -160,9 +160,9 @@ public class FuelingAgreementController {
     @Operation(summary = "Get Agreement Transactions", description = "This endpoint retrieves the transactions for a specific agreement from the database.")
     @GetMapping("/{id}/transactions")
     public ResponseEntity<ApiSuccessResponse<List<CompanyAccountTransactionResponse>>>
-    getTransactions(@PathVariable Long agreementId) {
+    getTransactions(@PathVariable Long agreementId, @RequestParam Long stationId) {
 
-        List<CompanyAccountTransactionResponse> response =fuelingAgreementService.getTransactions(agreementId);
+        List<CompanyAccountTransactionResponse> response =fuelingAgreementService.getTransactions(agreementId, stationId);
 
         return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement transactions retrieved successfully.", response));
     }
@@ -170,9 +170,9 @@ public class FuelingAgreementController {
     @Operation(summary = "Get Company Agreements", description = "This endpoint retrieves all agreements for a specific company from the database.")
     @GetMapping("/{companyId}/agreements")
     public ResponseEntity<ApiSuccessResponse<List<FuelingAgreementResponse>>>
-    getCompanyAgreements(@PathVariable Long companyId) {
+    getCompanyAgreements(@PathVariable Long companyId, @RequestParam Long stationId) {
 
-        List<FuelingAgreementResponse> response = fuelingAgreementService.getCompanyAgreements(companyId);
+        List<FuelingAgreementResponse> response = fuelingAgreementService.getCompanyAgreements(companyId, stationId);
 
         return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Company agreements retrieved successfully.", response));
     }

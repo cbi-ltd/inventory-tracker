@@ -259,7 +259,7 @@ public class FuelingAgreementService {
         
 
         @Transactional(readOnly = true)
-        public List<FuelingAgreementResponse> getCompanyAgreements(Long companyId) {
+        public List<FuelingAgreementResponse> getCompanyAgreements(Long companyId, Long stationId) {
                 Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
                 FuelingCompany company = fuelingCompanyRepository
@@ -268,7 +268,7 @@ public class FuelingAgreementService {
 
                 List<FuelingAgreement> agreements =
                         fuelingAgreementRepository
-                                .findByCompany_IdAndMerchant_IdOrderByStartDateDesc(company.getId(), merchant.getId());       
+                                .findByCompany_IdAndMerchant_IdAndStation_IdOrderByStartDateDesc(company.getId(), merchant.getId(), stationId);       
 
                 return fuelingAgreementMapper.toResponseList(agreements);
         }
@@ -573,12 +573,12 @@ public class FuelingAgreementService {
         }
 
         @Transactional(readOnly = true)
-        public List<CompanyAccountTransactionResponse> getTransactions(Long agreementId) {
+        public List<CompanyAccountTransactionResponse> getTransactions(Long agreementId, Long stationId) {
                 Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
                 FuelingAgreement agreement =
                         fuelingAgreementRepository
-                                .findByIdAndMerchant_Id(agreementId, merchant.getId())
+                                .findByIdAndMerchant_IdAndStation_Id(agreementId, merchant.getId(), stationId)
                                 .orElseThrow(() ->new ResourceNotFoundException("Fueling agreement not found"));
 
                 return companyAccountTransactionRepository
