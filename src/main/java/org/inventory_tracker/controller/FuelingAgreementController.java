@@ -11,7 +11,9 @@ import org.inventory_tracker.dto.response.FuelingAgreementBalanceResponse;
 import org.inventory_tracker.dto.response.FuelingAgreementResponse;
 import org.inventory_tracker.dto.response.FuelingCompanyResponse;
 import org.inventory_tracker.enums.FuelingSettlementType;
+import org.inventory_tracker.enums.Shift;
 import org.inventory_tracker.service.FuelingAgreementService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.RequestBody;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import jakarta.validation.Valid;
@@ -175,5 +179,31 @@ public class FuelingAgreementController {
         List<FuelingAgreementResponse> response = fuelingAgreementService.getCompanyAgreements(companyId, stationId);
 
         return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Company agreements retrieved successfully.", response));
+    }
+
+    @GetMapping("/filter")
+    public List<CompanyAccountTransactionResponse> getFuelingReport(
+        @RequestParam Long stationId,
+        @RequestParam FuelingSettlementType settlementType,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        LocalDate businessDate,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        LocalDate startDate,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        LocalDate endDate,
+        @RequestParam(required = false) Shift shift,
+        @RequestParam(required = false) List<Shift> shifts) {
+
+        return fuelingAgreementService.getFuelingFilter(
+                stationId,
+                settlementType,
+                businessDate,
+                startDate,
+                endDate,
+                shift,
+                shifts);
     }
 }

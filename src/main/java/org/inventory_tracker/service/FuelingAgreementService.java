@@ -28,6 +28,7 @@ import org.inventory_tracker.entity.Station;
 import org.inventory_tracker.entity.Terminal;
 import org.inventory_tracker.enums.CompanyAccountTransactionType;
 import org.inventory_tracker.enums.FuelingSettlementType;
+import org.inventory_tracker.enums.Shift;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
@@ -41,6 +42,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.inventory_tracker.security.*;
 import org.inventory_tracker.util.ShiftUtil;
+import java.util.EnumSet;
 
 
 @Service
@@ -666,5 +668,45 @@ private CompanyAccountTransactionResponse toTransactionResponse(CompanyAccountTr
                         endDate,
                         startDate,
                         agreementId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CompanyAccountTransactionResponse> getFuelingFilter(
+        Long stationId,
+        FuelingSettlementType settlementType,
+        LocalDate businessDate,
+        LocalDate startDate,
+        LocalDate endDate,
+        Shift shift,
+        List<Shift> shifts) {
+
+        Merchant merchant = authenticatedUserService.getCurrentMerchant();
+
+        if (settlementType == null) {
+                throw new BadRequestException("Settlement type is required");
+        }
+
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+                throw new BadRequestException("Start date cannot be after end date");
+        }
+
+        if (businessDate != null && (startDate != null || endDate != null)) {
+                throw new BadRequestException(
+                        "Use businessDate or a date range, not both");
+        }
+
+        List<CompanyAccountTransaction> transactions =
+                companyAccountTransactionRepository.findFuelingFilter(
+                        merchant.getId(),
+                        stationId,
+                        settlementType,
+                        CompanyAccountTransactionType.FUEL_PURCHASE,
+                        businessDate,
+                        startDate,
+                        endDate,
+                        shift,
+                        shifts == null || shifts.isEmpty() ? EnumSet.allOf(Shift.class) : shifts);
+
+        return transactions.stream().map(this::toTransactionResponse).toList();
     }
 }

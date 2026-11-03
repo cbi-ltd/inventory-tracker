@@ -30,7 +30,7 @@ public interface CompanyAccountTransactionRepository extends JpaRepository<Compa
           AND (:startDate IS NULL OR s.businessDate >= :startDate)
           AND (:endDate IS NULL OR s.businessDate <= :endDate)
           AND (:shift IS NULL OR s.shift = :shift)
-          AND (:shifts IS NULL OR s.shift IN :shifts)
+          AND s.shift IN :shifts
         ORDER BY s.businessDate DESC, t.transactionDate DESC
         """)
     List<CompanyAccountTransaction> findFuelingFilter(

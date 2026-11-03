@@ -75,21 +75,18 @@ public class OfflinePaymentController {
         );
     }
 
-//     @GetMapping("/filter")
-//     public List<OfflinePaymentResponse> getOfflinePayments(
-//         @RequestParam Long stationId,
-//         @RequestParam(required = false)
-//         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-//         LocalDate businessDate,
-//         @RequestParam(required = false)
-//         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-//         LocalDate startDate,
-//         @RequestParam(required = false)
-//         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-//         LocalDate endDate,
-//         @RequestParam(required = false) Shift shift,
-//         @RequestParam(required = false) List<Shift> shifts) {
+    @GetMapping("/filter")
+    public List<OfflinePaymentResponse> getOfflinePayments(
+        @RequestParam Long stationId,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate businessDate,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+        @RequestParam(required = false) Shift shift,
+        @RequestParam(required = false) List<Shift> shifts) {
 
-//                 return offlinePaymentService.getOfflinePayments(stationId, businessDate, startDate, endDate, shift, shifts);
-//     }
+                return offlinePaymentService.getOfflinePaymentsFilter(stationId, businessDate, startDate, endDate, shift, shifts);
+    }
 }

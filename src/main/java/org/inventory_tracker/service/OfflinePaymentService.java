@@ -17,6 +17,7 @@ import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.inventory_tracker.dto.response.OfflinePaymentResponse;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 import java.math.BigDecimal;
@@ -164,7 +165,7 @@ public class OfflinePaymentService {
                         startDate,
                         endDate,
                         shift,
-                        shifts == null || shifts.isEmpty() ? null : shifts);
+                        shifts == null || shifts.isEmpty() ? EnumSet.allOf(Shift.class) : shifts);
 
         return payments.stream().map(this::toResponse).toList();
     }
