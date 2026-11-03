@@ -137,37 +137,36 @@ public class OfflinePaymentService {
                 .map(this::toResponse);
     }
 
-    // @Transactional(readOnly = true)
-    // public List<OfflinePaymentResponse> getOfflinePayments(
-    //         Long stationId,
-    //         LocalDate businessDate,
-    //         LocalDate startDate,
-    //         LocalDate endDate,
-    //         Shift shift,
-    //         List<Shift> shifts) {
+    @Transactional(readOnly = true)
+    public List<OfflinePaymentResponse> getOfflinePaymentsFilter(
+            Long stationId,
+            LocalDate businessDate,
+            LocalDate startDate,
+            LocalDate endDate,
+            Shift shift,
+            List<Shift> shifts) {
 
-    //     Merchant merchant = authenticatedUserService.getCurrentMerchant();
+        Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
-    //     if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-    //         throw new BadRequestException("Start date cannot be after end date");
-    //     }
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new BadRequestException("Start date cannot be after end date");
+        }
 
-    //     if (businessDate != null && (startDate != null || endDate != null)) {
-    //         throw new BadRequestException(
-    //                 "Use businessDate or a date range, not both");
-    //     }
+        if (businessDate != null && (startDate != null || endDate != null)) {
+            throw new BadRequestException("Use businessDate or a date range, not both");
+        }
 
-    //     List<OfflinePayment> payments =
-    //             offlinePaymentRepository.filterOfflinePayment(
-    //                     merchant.getId(),
-    //                     stationId,
-    //                     businessDate,
-    //                     startDate,
-    //                     endDate,
-    //                     shift,
-    //                     shifts == null || shifts.isEmpty() ? null : shifts);
+        List<OfflinePayment> payments =
+                offlinePaymentRepository.filterOfflinePayment(
+                        merchant.getId(),
+                        stationId,
+                        businessDate,
+                        startDate,
+                        endDate,
+                        shift,
+                        shifts == null || shifts.isEmpty() ? null : shifts);
 
-    //     return payments.stream().map(offlinePaymentMapper::toResponse).toList();
-    // }
+        return payments.stream().map(this::toResponse).toList();
+    }
 
 }

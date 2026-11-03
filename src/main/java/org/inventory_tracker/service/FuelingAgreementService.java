@@ -588,8 +588,7 @@ public class FuelingAgreementService {
                         .toList();
         }
 
-private CompanyAccountTransactionResponse toTransactionResponse(
-        CompanyAccountTransaction transaction) {
+private CompanyAccountTransactionResponse toTransactionResponse(CompanyAccountTransaction transaction) {
 
     return CompanyAccountTransactionResponse.builder()
             .id(transaction.getId())
@@ -640,7 +639,7 @@ private CompanyAccountTransactionResponse toTransactionResponse(
         }
     }
 
-        private boolean hasOverlappingActiveAgreement(
+    private boolean hasOverlappingActiveAgreement(
                 Long companyId,
                 Long stationId,
                 Long merchantId,
@@ -667,5 +666,5 @@ private CompanyAccountTransactionResponse toTransactionResponse(
                         endDate,
                         startDate,
                         agreementId);
-        }
+    }
 }

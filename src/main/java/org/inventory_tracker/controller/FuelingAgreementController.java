@@ -160,9 +160,9 @@ public class FuelingAgreementController {
     @Operation(summary = "Get Agreement Transactions", description = "This endpoint retrieves the transactions for a specific agreement from the database.")
     @GetMapping("/{id}/transactions")
     public ResponseEntity<ApiSuccessResponse<List<CompanyAccountTransactionResponse>>>
-    getTransactions(@PathVariable Long agreementId, @RequestParam Long stationId) {
+    getTransactions(@PathVariable Long id, @RequestParam Long stationId) {
 
-        List<CompanyAccountTransactionResponse> response =fuelingAgreementService.getTransactions(agreementId, stationId);
+        List<CompanyAccountTransactionResponse> response =fuelingAgreementService.getTransactions(id, stationId);
 
         return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Agreement transactions retrieved successfully.", response));
     }

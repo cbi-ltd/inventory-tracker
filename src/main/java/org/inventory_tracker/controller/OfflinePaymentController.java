@@ -1,12 +1,16 @@
 package org.inventory_tracker.controller;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.inventory_tracker.dto.response.OfflinePaymentResponse;
+import org.inventory_tracker.enums.Shift;
 import org.inventory_tracker.service.OfflinePaymentService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -70,4 +74,22 @@ public class OfflinePaymentController {
                 )
         );
     }
+
+//     @GetMapping("/filter")
+//     public List<OfflinePaymentResponse> getOfflinePayments(
+//         @RequestParam Long stationId,
+//         @RequestParam(required = false)
+//         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+//         LocalDate businessDate,
+//         @RequestParam(required = false)
+//         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+//         LocalDate startDate,
+//         @RequestParam(required = false)
+//         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+//         LocalDate endDate,
+//         @RequestParam(required = false) Shift shift,
+//         @RequestParam(required = false) List<Shift> shifts) {
+
+//                 return offlinePaymentService.getOfflinePayments(stationId, businessDate, startDate, endDate, shift, shifts);
+//     }
 }
