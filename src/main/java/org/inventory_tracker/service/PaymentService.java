@@ -3,6 +3,8 @@ package org.inventory_tracker.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.inventory_tracker.dto.request.CreateSaleRequest;
 import org.inventory_tracker.dto.request.PaymentFilterRequest;
@@ -423,14 +425,18 @@ public class PaymentService {
             }
 
             FuelingCompany company = vehicle.getCompany();
-            agreement = fuelingAgreementRepository
-                            .findFirstByCompany_IdAndMerchant_IdAndStation_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByIdDesc(
-                                    company.getId(),
-                                    merchant.getId(),
-                                    station.getId(),
-                                    businessDate,
-                                    businessDate)
-                                        .orElseThrow(() -> new BadRequestException("No active fueling agreement found for this vehicle's company at this station"));
+            // agreement = fuelingAgreementRepository
+            //                 .findFirstByCompany_IdAndMerchant_IdAndStation_IdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByIdDesc(
+            //                         company.getId(),
+            //                         merchant.getId(),
+            //                         station.getId(),
+            //                         businessDate,
+            //                         businessDate)
+            //                             .orElseThrow(() -> new BadRequestException("No active fueling agreement found for this vehicle's company at this station"));
+            agreement = fuelingAgreementRepository.findActiveAgreementForSale(company.getId(), merchant.getId(),
+                station.getId(), businessDate, PageRequest.of(0, 1)).stream().findFirst()
+                .orElseThrow(() -> new BadRequestException("No active fueling agreement found for this vehicle's company at this station"));
+
 
             if (!Boolean.TRUE.equals(agreement.getActive())) {
                 throw new BadRequestException("Vehicle fueling agreement is inactive");
@@ -497,7 +503,7 @@ public class PaymentService {
             sale.setPaymentStatus(agreement.getSettlementType() == FuelingSettlementType.PREPAID
                             ? PaymentStatus.SUCCESS : PaymentStatus.PENDING);
 
-            sale.setSaleStatus(SaleStatus.PENDING);
+            sale.setSaleStatus(SaleStatus.COMPLETED);
         }
         else{
             switch (request.getPaymentMethod()) {
@@ -522,7 +528,7 @@ public class PaymentService {
         OfflinePaymentResponse offlinePaymentResponse = null;
         if (vehicle == null && savedSale.getPaymentMethod() == PaymentMethod.OFFLINE_PAYMENT) {
                 offlinePaymentResponse = offlinePaymentService.createForSale(savedSale, station, merchant);
-       }
+        }
 
         if (vehicle != null) {
                 if (agreement.getSettlementType() == FuelingSettlementType.PREPAID) {

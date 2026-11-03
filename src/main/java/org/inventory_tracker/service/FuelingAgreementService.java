@@ -108,13 +108,27 @@ public class FuelingAgreementService {
                 .settlementType(request.getSettlementType())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
-                .prepaidBalance(request.getPrepaidBalance() == null ? BigDecimal.ZERO : request.getPrepaidBalance())
-                .outstandingBalance(BigDecimal.ZERO)
-                .creditLimit(request.getCreditLimit())
+                // .prepaidBalance(request.getPrepaidBalance() == null ? BigDecimal.ZERO : request.getPrepaidBalance())
+                // .outstandingBalance(BigDecimal.ZERO)
+                // .creditLimit(request.getCreditLimit())
                 .active(true)
                 .reference(request.getReference())
                 .remarks(request.getRemarks())
                 .build();
+
+        if (request.getSettlementType() == FuelingSettlementType.PREPAID) {
+                agreement.setPrepaidBalance(
+                        request.getPrepaidBalance() != null
+                                ? request.getPrepaidBalance()
+                                : BigDecimal.ZERO);
+                agreement.setOutstandingBalance(BigDecimal.ZERO);
+                agreement.setCreditLimit(null);
+        } 
+        else if (request.getSettlementType() == FuelingSettlementType.POSTPAID) {
+                agreement.setPrepaidBalance(BigDecimal.ZERO);
+                agreement.setOutstandingBalance(BigDecimal.ZERO);
+                agreement.setCreditLimit(request.getCreditLimit());
+        }
 
         FuelingAgreement saved = fuelingAgreementRepository.save(agreement);
         return fuelingAgreementMapper.toResponse(saved);
@@ -245,7 +259,7 @@ public class FuelingAgreementService {
         
 
         @Transactional(readOnly = true)
-        public List<FuelingAgreementResponse> getCompanyAgreements(Long companyId, Long stationId) {
+        public List<FuelingAgreementResponse> getCompanyAgreements(Long companyId) {
                 Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
                 FuelingCompany company = fuelingCompanyRepository
@@ -254,7 +268,7 @@ public class FuelingAgreementService {
 
                 List<FuelingAgreement> agreements =
                         fuelingAgreementRepository
-                                .findByCompany_IdAndMerchant_IdAndStation_IdOrderByStartDateDesc(company.getId(), merchant.getId(), stationId);       
+                                .findByCompany_IdAndMerchant_IdOrderByStartDateDesc(company.getId(), merchant.getId());       
 
                 return fuelingAgreementMapper.toResponseList(agreements);
         }
@@ -537,11 +551,11 @@ public class FuelingAgreementService {
                 return toTransactionResponse(saved);
         }
 
-    private void validateAgreementDates(LocalDate startDate, LocalDate endDate) {
-        if (startDate.isAfter(endDate)) {
-            throw new BadRequestException("Start date cannot be after end date");
+        private void validateAgreementDates(LocalDate startDate, LocalDate endDate) {
+                if (startDate.isAfter(endDate)) {
+                throw new BadRequestException("Start date cannot be after end date");
+                }
         }
-    }
 
         private void validateAgreementUsable(FuelingAgreement agreement, LocalDate businessDate) {
 
@@ -553,18 +567,18 @@ public class FuelingAgreementService {
                         throw new BadRequestException("Fueling agreement has not started");
                 }
 
-                if (businessDate.isAfter(agreement.getEndDate())) {
+                if (agreement.getEndDate() != null && businessDate.isAfter(agreement.getEndDate())) {
                         throw new BadRequestException("Fueling agreement has expired");
                 }
         }
 
         @Transactional(readOnly = true)
-        public List<CompanyAccountTransactionResponse> getTransactions(Long agreementId, Long stationId) {
+        public List<CompanyAccountTransactionResponse> getTransactions(Long agreementId) {
                 Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
                 FuelingAgreement agreement =
                         fuelingAgreementRepository
-                                .findByIdAndMerchant_IdAndStation_Id(agreementId, merchant.getId(), stationId)
+                                .findByIdAndMerchant_Id(agreementId, merchant.getId())
                                 .orElseThrow(() ->new ResourceNotFoundException("Fueling agreement not found"));
 
                 return companyAccountTransactionRepository

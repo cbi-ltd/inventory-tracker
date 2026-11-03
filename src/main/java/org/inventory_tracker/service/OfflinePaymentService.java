@@ -9,14 +9,18 @@ import org.inventory_tracker.entity.Sale;
 import org.inventory_tracker.entity.Merchant;
 import org.inventory_tracker.entity.Station;
 import org.inventory_tracker.enums.PaymentStatus;
+import org.inventory_tracker.enums.Shift;
 import org.inventory_tracker.repository.OfflinePaymentRepository;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.DuplicateResourceException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.inventory_tracker.dto.response.OfflinePaymentResponse;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 import java.util.UUID;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.inventory_tracker.security.AuthenticatedUserService;
 
@@ -54,7 +58,8 @@ public class OfflinePaymentService {
                 .station(station)
                 .merchant(merchant)
                 .amount(sale.getNetAmount())
-                .status(PaymentStatus.PENDING)
+                .status(PaymentStatus.SUCCESS)
+                .receivedAt(LocalDateTime.now(station.getTimeZone()))
                 .destinationBankName(station.getOfflinePaymentBank())
                 .destinationAccountNumber(station.getOfflinePaymentAccountNumber())
                 .destinationAccountName(station.getOfflinePaymentAccountName())
@@ -131,5 +136,38 @@ public class OfflinePaymentService {
         return offlinePaymentRepository.findAllByMerchant_Id(merchant.getId(), pageable)
                 .map(this::toResponse);
     }
+
+    // @Transactional(readOnly = true)
+    // public List<OfflinePaymentResponse> getOfflinePayments(
+    //         Long stationId,
+    //         LocalDate businessDate,
+    //         LocalDate startDate,
+    //         LocalDate endDate,
+    //         Shift shift,
+    //         List<Shift> shifts) {
+
+    //     Merchant merchant = authenticatedUserService.getCurrentMerchant();
+
+    //     if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+    //         throw new BadRequestException("Start date cannot be after end date");
+    //     }
+
+    //     if (businessDate != null && (startDate != null || endDate != null)) {
+    //         throw new BadRequestException(
+    //                 "Use businessDate or a date range, not both");
+    //     }
+
+    //     List<OfflinePayment> payments =
+    //             offlinePaymentRepository.filterOfflinePayment(
+    //                     merchant.getId(),
+    //                     stationId,
+    //                     businessDate,
+    //                     startDate,
+    //                     endDate,
+    //                     shift,
+    //                     shifts == null || shifts.isEmpty() ? null : shifts);
+
+    //     return payments.stream().map(offlinePaymentMapper::toResponse).toList();
+    // }
 
 }
