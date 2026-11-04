@@ -554,8 +554,12 @@ public class FuelingAgreementService {
         }
 
         private void validateAgreementDates(LocalDate startDate, LocalDate endDate) {
-                if (startDate.isAfter(endDate)) {
-                throw new BadRequestException("Start date cannot be after end date");
+                if (startDate == null) {
+                        throw new BadRequestException("Start date is required");
+                }
+
+                if (endDate != null && startDate.isAfter(endDate)) {
+                        throw new BadRequestException("Start date cannot be after end date");
                 }
         }
 

@@ -1,7 +1,6 @@
 package org.inventory_tracker.repository;
 
 
-import org.inventory_tracker.entity.Payment;
 import org.inventory_tracker.entity.Sale;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
@@ -12,16 +11,32 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface SaleRepository extends JpaRepository<Sale, Long> {
+
    @Lock(LockModeType.PESSIMISTIC_WRITE)
    @Query("SELECT s FROM Sale s WHERE s.id = :saleId")
    Optional<Sale> findByIdForUpdate(@Param("saleId") Long saleId);
+
+   @Query("""
+    SELECT s FROM Sale s
+    WHERE s.station.merchant.id = :merchantId
+      AND (:saleId IS NULL OR s.id = :saleId)
+      AND (:startDate IS NULL OR s.businessDate >= :startDate)
+      AND (:endDate IS NULL OR s.businessDate <= :endDate)
+      AND s.shift IN :shifts
+      AND (:terminalSerialNumber IS NULL OR s.terminal.terminalSerialNumber = :terminalSerialNumber)
+      AND (:pumpId IS NULL OR s.pump.id = :pumpId)
+    ORDER BY s.businessDate DESC, s.saleTime DESC""")
+    List<Sale> findSalesByFilters(@Param("merchantId") Long merchantId, @Param("saleId") Long saleId,
+        @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate,
+        @Param("shifts") Collection<Shift> shifts, @Param("terminalSerialNumber") String terminalSerialNumber,
+        @Param("pumpId") Long pumpId);
 
    List<Sale> findByStation_Merchant_CamsMerchantIdAndBusinessDateOrderBySaleTimeDesc(String merchantId, LocalDate businessDate);
 
