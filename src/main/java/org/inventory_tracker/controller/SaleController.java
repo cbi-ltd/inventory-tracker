@@ -93,6 +93,22 @@ public class SaleController {
         return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Sales retrieved successfully", size, sales));
     }
 
+    @GetMapping("/pos")
+    @SecurityRequirements
+    public ResponseEntity<ApiSuccessResponse<List<SaleResponse>>> getPosSales(
+        @RequestParam(required = false) Long saleId,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+        @RequestParam(required = false) Shift shift,
+        @RequestParam(required = false) List<Shift> shifts,
+        @RequestParam(required = false) String terminalSerialNumber,
+        @RequestParam(required = false) Long pumpId
+    ) {
+        List<SaleResponse> sales = saleService.getPosSales(saleId, startDate, endDate, shift, shifts, terminalSerialNumber, pumpId);
+        int size = sales.size();
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Sales retrieved successfully", size, sales));
+    }
+
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/station/{stationId}")
     public List<SaleResponse> getSalesByStation(@PathVariable Long stationId) {

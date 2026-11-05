@@ -32,6 +32,7 @@ public class SaleService {
     private final PumpRepository pumpRepository;
     private final AttendantRepository attendantRepository;
     private final AuthenticatedUserService authenticatedUserService;
+    private final TerminalRepository terminalRepository;
 
 
 //     @Transactional
@@ -288,6 +289,37 @@ public class SaleService {
         }
 
         return saleRepository.findSalesByFilters(merchant.getId(), saleId, startDate, endDate,
+                        selectedShifts, terminalSerialNumber, pumpId)
+                                .stream().map(saleMapper::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SaleResponse> getPosSales(Long saleId, LocalDate startDate, LocalDate endDate,
+                Shift shift, Collection<Shift> shifts, String terminalSerialNumber, Long pumpId) {
+
+        if (terminalSerialNumber == null || terminalSerialNumber.isBlank()) {
+                throw new IllegalArgumentException("Terminal serial number is required");
+        }
+
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+                throw new IllegalArgumentException("Start date cannot be after end date");
+        }
+
+        Terminal terminal = terminalRepository
+                        .findByTerminalSerialNumberAndActiveTrue(terminalSerialNumber)
+                        .orElseThrow(() -> new ResourceNotFoundException("Active terminal not found"));
+
+        Collection<Shift> selectedShifts;
+
+        if (shift != null) { selectedShifts = List.of(shift); } 
+        else if (shifts != null && !shifts.isEmpty()) {
+                selectedShifts = shifts;
+        } 
+        else {
+                selectedShifts = EnumSet.allOf(Shift.class);
+        }
+
+        return saleRepository.findSalesByFilters(terminal.getStation().getMerchant().getId(), saleId, startDate, endDate,
                         selectedShifts, terminalSerialNumber, pumpId)
                                 .stream().map(saleMapper::toResponse).toList();
     }
