@@ -8,6 +8,7 @@ import org.inventory_tracker.entity.*;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
+import org.inventory_tracker.enums.Shift;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.inventory_tracker.repository.*;
@@ -15,6 +16,8 @@ import org.inventory_tracker.security.AuthenticatedUserService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 
 
@@ -261,6 +264,32 @@ public class SaleService {
                         .stream().map(saleMapper::toResponse).toList();
         // return saleRepository.findAllByOrderByBusinessDateDescSaleTimeDesc().stream()
         //                         .map(saleMapper::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SaleResponse> getSales(Long saleId, LocalDate startDate, LocalDate endDate,
+                Shift shift, Collection<Shift> shifts, String terminalSerialNumber, Long pumpId) {
+        Merchant merchant = authenticatedUserService.getCurrentMerchant();
+
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+                throw new IllegalArgumentException("Start date cannot be after end date");
+        }
+
+        Collection<Shift> selectedShifts;
+
+        if (shift != null) {
+                selectedShifts = List.of(shift);
+        } 
+        else if (shifts != null && !shifts.isEmpty()) {
+                selectedShifts = shifts;
+        } 
+        else {
+                selectedShifts = EnumSet.allOf(Shift.class);
+        }
+
+        return saleRepository.findSalesByFilters(merchant.getId(), saleId, startDate, endDate,
+                        selectedShifts, terminalSerialNumber, pumpId)
+                                .stream().map(saleMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)

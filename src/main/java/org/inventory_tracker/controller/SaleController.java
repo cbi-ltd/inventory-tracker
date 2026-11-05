@@ -2,20 +2,26 @@ package org.inventory_tracker.controller;
 
 
 import lombok.RequiredArgsConstructor;
+
+import org.inventory_tracker.dto.common.ApiSuccessResponse;
 import org.inventory_tracker.dto.request.CreateSaleRequest;
 import org.inventory_tracker.dto.response.SaleResponse;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
+import org.inventory_tracker.enums.Shift;
 import org.inventory_tracker.service.PaymentService;
 import org.inventory_tracker.service.SaleService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 
@@ -65,10 +71,26 @@ public class SaleController {
         return saleService.getSaleByTransactionReference(transactionReference);
     }
 
+    // @SecurityRequirement(name = "bearerAuth")
+    // @GetMapping
+    // public List<SaleResponse> getAllSales() {
+    //     return saleService.getAllSales();
+    // }
+
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping
-    public List<SaleResponse> getAllSales() {
-        return saleService.getAllSales();
+    public ResponseEntity<ApiSuccessResponse<List<SaleResponse>>> getSales(
+        @RequestParam(required = false) Long saleId,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+        @RequestParam(required = false) Shift shift,
+        @RequestParam(required = false) List<Shift> shifts,
+        @RequestParam(required = false) String terminalSerialNumber,
+        @RequestParam(required = false) Long pumpId
+    ) {
+        List<SaleResponse> sales = saleService.getSales(saleId, startDate, endDate, shift, shifts, terminalSerialNumber, pumpId);
+        int size = sales.size();
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Sales retrieved successfully", size, sales));
     }
 
     @SecurityRequirement(name = "bearerAuth")

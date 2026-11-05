@@ -23,16 +23,27 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
    @Query("SELECT s FROM Sale s WHERE s.id = :saleId")
    Optional<Sale> findByIdForUpdate(@Param("saleId") Long saleId);
 
-   @Query("""
+//    @Query("""
+//     SELECT s FROM Sale s
+//     WHERE s.station.merchant.id = :merchantId
+//       AND (:saleId IS NULL OR s.id = :saleId)
+//       AND (:startDate IS NULL OR s.businessDate >= :startDate)
+//       AND (:endDate IS NULL OR s.businessDate <= :endDate)
+//       AND s.shift IN :shifts
+//       AND (:terminalSerialNumber IS NULL OR s.terminal.terminalSerialNumber = :terminalSerialNumber)
+//       AND (:pumpId IS NULL OR s.pump.id = :pumpId)
+//     ORDER BY s.businessDate DESC, s.saleTime DESC""")
+    @Query("""
     SELECT s FROM Sale s
     WHERE s.station.merchant.id = :merchantId
-      AND (:saleId IS NULL OR s.id = :saleId)
-      AND (:startDate IS NULL OR s.businessDate >= :startDate)
-      AND (:endDate IS NULL OR s.businessDate <= :endDate)
+      AND s.id = COALESCE(:saleId, s.id)
+      AND s.businessDate >= COALESCE(:startDate, s.businessDate)
+      AND s.businessDate <= COALESCE(:endDate, s.businessDate)
       AND s.shift IN :shifts
-      AND (:terminalSerialNumber IS NULL OR s.terminal.terminalSerialNumber = :terminalSerialNumber)
-      AND (:pumpId IS NULL OR s.pump.id = :pumpId)
-    ORDER BY s.businessDate DESC, s.saleTime DESC""")
+      AND s.terminal.terminalSerialNumber = COALESCE(:terminalSerialNumber, s.terminal.terminalSerialNumber)
+      AND s.pump.id = COALESCE(:pumpId, s.pump.id)
+    ORDER BY s.businessDate DESC, s.saleTime DESC
+    """)
     List<Sale> findSalesByFilters(@Param("merchantId") Long merchantId, @Param("saleId") Long saleId,
         @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate,
         @Param("shifts") Collection<Shift> shifts, @Param("terminalSerialNumber") String terminalSerialNumber,
