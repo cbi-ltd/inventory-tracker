@@ -8,7 +8,6 @@ import org.inventory_tracker.entity.*;
 import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
-import org.inventory_tracker.enums.Shift;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.inventory_tracker.repository.*;
@@ -16,8 +15,8 @@ import org.inventory_tracker.security.AuthenticatedUserService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
-import java.util.Collection;
-import java.util.EnumSet;
+import org.inventory_tracker.integration.cams.PendingPayment.card.PendingCardPaymentService;
+import org.inventory_tracker.integration.cams.PendingPayment.transfer.PendingTransferService;
 import java.util.List;
 
 
@@ -32,7 +31,8 @@ public class SaleService {
     private final PumpRepository pumpRepository;
     private final AttendantRepository attendantRepository;
     private final AuthenticatedUserService authenticatedUserService;
-    private final TerminalRepository terminalRepository;
+    private final PendingTransferService pendingTransferService;
+    private final PendingCardPaymentService pendingCardPaymentService;
 
 
 //     @Transactional
@@ -268,63 +268,6 @@ public class SaleService {
     }
 
     @Transactional(readOnly = true)
-    public List<SaleResponse> getSales(Long saleId, LocalDate startDate, LocalDate endDate,
-                Shift shift, Collection<Shift> shifts, String terminalSerialNumber, Long pumpId) {
-        Merchant merchant = authenticatedUserService.getCurrentMerchant();
-
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-                throw new IllegalArgumentException("Start date cannot be after end date");
-        }
-
-        Collection<Shift> selectedShifts;
-
-        if (shift != null) {
-                selectedShifts = List.of(shift);
-        } 
-        else if (shifts != null && !shifts.isEmpty()) {
-                selectedShifts = shifts;
-        } 
-        else {
-                selectedShifts = EnumSet.allOf(Shift.class);
-        }
-
-        return saleRepository.findSalesByFilters(merchant.getId(), saleId, startDate, endDate,
-                        selectedShifts, terminalSerialNumber, pumpId)
-                                .stream().map(saleMapper::toResponse).toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<SaleResponse> getPosSales(Long saleId, LocalDate startDate, LocalDate endDate,
-                Shift shift, Collection<Shift> shifts, String terminalSerialNumber, Long pumpId) {
-
-        if (terminalSerialNumber == null || terminalSerialNumber.isBlank()) {
-                throw new IllegalArgumentException("Terminal serial number is required");
-        }
-
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-                throw new IllegalArgumentException("Start date cannot be after end date");
-        }
-
-        Terminal terminal = terminalRepository
-                        .findByTerminalSerialNumberAndActiveTrue(terminalSerialNumber)
-                        .orElseThrow(() -> new ResourceNotFoundException("Active terminal not found"));
-
-        Collection<Shift> selectedShifts;
-
-        if (shift != null) { selectedShifts = List.of(shift); } 
-        else if (shifts != null && !shifts.isEmpty()) {
-                selectedShifts = shifts;
-        } 
-        else {
-                selectedShifts = EnumSet.allOf(Shift.class);
-        }
-
-        return saleRepository.findSalesByFilters(terminal.getStation().getMerchant().getId(), saleId, startDate, endDate,
-                        selectedShifts, terminalSerialNumber, pumpId)
-                                .stream().map(saleMapper::toResponse).toList();
-    }
-
-    @Transactional(readOnly = true)
     public List<SaleResponse> getSalesByStation(Long stationId) {
                 Merchant merchant = authenticatedUserService.getCurrentMerchant();
 
@@ -453,6 +396,9 @@ public class SaleService {
             throw new BadRequestException("Completed sales cannot be cancelled. Use a refund or reversal process instead.");
         }
 
+        // a cancelled sale must not leave a pending payment behind: it would block the terminal and could swallow a later payment
+        pendingTransferService.deleteBySaleNumber(sale.getSaleNumber());
+        pendingCardPaymentService.deleteBySaleNumber(sale.getSaleNumber());
         sale.setSaleStatus(SaleStatus.CANCELLED);
         sale.setPaymentStatus(PaymentStatus.CANCELLED);
         return saleMapper.toResponse(saleRepository.save(sale));

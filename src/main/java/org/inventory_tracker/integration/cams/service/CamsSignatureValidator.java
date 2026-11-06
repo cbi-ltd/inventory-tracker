@@ -1,66 +1,28 @@
 package org.inventory_tracker.integration.cams.service;
 
-import lombok.RequiredArgsConstructor;
+import java.time.Instant;
+import java.util.List;
+import org.inventory_tracker.integration.cams.support.WebhookSignature;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
-import java.util.HexFormat;
-
+/**
+ * Verifies the X-Timestamp and X-Signature headers of a CAMS webhook (contract v1).
+ * The previous secret is only used while a secret is being rotated.
+ */
 @Component
-@RequiredArgsConstructor
 public class CamsSignatureValidator {
 
-    @Value("${cams.webhook.secret}")
-    private String webhookSecret;
+    private final WebhookSignature signature;
 
-    public boolean isValid(
-            String payload,
-            String signature) {
-
-        try {
-
-            String expected =
-                    generateSignature(payload);
-
-            return expected.equalsIgnoreCase(signature);
-
-        } catch (Exception ex) {
-
-            return false;
-
-        }
-
+    public CamsSignatureValidator(
+            @Value("${cams.webhook.secret}") String secret,
+            @Value("${cams.webhook.previous-secret:}") String previousSecret,
+            @Value("${cams.webhook.tolerance-seconds:300}") long toleranceSeconds) {
+        this.signature = new WebhookSignature(List.of(secret, previousSecret), toleranceSeconds);
     }
 
-    private String generateSignature(String payload)
-            throws Exception {
-
-        Mac mac =
-                Mac.getInstance("HmacSHA256");
-
-        SecretKeySpec key =
-                new SecretKeySpec(
-
-                        webhookSecret.getBytes(StandardCharsets.UTF_8),
-
-                        "HmacSHA256"
-
-                );
-
-        mac.init(key);
-
-        byte[] hash =
-                mac.doFinal(
-
-                        payload.getBytes(StandardCharsets.UTF_8)
-
-                );
-
-        return HexFormat.of().formatHex(hash);
-
+    public WebhookSignature.Result verify(byte[] rawBody, String timestamp, String signatureHeader) {
+        return signature.verify(rawBody, timestamp, signatureHeader, Instant.now().getEpochSecond());
     }
-
 }

@@ -1,0 +1,1495 @@
+--- a/src/main/java/org/inventory_tracker/dto/request/RegisterPendingTransferRequest.java
++++ b/src/main/java/org/inventory_tracker/dto/request/RegisterPendingTransferRequest.java
+@@ -0,0 +1,27 @@
++package org.inventory_tracker.dto.request;
++
++import jakarta.validation.constraints.DecimalMin;
++import jakarta.validation.constraints.NotBlank;
++import jakarta.validation.constraints.NotNull;
++import java.math.BigDecimal;
++import lombok.Getter;
++import lombok.Setter;
++
++/** What the POS sends to register a transfer payment. Unknown fields (id, createdAt, tid) are ignored. */
++@Getter
++@Setter
++public class RegisterPendingTransferRequest {
++
++    @NotBlank
++    private String virtualAccountNumber;
++
++    @NotBlank
++    private String saleNumber;
++
++    @NotNull
++    @DecimalMin("0.00")
++    private BigDecimal amount;
++
++    @NotBlank
++    private String deviceSerial;
++}
+--- a/src/main/java/org/inventory_tracker/integration/cams/PendingPayment/card/PendingCardPaymentRepository.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/PendingPayment/card/PendingCardPaymentRepository.java
+@@ -1,10 +1,18 @@
+ package org.inventory_tracker.integration.cams.PendingPayment.card;
+ 
+-import org.springframework.data.jpa.repository.JpaRepository;
+ import java.math.BigDecimal;
++import java.time.LocalDateTime;
++import java.util.List;
+ import java.util.Optional;
++import org.springframework.data.jpa.repository.JpaRepository;
+ 
+ public interface PendingCardPaymentRepository extends JpaRepository<PendingCardPayment, Long> {
+-
+     Optional<PendingCardPayment> findFirstByTerminalSerialNumberAndAmount(String terminalSerial, BigDecimal amount);
++
++    /** The open (not yet expired) card payments on one terminal, oldest first. */
++    List<PendingCardPayment> findByTerminalSerialNumberAndCreatedAtAfterOrderByCreatedAtAsc(String terminalSerialNumber, LocalDateTime cutoff);
++
++    void deleteByTerminalSerialNumberAndCreatedAtBefore(String terminalSerialNumber, LocalDateTime cutoff);
++
++    void deleteBySaleNumber(String saleNumber);
+ }
+--- a/src/main/java/org/inventory_tracker/integration/cams/PendingPayment/card/PendingCardPaymentService.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/PendingPayment/card/PendingCardPaymentService.java
+@@ -1,11 +1,13 @@
+ package org.inventory_tracker.integration.cams.PendingPayment.card;
+ 
++import java.math.BigDecimal;
++import java.time.LocalDateTime;
++import java.util.List;
+ import lombok.RequiredArgsConstructor;
+-import org.inventory_tracker.exception.ResourceNotFoundException;
++import org.inventory_tracker.exception.DuplicateResourceException;
++import org.springframework.beans.factory.annotation.Value;
+ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Transactional;
+-import java.math.BigDecimal;
+-import java.time.LocalDateTime;
+ 
+ @Service
+ @RequiredArgsConstructor
+@@ -13,9 +15,23 @@
+ 
+     private final PendingCardPaymentRepository repository;
+ 
++    /** How long a card payment stays open. After this it can no longer be matched and no longer blocks the terminal. */
++    @Value("${cams.pending.card-ttl-minutes:10}")
++    private int ttlMinutes;
++
++    /** A terminal serves one customer at a time, so a second open payment on it is refused. */
++    @Value("${cams.pending.single-open-per-terminal:true}")
++    private boolean singleOpenPerTerminal;
++
+     @Transactional
+     public void register(String saleNumber, BigDecimal amount, String terminalSerialNumber, Long terminalId) {
+-
++        // registering the same sale again replaces its note, and expired notes never block the terminal
++        repository.deleteBySaleNumber(saleNumber);
++        repository.deleteByTerminalSerialNumberAndCreatedAtBefore(terminalSerialNumber, cutoff());
++        if (singleOpenPerTerminal && !findOpen(terminalSerialNumber).isEmpty()) {
++            throw new DuplicateResourceException(
++                    "This terminal already has a card payment in progress. Wait for it to finish, or cancel that sale first.");
++        }
+         PendingCardPayment pending = PendingCardPayment.builder()
+                 .saleNumber(saleNumber)
+                 .amount(amount)
+@@ -23,19 +39,26 @@
+                 .terminalSerialNumber(terminalSerialNumber)
+                 .createdAt(LocalDateTime.now())
+                 .build();
+-
+         repository.save(pending);
+     }
+ 
++    /** The open card payments on a terminal, oldest first. Empty when there are none; it never throws. */
++    @Transactional(readOnly = true)
++    public List<PendingCardPayment> findOpen(String terminalSerialNumber) {
++        return repository.findByTerminalSerialNumberAndCreatedAtAfterOrderByCreatedAtAsc(terminalSerialNumber, cutoff());
++    }
++
++    @Transactional
++    public void deleteBySaleNumber(String saleNumber) {
++        repository.deleteBySaleNumber(saleNumber);
++    }
+ 
+     @Transactional
+-    public PendingCardPayment consume(String terminalSerialNumber, BigDecimal amount) {
++    public void delete(PendingCardPayment pending) {
++        repository.delete(pending);
++    }
+ 
+-        return repository.findFirstByTerminalSerialNumberAndAmount(terminalSerialNumber, amount)
+-                .map(payment -> {
+-                    repository.delete(payment);
+-                    return payment;
+-                })
+-                .orElseThrow(() -> new ResourceNotFoundException("No Pending Payment For Terminal "+ terminalSerialNumber));
++    private LocalDateTime cutoff() {
++        return LocalDateTime.now().minusMinutes(ttlMinutes);
+     }
+ }
+--- a/src/main/java/org/inventory_tracker/integration/cams/PendingPayment/transfer/PendingTransferController.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/PendingPayment/transfer/PendingTransferController.java
+@@ -3,6 +3,7 @@
+ 
+ import jakarta.validation.Valid;
+ import lombok.RequiredArgsConstructor;
++import org.inventory_tracker.dto.request.RegisterPendingTransferRequest;
+ import org.springframework.http.ResponseEntity;
+ import org.springframework.web.bind.annotation.*;
+ 
+@@ -14,7 +15,7 @@
+     private final PendingTransferService pendingTransferService;
+ 
+     @PostMapping
+-    public ResponseEntity<Void> registerPendingTransfer(@Valid @RequestBody PendingTransfer pendingTransfer) {
++    public ResponseEntity<Void> registerPendingTransfer(@Valid @RequestBody RegisterPendingTransferRequest pendingTransfer) {
+ 
+         pendingTransferService.registerPendingTransfer(
+                 pendingTransfer.getVirtualAccountNumber(),
+--- a/src/main/java/org/inventory_tracker/integration/cams/PendingPayment/transfer/PendingTransferRepository.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/PendingPayment/transfer/PendingTransferRepository.java
+@@ -1,10 +1,19 @@
+ package org.inventory_tracker.integration.cams.PendingPayment.transfer;
+ 
+-import org.springframework.data.jpa.repository.JpaRepository;
++import java.time.LocalDateTime;
++import java.util.List;
+ import java.util.Optional;
+-
++import org.springframework.data.jpa.repository.JpaRepository;
+ 
+ public interface PendingTransferRepository extends JpaRepository<PendingTransfer, Long> {
+         Optional<PendingTransfer> findByVirtualAccountNumberAndSaleNumber(String virtualAccountNumber, String saleNumber);
++
+         Optional<PendingTransfer> findFirstByVirtualAccountNumberOrderByCreatedAtAsc(String virtualAccountNumber);
++
++        /** The open (not yet expired) transfer payments on one terminal, oldest first. */
++        List<PendingTransfer> findByDeviceSerialAndCreatedAtAfterOrderByCreatedAtAsc(String deviceSerial, LocalDateTime cutoff);
++
++        void deleteByDeviceSerialAndCreatedAtBefore(String deviceSerial, LocalDateTime cutoff);
++
++        void deleteBySaleNumber(String saleNumber);
+ }
+--- a/src/main/java/org/inventory_tracker/integration/cams/PendingPayment/transfer/PendingTransferService.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/PendingPayment/transfer/PendingTransferService.java
+@@ -1,31 +1,31 @@
+ package org.inventory_tracker.integration.cams.PendingPayment.transfer;
+ 
+-import lombok.RequiredArgsConstructor;
+ import java.math.BigDecimal;
++import java.time.LocalDateTime;
++import java.util.List;
++import lombok.RequiredArgsConstructor;
++import org.inventory_tracker.exception.DuplicateResourceException;
++import org.springframework.beans.factory.annotation.Value;
+ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Transactional;
+-import jakarta.persistence.EntityNotFoundException;
+-
+ 
+ @Service
+ @RequiredArgsConstructor
+ public class PendingTransferService {
+ 
+     private final PendingTransferRepository pendingTransferRepository;
+-    
++
++    /** How long a transfer payment stays open. After this it can no longer be matched and no longer blocks the terminal. */
++    @Value("${cams.pending.transfer-ttl-minutes:15}")
++    private int ttlMinutes;
++
++    /** A terminal serves one customer at a time, so a second open payment on it is refused. */
++    @Value("${cams.pending.single-open-per-terminal:true}")
++    private boolean singleOpenPerTerminal;
+ 
+     @Transactional
+     public void registerPendingTransfer(String virtualAccountNumber, String saleNumber, BigDecimal amount, String deviceSerial) {
+-
+-        PendingTransfer pendingTransfer = PendingTransfer.builder()
+-                .virtualAccountNumber(virtualAccountNumber)
+-                .saleNumber(saleNumber)
+-                .amount(amount)
+-                .deviceSerial(deviceSerial)
+-                .tid(deviceSerial)
+-                .build();
+-
+-        pendingTransferRepository.save(pendingTransfer);
++        registerPendingTransfer(virtualAccountNumber, saleNumber, amount, deviceSerial, deviceSerial);
+     }
+ 
+     @Transactional
+@@ -35,7 +35,13 @@
+             BigDecimal amount,
+             String tid,
+             String deviceSerial) {
+-
++        // registering the same sale again replaces its note, and expired notes never block the terminal
++        pendingTransferRepository.deleteBySaleNumber(saleNumber);
++        pendingTransferRepository.deleteByDeviceSerialAndCreatedAtBefore(deviceSerial, cutoff());
++        if (singleOpenPerTerminal && !findOpen(deviceSerial).isEmpty()) {
++            throw new DuplicateResourceException(
++                    "This terminal already has a transfer payment in progress. Wait for it to finish, or cancel that sale first.");
++        }
+         PendingTransfer pendingTransfer = PendingTransfer.builder()
+                 .virtualAccountNumber(virtualAccountNumber)
+                 .saleNumber(saleNumber)
+@@ -43,21 +49,25 @@
+                 .tid(tid)
+                 .deviceSerial(deviceSerial)
+                 .build();
+-
+         pendingTransferRepository.save(pendingTransfer);
+     }
+ 
+-    @Transactional
+-    public PendingTransfer find(String virtualAccountNumber) {
+-        // PendingTransfer pending = pendingTransferRepository.findByVirtualAccountNumberAndSaleNumber(virtualAccountNumber, saleNumber)
+-        //                             .orElseThrow(() -> new EntityNotFoundException("No pending transfer found for account: " + virtualAccountNumber));
+-        PendingTransfer pending = pendingTransferRepository.findFirstByVirtualAccountNumberOrderByCreatedAtAsc(virtualAccountNumber)
+-                                    .orElseThrow(() -> new EntityNotFoundException("No pending transfer found for account: " + virtualAccountNumber));
++    /** The open transfer payments on a terminal, oldest first. Empty when there are none; it never throws. */
++    @Transactional(readOnly = true)
++    public List<PendingTransfer> findOpen(String deviceSerial) {
++        return pendingTransferRepository.findByDeviceSerialAndCreatedAtAfterOrderByCreatedAtAsc(deviceSerial, cutoff());
++    }
+ 
+-        return pending;
++    @Transactional
++    public void deleteBySaleNumber(String saleNumber) {
++        pendingTransferRepository.deleteBySaleNumber(saleNumber);
+     }
+ 
+     public void delete(PendingTransfer pendingTransfer) {
+         pendingTransferRepository.delete(pendingTransfer);
+     }
++
++    private LocalDateTime cutoff() {
++        return LocalDateTime.now().minusMinutes(ttlMinutes);
++    }
+ }
+--- a/src/main/java/org/inventory_tracker/integration/cams/controller/CamsWebhookController.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/controller/CamsWebhookController.java
+@@ -1,19 +1,29 @@
+ package org.inventory_tracker.integration.cams.controller;
+ 
+ import com.fasterxml.jackson.databind.ObjectMapper;
++import java.io.IOException;
++import java.nio.charset.StandardCharsets;
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+ import org.inventory_tracker.integration.cams.dto.CamsPaymentNotification;
++import org.inventory_tracker.integration.cams.dto.CamsWebhookResponse;
+ import org.inventory_tracker.integration.cams.dto.CardPaymentNotification;
+ import org.inventory_tracker.integration.cams.service.CamsSignatureValidator;
+ import org.inventory_tracker.integration.cams.service.CamsWebhookService;
+-import org.inventory_tracker.dto.common.ApiSuccessResponse;
++import org.inventory_tracker.integration.cams.support.WebhookSignature;
+ import org.springframework.http.HttpStatus;
+ import org.springframework.http.ResponseEntity;
+-import org.springframework.web.bind.annotation.*;
+-import java.time.LocalDateTime;
+-
+-
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestBody;
++import org.springframework.web.bind.annotation.RequestHeader;
++import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.RestController;
++
++/**
++ * Receives the signed notices CAMS sends (contract v1). The reply tells CAMS what happened:
++ * 200 with status processed, duplicate or ignored (CAMS stops retrying), 401 for a bad signature or timestamp,
++ * 400 for a body that cannot be read, and 500 only for a real failure (CAMS retries).
++ */
+ @Slf4j
+ @RestController
+ @RequiredArgsConstructor
+@@ -24,62 +34,59 @@
+     private final CamsSignatureValidator signatureValidator;
+     private final CamsWebhookService camsWebhookService;
+ 
+-
+     @PostMapping("/transfer")
+-    public ResponseEntity<ApiSuccessResponse<String>> receivePaymentNotification(@RequestBody String payload,
+-                    @RequestHeader(value = "X-Signature", required = false) String signature) {
+-
++    public ResponseEntity<CamsWebhookResponse> receivePaymentNotification(
++            @RequestBody byte[] body,
++            @RequestHeader(value = "X-Timestamp", required = false) String timestamp,
++            @RequestHeader(value = "X-Signature", required = false) String signature) {
++
++        ResponseEntity<CamsWebhookResponse> rejected = rejectIfNotAuthentic(body, timestamp, signature);
++        if (rejected != null) {
++            return rejected;
++        }
++        CamsPaymentNotification notification;
+         try {
+-            if (!signatureValidator.isValid(payload, signature)) {
+-                return ResponseEntity
+-                        .status(HttpStatus.UNAUTHORIZED)
+-                        .body(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.UNAUTHORIZED.value(),
+-                                    "Invalid webhook signature", 0, null));
+-            }
+-
+-            CamsPaymentNotification notification = objectMapper.readValue(payload, CamsPaymentNotification.class);
+-            camsWebhookService.processTransferPayment(notification);
+-
+-            return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Payment notification processed successfully", 1, notification.getRequestReference()));
+-        } 
+-        catch (Exception ex) {
+-            log.error("Error processing CAMS payment notification", ex);
+-
+-            return ResponseEntity
+-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+-                    .body(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "Unable to process payment notification", 0, null));
++            notification = objectMapper.readValue(body, CamsPaymentNotification.class);
++        } catch (IOException ex) {
++            log.warn("CAMS transfer notice could not be read: {}", ex.getMessage());
++            return malformed();
+         }
++        return ResponseEntity.ok(camsWebhookService.handleTransfer(notification, new String(body, StandardCharsets.UTF_8)));
+     }
+ 
+-    // @PostMapping("/card")
+-    // public ResponseEntity<ApiSuccessResponse<String>> receiveCardPayment(@RequestBody CardPaymentNotification notification) {
+-    //     camsWebhookService.processCardPayment(notification);
+-    //     return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Card payment processed successfully", 1, notification.getRrn()));
+-    // }
+-
+     @PostMapping("/card")
+-    public ResponseEntity<ApiSuccessResponse<String>> receiveCardPayment(@RequestBody String payload,
+-                    @RequestHeader(value = "X-Signature", required = false) String signature) {
+-
++    public ResponseEntity<CamsWebhookResponse> receiveCardPayment(
++            @RequestBody byte[] body,
++            @RequestHeader(value = "X-Timestamp", required = false) String timestamp,
++            @RequestHeader(value = "X-Signature", required = false) String signature) {
++
++        ResponseEntity<CamsWebhookResponse> rejected = rejectIfNotAuthentic(body, timestamp, signature);
++        if (rejected != null) {
++            return rejected;
++        }
++        CardPaymentNotification notification;
+         try {
+-            if (!signatureValidator.isValid(payload, signature)) {
+-                return ResponseEntity
+-                        .status(HttpStatus.UNAUTHORIZED)
+-                        .body(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.UNAUTHORIZED.value(),
+-                                    "Invalid webhook signature", 0, null));
+-            }
+-
+-            CardPaymentNotification notification = objectMapper.readValue(payload, CardPaymentNotification.class);
+-            camsWebhookService.processCardPayment(notification);
+-
+-            return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Payment notification processed successfully", 1, notification.getRrn()));
+-        } 
+-        catch (Exception ex) {
+-            log.error("Error processing CAMS payment notification", ex);
+-
+-            return ResponseEntity
+-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+-                    .body(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "Unable to process payment notification", 0, null));
++            notification = objectMapper.readValue(body, CardPaymentNotification.class);
++        } catch (IOException ex) {
++            log.warn("CAMS card notice could not be read: {}", ex.getMessage());
++            return malformed();
++        }
++        return ResponseEntity.ok(camsWebhookService.handleCard(notification, new String(body, StandardCharsets.UTF_8)));
++    }
++
++    /** Returns the 401 reply when the signature or timestamp is not acceptable, or null when the notice is genuine. */
++    private ResponseEntity<CamsWebhookResponse> rejectIfNotAuthentic(byte[] body, String timestamp, String signature) {
++        WebhookSignature.Result result = signatureValidator.verify(body, timestamp, signature);
++        if (result == WebhookSignature.Result.VALID) {
++            return null;
+         }
++        log.warn("CAMS webhook rejected: {}", result);
++        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
++                .body(new CamsWebhookResponse("rejected", "Invalid signature or timestamp"));
++    }
++
++    private ResponseEntity<CamsWebhookResponse> malformed() {
++        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
++                .body(new CamsWebhookResponse("rejected", "Malformed notification"));
+     }
+ }
+--- a/src/main/java/org/inventory_tracker/integration/cams/dto/CamsPaymentNotification.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/dto/CamsPaymentNotification.java
+@@ -7,7 +7,7 @@
+ import org.inventory_tracker.enums.PaymentStatus;
+ 
+ import java.math.BigDecimal;
+-import java.time.LocalDateTime;
++import java.time.Instant;
+ 
+ import lombok.AllArgsConstructor;
+ import lombok.Builder;
+@@ -61,6 +61,12 @@
+      * CAMS References
+      */
+     private String requestReference;
++    /** Contract v1: the duplicate key, the kind of event, the payload version and the CAMS tenant. */
++    private String version;
++    private String eventId;
++    private String eventType;
++    private String institutionId;
++    private String merchantProfileId;
+ 
+     private String sessionId;
+ 
+@@ -78,7 +84,7 @@
+ 
+     private PaymentMethod paymentMethod;
+ 
+-    private LocalDateTime paymentTime;
++    private Instant paymentTime;
+ 
+     private String payerName;
+ 
+--- a/src/main/java/org/inventory_tracker/integration/cams/dto/CamsWebhookResponse.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/dto/CamsWebhookResponse.java
+@@ -0,0 +1,17 @@
++package org.inventory_tracker.integration.cams.dto;
++
++/** The reply to CAMS: {"status": "processed" | "duplicate" | "ignored", "message": "..."}. */
++public record CamsWebhookResponse(String status, String message) {
++
++    public static CamsWebhookResponse processed(String message) {
++        return new CamsWebhookResponse("processed", message);
++    }
++
++    public static CamsWebhookResponse duplicate(String message) {
++        return new CamsWebhookResponse("duplicate", message);
++    }
++
++    public static CamsWebhookResponse ignored(String message) {
++        return new CamsWebhookResponse("ignored", message);
++    }
++}
+--- a/src/main/java/org/inventory_tracker/integration/cams/dto/CardPaymentNotification.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/dto/CardPaymentNotification.java
+@@ -2,7 +2,7 @@
+ 
+ import lombok.*;
+ import java.math.BigDecimal;
+-import java.time.LocalDateTime;
++import java.time.Instant;
+ 
+ @Getter
+ @Setter
+@@ -12,6 +12,15 @@
+ public class CardPaymentNotification {
+ 
+     private String terminalSerialNumber;
++    /** Contract v1: the duplicate key, the kind of event, the payload version and the CAMS tenant. */
++    private String version;
++    private String eventId;
++    private String eventType;
++    private String requestReference;
++    private String institutionId;
++    private String merchantProfileId;
++    private String outletId;
++    private String switchTerminalId;
+ 
+     private String rrn;
+ 
+@@ -30,7 +39,8 @@
+     private String responseMessage;
+ 
+     private String status;
++    private String cardScheme;
+ 
+-    private LocalDateTime transactionTime;
++    private Instant transactionTime;
+ 
+ }
+--- a/src/main/java/org/inventory_tracker/integration/cams/event/CamsWebhookEvent.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/event/CamsWebhookEvent.java
+@@ -0,0 +1,58 @@
++package org.inventory_tracker.integration.cams.event;
++
++import jakarta.persistence.Column;
++import jakarta.persistence.Entity;
++import jakarta.persistence.GeneratedValue;
++import jakarta.persistence.GenerationType;
++import jakarta.persistence.Id;
++import jakarta.persistence.Table;
++import java.math.BigDecimal;
++import java.time.LocalDateTime;
++import lombok.AllArgsConstructor;
++import lombok.Builder;
++import lombok.Getter;
++import lombok.NoArgsConstructor;
++import lombok.Setter;
++
++/**
++ * One row per CAMS notice that was handled. The unique eventId is what makes a repeated delivery harmless.
++ * The raw body is kept only when nothing was matched (IGNORED or AMOUNT_MISMATCH), so staff can reconcile it.
++ */
++@Entity
++@Table(name = "cams_webhook_events")
++@Getter
++@Setter
++@Builder
++@NoArgsConstructor
++@AllArgsConstructor
++public class CamsWebhookEvent {
++
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
++    private Long id;
++
++    @Column(nullable = false, unique = true, length = 150)
++    private String eventId;
++
++    /** TRANSFER or CARD. */
++    @Column(nullable = false, length = 20)
++    private String kind;
++
++    /** PROCESSED, IGNORED or AMOUNT_MISMATCH. */
++    @Column(nullable = false, length = 30)
++    private String outcome;
++
++    private String terminalSerial;
++
++    @Column(precision = 19, scale = 2)
++    private BigDecimal amount;
++
++    @Column(length = 300)
++    private String detail;
++
++    @Column(columnDefinition = "TEXT")
++    private String rawBody;
++
++    @Column(nullable = false)
++    private LocalDateTime receivedAt;
++}
+--- a/src/main/java/org/inventory_tracker/integration/cams/event/CamsWebhookEventRepository.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/event/CamsWebhookEventRepository.java
+@@ -0,0 +1,8 @@
++package org.inventory_tracker.integration.cams.event;
++
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public interface CamsWebhookEventRepository extends JpaRepository<CamsWebhookEvent, Long> {
++
++    boolean existsByEventId(String eventId);
++}
+--- a/src/main/java/org/inventory_tracker/integration/cams/service/CamsSignatureValidator.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/service/CamsSignatureValidator.java
+@@ -1,66 +1,28 @@
+ package org.inventory_tracker.integration.cams.service;
+ 
+-import lombok.RequiredArgsConstructor;
++import java.time.Instant;
++import java.util.List;
++import org.inventory_tracker.integration.cams.support.WebhookSignature;
+ import org.springframework.beans.factory.annotation.Value;
+ import org.springframework.stereotype.Component;
+ 
+-import javax.crypto.Mac;
+-import javax.crypto.spec.SecretKeySpec;
+-import java.nio.charset.StandardCharsets;
+-import java.util.HexFormat;
+-
++/**
++ * Verifies the X-Timestamp and X-Signature headers of a CAMS webhook (contract v1).
++ * The previous secret is only used while a secret is being rotated.
++ */
+ @Component
+-@RequiredArgsConstructor
+ public class CamsSignatureValidator {
+ 
+-    @Value("${cams.webhook.secret}")
+-    private String webhookSecret;
+-
+-    public boolean isValid(
+-            String payload,
+-            String signature) {
+-
+-        try {
+-
+-            String expected =
+-                    generateSignature(payload);
+-
+-            return expected.equalsIgnoreCase(signature);
+-
+-        } catch (Exception ex) {
+-
+-            return false;
+-
+-        }
++    private final WebhookSignature signature;
+ 
++    public CamsSignatureValidator(
++            @Value("${cams.webhook.secret}") String secret,
++            @Value("${cams.webhook.previous-secret:}") String previousSecret,
++            @Value("${cams.webhook.tolerance-seconds:300}") long toleranceSeconds) {
++        this.signature = new WebhookSignature(List.of(secret, previousSecret), toleranceSeconds);
+     }
+ 
+-    private String generateSignature(String payload)
+-            throws Exception {
+-
+-        Mac mac =
+-                Mac.getInstance("HmacSHA256");
+-
+-        SecretKeySpec key =
+-                new SecretKeySpec(
+-
+-                        webhookSecret.getBytes(StandardCharsets.UTF_8),
+-
+-                        "HmacSHA256"
+-
+-                );
+-
+-        mac.init(key);
+-
+-        byte[] hash =
+-                mac.doFinal(
+-
+-                        payload.getBytes(StandardCharsets.UTF_8)
+-
+-                );
+-
+-        return HexFormat.of().formatHex(hash);
+-
++    public WebhookSignature.Result verify(byte[] rawBody, String timestamp, String signatureHeader) {
++        return signature.verify(rawBody, timestamp, signatureHeader, Instant.now().getEpochSecond());
+     }
+-
+ }
+--- a/src/main/java/org/inventory_tracker/integration/cams/service/CamsWebhookService.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/service/CamsWebhookService.java
+@@ -1,60 +1,207 @@
+ package org.inventory_tracker.integration.cams.service;
+ 
+-
++import jakarta.annotation.PostConstruct;
++import java.math.BigDecimal;
++import java.time.LocalDateTime;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.function.Function;
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+-import org.springframework.stereotype.Service;
+-
+-
++import org.inventory_tracker.exception.BadRequestException;
+ import org.inventory_tracker.integration.cams.PendingPayment.card.PendingCardPayment;
+ import org.inventory_tracker.integration.cams.PendingPayment.card.PendingCardPaymentService;
+ import org.inventory_tracker.integration.cams.PendingPayment.transfer.PendingTransfer;
+ import org.inventory_tracker.integration.cams.PendingPayment.transfer.PendingTransferService;
+ import org.inventory_tracker.integration.cams.dto.CamsPaymentNotification;
++import org.inventory_tracker.integration.cams.dto.CamsWebhookResponse;
+ import org.inventory_tracker.integration.cams.dto.CardPaymentNotification;
++import org.inventory_tracker.integration.cams.event.CamsWebhookEvent;
++import org.inventory_tracker.integration.cams.event.CamsWebhookEventRepository;
++import org.inventory_tracker.integration.cams.support.EventIds;
++import org.inventory_tracker.integration.cams.support.PendingMatcher;
++import org.inventory_tracker.repository.PaymentRepository;
+ import org.inventory_tracker.service.PaymentService;
++import org.springframework.beans.factory.annotation.Value;
++import org.springframework.stereotype.Service;
++import org.springframework.transaction.annotation.Transactional;
+ 
+-
+-
++/**
++ * Handles a CAMS notice (contract v1). Whatever the outcome, the whole notice is handled in one database
++ * transaction: if anything fails nothing is saved, the reply is a 5xx, and CAMS sends it again.
++ * A notice that is a duplicate, is not FuelFlow's, or matches nothing is answered with 200, so CAMS stops retrying.
++ */
+ @Slf4j
+ @Service
+ @RequiredArgsConstructor
+ public class CamsWebhookService {
+ 
++    private static final String TRANSFER = "TRANSFER";
++    private static final String CARD = "CARD";
++
+     private final PaymentService paymentService;
+     private final PendingTransferService pendingTransferService;
+     private final PendingCardPaymentService pendingCardPaymentService;
++    private final PaymentRepository paymentRepository;
++    private final CamsWebhookEventRepository eventRepository;
+ 
++    /** FuelFlow's institution on CAMS. When it is empty, the institution is not checked. */
++    @Value("${cams.institution-id:}")
++    private String fuelFlowInstitutionId;
++
++    @PostConstruct
++    void warnIfInstitutionIsNotConfigured() {
++        if (fuelFlowInstitutionId == null || fuelFlowInstitutionId.isBlank()) {
++            log.warn("cams.institution-id (CAMS_INSTITUTION_ID) is not set: CAMS notices are not checked against FuelFlow's institution.");
++        }
++    }
+ 
+-    public void processTransferPayment(CamsPaymentNotification notification) {
++    @Transactional
++    public CamsWebhookResponse handleTransfer(CamsPaymentNotification notification, String rawBody) {
++        String eventId = EventIds.resolve(notification.getEventId(), notification.getRequestReference());
++        if (eventId == null) {
++            throw new BadRequestException("eventId or requestReference is required.");
++        }
++        if (notification.getAmount() == null) {
++            throw new BadRequestException("amount is required.");
++        }
++        if (isDuplicate(eventId, notification.getRequestReference())) {
++            return CamsWebhookResponse.duplicate("Already processed.");
++        }
++        String terminal = firstNonBlank(notification.getDeviceSerial(), notification.getTid());
++        String problem = institutionProblem(notification.getInstitutionId());
++        if (problem == null && terminal == null) {
++            problem = "the notice has no terminal id";
++        }
++        if (problem != null) {
++            return ignored(eventId, TRANSFER, terminal, notification.getAmount(), problem, rawBody);
++        }
+ 
+-        PendingTransfer pendingTransfer = pendingTransferService.find(notification.getVirtualAccountNumber());
++        List<PendingTransfer> open = pendingTransferService.findOpen(terminal);
++        PendingMatcher.Decision<PendingTransfer> decision =
++                PendingMatcher.decide(candidates(open, PendingTransfer::getAmount), notification.getAmount());
++
++        if (decision.kind() == PendingMatcher.Kind.MATCH) {
++            notification.setDeviceSerial(terminal);
++            paymentService.processCamsTransferPayment(notification, decision.pending());
++            String sale = decision.pending().getSaleNumber();
++            record(eventId, TRANSFER, "PROCESSED", terminal, notification.getAmount(), "sale " + sale, null);
++            return CamsWebhookResponse.processed("Sale " + sale + " paid.");
++        }
++        if (decision.kind() == PendingMatcher.Kind.AMOUNT_MISMATCH) {
++            notification.setDeviceSerial(terminal);
++            paymentService.recordUnmatchedCamsTransfer(notification, decision.pending());
++            String sale = decision.pending().getSaleNumber();
++            record(eventId, TRANSFER, "AMOUNT_MISMATCH", terminal, notification.getAmount(),
++                    "sale " + sale + " expected " + decision.pending().getAmount(), rawBody);
++            return CamsWebhookResponse.processed("The amount does not match sale " + sale
++                    + ". It was recorded for review and the sale was not completed.");
++        }
++        return ignored(eventId, TRANSFER, terminal, notification.getAmount(),
++                "no open transfer payment on terminal " + terminal, rawBody);
++    }
+ 
+-        if (pendingTransfer == null) {
+-            log.info("Ignoring payment. No pending FuelFlow transfer for VA={}", notification.getVirtualAccountNumber());
+-            return;
++    @Transactional
++    public CamsWebhookResponse handleCard(CardPaymentNotification notification, String rawBody) {
++        String eventId = EventIds.resolve(notification.getEventId(),
++                firstNonBlank(notification.getRequestReference(), notification.getRrn()));
++        if (eventId == null) {
++            throw new BadRequestException("eventId, requestReference or rrn is required.");
++        }
++        if (notification.getAmount() == null) {
++            throw new BadRequestException("amount is required.");
++        }
++        if (isDuplicate(eventId, notification.getRrn())) {
++            return CamsWebhookResponse.duplicate("Already processed.");
++        }
++        String terminal = notification.getTerminalSerialNumber();
++        String problem = institutionProblem(notification.getInstitutionId());
++        if (problem == null && !"00".equals(notification.getResponseCode())) {
++            problem = "not an approved card sale";
++        }
++        if (problem == null && (terminal == null || terminal.isBlank())) {
++            problem = "the notice has no terminal id";
++        }
++        if (problem != null) {
++            return ignored(eventId, CARD, terminal, notification.getAmount(), problem, rawBody);
+         }
+ 
+-        log.info("Received CAMS payment notification. requestReference={}", notification.getRequestReference());
+-        paymentService.processCamsTransferPayment(notification, pendingTransfer);
++        List<PendingCardPayment> open = pendingCardPaymentService.findOpen(terminal);
++        PendingMatcher.Decision<PendingCardPayment> decision =
++                PendingMatcher.decide(candidates(open, PendingCardPayment::getAmount), notification.getAmount());
++
++        if (decision.kind() == PendingMatcher.Kind.MATCH) {
++            paymentService.processCamsCardPayment(notification, decision.pending());
++            String sale = decision.pending().getSaleNumber();
++            record(eventId, CARD, "PROCESSED", terminal, notification.getAmount(), "sale " + sale, null);
++            return CamsWebhookResponse.processed("Sale " + sale + " paid.");
++        }
++        if (decision.kind() == PendingMatcher.Kind.AMOUNT_MISMATCH) {
++            paymentService.recordUnmatchedCamsCard(notification, decision.pending());
++            String sale = decision.pending().getSaleNumber();
++            record(eventId, CARD, "AMOUNT_MISMATCH", terminal, notification.getAmount(),
++                    "sale " + sale + " expected " + decision.pending().getAmount(), rawBody);
++            return CamsWebhookResponse.processed("The amount does not match sale " + sale
++                    + ". It was recorded for review and the sale was not completed.");
++        }
++        return ignored(eventId, CARD, terminal, notification.getAmount(),
++                "no open card payment on terminal " + terminal, rawBody);
+     }
+ 
++    private boolean isDuplicate(String eventId, String paymentReference) {
++        if (eventRepository.existsByEventId(eventId)) {
++            return true;
++        }
++        // guards against a null or blank reference: that would match payments that have no gateway reference at all
++        return paymentReference != null && !paymentReference.isBlank()
++                && paymentRepository.findByGatewayReference(paymentReference).isPresent();
++    }
+ 
+-    public void processCardPayment(CardPaymentNotification notification) {
+-
+-        if (!"00".equals(notification.getResponseCode())) {
+-            log.info("Ignoring unsuccessful card payment.");
+-            return;
++    /** Null when the notice is for FuelFlow's institution (or the institution is not configured), else the reason. */
++    private String institutionProblem(String noticeInstitutionId) {
++        if (fuelFlowInstitutionId == null || fuelFlowInstitutionId.isBlank()) {
++            return null;
+         }
++        if (noticeInstitutionId == null || !fuelFlowInstitutionId.trim().equalsIgnoreCase(noticeInstitutionId.trim())) {
++            return "the notice is not for FuelFlow's institution";
++        }
++        return null;
++    }
+ 
+-        PendingCardPayment pending = pendingCardPaymentService.consume(notification.getTerminalSerialNumber(), notification.getAmount());
++    private CamsWebhookResponse ignored(String eventId, String kind, String terminal, BigDecimal amount, String reason, String rawBody) {
++        log.info("CAMS {} notice {} ignored: {}", kind, eventId, reason);
++        record(eventId, kind, "IGNORED", terminal, amount, reason, rawBody);
++        return CamsWebhookResponse.ignored(reason);
++    }
++
++    private void record(String eventId, String kind, String outcome, String terminal, BigDecimal amount, String detail, String rawBody) {
++        eventRepository.save(CamsWebhookEvent.builder()
++                .eventId(eventId)
++                .kind(kind)
++                .outcome(outcome)
++                .terminalSerial(terminal)
++                .amount(amount)
++                .detail(detail == null ? null : detail.substring(0, Math.min(detail.length(), 300)))
++                .rawBody(rawBody)
++                .receivedAt(LocalDateTime.now())
++                .build());
++    }
+ 
+-        if (pending == null) {
+-            log.info("Card payment does not belong to FuelFlow.");
+-            return;
++    private static <T> List<PendingMatcher.Candidate<T>> candidates(List<T> open, Function<T, BigDecimal> amountOf) {
++        List<PendingMatcher.Candidate<T>> candidates = new ArrayList<>();
++        for (T pending : open) {
++            candidates.add(new PendingMatcher.Candidate<>(pending, amountOf.apply(pending)));
+         }
++        return candidates;
++    }
+ 
+-        paymentService.processCamsCardPayment(notification, pending);
++    private static String firstNonBlank(String first, String second) {
++        if (first != null && !first.isBlank()) {
++            return first.trim();
++        }
++        if (second != null && !second.isBlank()) {
++            return second.trim();
++        }
++        return null;
+     }
+ }
+-
+--- a/src/main/java/org/inventory_tracker/integration/cams/support/EventIds.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/support/EventIds.java
+@@ -0,0 +1,18 @@
++package org.inventory_tracker.integration.cams.support;
++
++/** The duplicate key of a CAMS notice. It needs only the JDK. */
++public final class EventIds {
++
++    private EventIds() { }
++
++    /** The notice's eventId, or "evt_" plus its requestReference, or null when it has neither. */
++    public static String resolve(String eventId, String requestReference) {
++        if (eventId != null && !eventId.isBlank()) {
++            return eventId.trim();
++        }
++        if (requestReference != null && !requestReference.isBlank()) {
++            return "evt_" + requestReference.trim();
++        }
++        return null;
++    }
++}
+--- a/src/main/java/org/inventory_tracker/integration/cams/support/PendingMatcher.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/support/PendingMatcher.java
+@@ -0,0 +1,36 @@
++package org.inventory_tracker.integration.cams.support;
++
++import java.math.BigDecimal;
++import java.util.List;
++import java.util.Objects;
++
++/**
++ * Decides which open payment on a terminal a CAMS notice belongs to. It needs only the JDK.
++ *
++ * The caller passes the open (not expired) payments of ONE terminal, oldest first. A payment matches when its
++ * amount is exactly equal (5000 and 5000.00 are equal). If something is open on the terminal but no amount
++ * matches, the notice is an amount mismatch: it is recorded for review and never completes a sale.
++ */
++public final class PendingMatcher {
++
++    public enum Kind { MATCH, AMOUNT_MISMATCH, NONE }
++
++    public record Candidate<T>(T pending, BigDecimal amount) { }
++
++    public record Decision<T>(Kind kind, T pending) { }
++
++    private PendingMatcher() { }
++
++    public static <T> Decision<T> decide(List<Candidate<T>> openOldestFirst, BigDecimal paid) {
++        Objects.requireNonNull(paid, "paid");
++        if (openOldestFirst == null || openOldestFirst.isEmpty()) {
++            return new Decision<>(Kind.NONE, null);
++        }
++        for (Candidate<T> candidate : openOldestFirst) {
++            if (candidate.amount() != null && candidate.amount().compareTo(paid) == 0) {
++                return new Decision<>(Kind.MATCH, candidate.pending());
++            }
++        }
++        return new Decision<>(Kind.AMOUNT_MISMATCH, openOldestFirst.get(0).pending());
++    }
++}
+--- a/src/main/java/org/inventory_tracker/integration/cams/support/WebhookSignature.java
++++ b/src/main/java/org/inventory_tracker/integration/cams/support/WebhookSignature.java
+@@ -0,0 +1,77 @@
++package org.inventory_tracker.integration.cams.support;
++
++import java.nio.charset.StandardCharsets;
++import java.security.GeneralSecurityException;
++import java.security.MessageDigest;
++import java.util.ArrayList;
++import java.util.HexFormat;
++import java.util.List;
++import java.util.Locale;
++import javax.crypto.Mac;
++import javax.crypto.spec.SecretKeySpec;
++
++/**
++ * Checks the signature on a CAMS webhook (contract v1). It needs only the JDK.
++ *
++ * The signed text is "{X-Timestamp}.{raw body bytes}" with HMAC-SHA256, written as lowercase hex.
++ * The timestamp is when CAMS sent that attempt, so a retry hours later is signed afresh and still passes.
++ */
++public final class WebhookSignature {
++
++    public enum Result { VALID, MISSING_HEADERS, STALE_TIMESTAMP, BAD_SIGNATURE }
++
++    private final List<String> secrets = new ArrayList<>();
++    private final long toleranceSeconds;
++
++    /** Blank secrets are dropped: an empty secret must never be able to validate anything. */
++    public WebhookSignature(List<String> secrets, long toleranceSeconds) {
++        for (String s : secrets) {
++            if (s != null && !s.isBlank()) {
++                this.secrets.add(s);
++            }
++        }
++        this.toleranceSeconds = toleranceSeconds;
++    }
++
++    public Result verify(byte[] rawBody, String timestampHeader, String signatureHeader, long nowEpochSeconds) {
++        if (rawBody == null || isBlank(timestampHeader) || isBlank(signatureHeader)) {
++            return Result.MISSING_HEADERS;
++        }
++        String timestamp = timestampHeader.trim();
++        long sentAt;
++        try {
++            sentAt = Long.parseLong(timestamp);
++        } catch (NumberFormatException ex) {
++            return Result.STALE_TIMESTAMP;
++        }
++        if (Math.abs(nowEpochSeconds - sentAt) > toleranceSeconds) {
++            return Result.STALE_TIMESTAMP;
++        }
++        byte[] provided = signatureHeader.trim().toLowerCase(Locale.ROOT).getBytes(StandardCharsets.US_ASCII);
++        boolean matched = false;
++        for (String secret : secrets) {
++            byte[] expected = sign(secret, timestamp, rawBody).getBytes(StandardCharsets.US_ASCII);
++            // Constant-time comparison, and every configured secret is always checked.
++            matched |= MessageDigest.isEqual(expected, provided);
++        }
++        return matched ? Result.VALID : Result.BAD_SIGNATURE;
++    }
++
++    /** The X-Signature value for a body: lowercase hex HMAC-SHA256 of "{timestamp}.{body}". */
++    public static String sign(String secret, String timestamp, byte[] body) {
++        try {
++            Mac mac = Mac.getInstance("HmacSHA256");
++            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
++            mac.update(timestamp.getBytes(StandardCharsets.UTF_8));
++            mac.update((byte) '.');
++            mac.update(body);
++            return HexFormat.of().formatHex(mac.doFinal());
++        } catch (GeneralSecurityException ex) {
++            throw new IllegalStateException("HmacSHA256 is not available", ex);
++        }
++    }
++
++    private static boolean isBlank(String s) {
++        return s == null || s.isBlank();
++    }
++}
+--- a/src/main/java/org/inventory_tracker/security/CamsAuthenticationFilter.java
++++ b/src/main/java/org/inventory_tracker/security/CamsAuthenticationFilter.java
+@@ -133,7 +133,14 @@
+                         ||
+ 
+                         ("GET".equalsIgnoreCase(method)
+-                                && uri.equals("/api/v1/corporate-agreement/pos/fueling-companies"));
++                                && uri.equals("/api/v1/corporate-agreement/pos/fueling-companies"))
++
++                        ||
++
++                        // CAMS webhooks carry no user token; the controller checks their signature
++                        ("POST".equalsIgnoreCase(method)
++                                && (uri.equals("/api/v1/integrations/cams/transfer")
++                                        || uri.equals("/api/v1/integrations/cams/card")));
+ 
+         }
+ }
+\ No newline at end of file
+--- a/src/main/java/org/inventory_tracker/security/SecurityConfig.java
++++ b/src/main/java/org/inventory_tracker/security/SecurityConfig.java
+@@ -4,6 +4,7 @@
+ import org.springframework.context.annotation.Configuration;
+ import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+ import org.springframework.context.annotation.Bean;
++import org.springframework.http.HttpMethod;
+ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+ import org.springframework.security.config.http.SessionCreationPolicy;
+ import org.springframework.security.web.SecurityFilterChain;
+@@ -36,6 +37,9 @@
+                                 "/api/v1/pump-assignments/assignments",
+                                 "/api/v1/corporate-agreement/pos/*"
+                         ).permitAll()
++                        .requestMatchers(HttpMethod.POST,
++                                "/api/v1/integrations/cams/transfer",
++                                "/api/v1/integrations/cams/card").permitAll()
+                         .anyRequest().authenticated()
+                 )
+                 .addFilterBefore(camsAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+--- a/src/main/java/org/inventory_tracker/service/PaymentService.java
++++ b/src/main/java/org/inventory_tracker/service/PaymentService.java
+@@ -65,7 +65,9 @@
+ import java.math.BigDecimal;
+ import java.math.RoundingMode;
+ import java.time.LocalDate;
++import java.time.Instant;
+ import java.time.LocalDateTime;
++import java.time.ZoneId;
+ import java.util.UUID;
+ 
+ @Slf4j
+@@ -838,7 +840,8 @@
+                 .gatewayReference(notification.getRequestReference())
+                 .gatewayTransactionReference(notification.getSessionId())
+                 .amount(notification.getAmount())
+-                .paidAt(notification.getPaymentTime())
++                .paidAt(toLocalDateTime(notification.getPaymentTime()))
++                .paymentTime(toLocalDateTime(notification.getPaymentTime()))
+                 .payerName(notification.getPayerName())
+                 .payerAccountNumber(notification.getPayerAccountNumber())
+                 .payerBank(notification.getPayerBankName())
+@@ -859,7 +862,7 @@
+         // sale.setTransactionReference(notification.getRequestReference());
+ 
+         saleRepository.save(sale);
+-        completeSale(sale.getId(), notification.getRequestReference(), PaymentStatus.SUCCESS, notification.getPaymentTime());
++        completeSaleOrFlagForReview(sale, notification.getRequestReference(), toLocalDateTime(notification.getPaymentTime()));
+         pendingTransferService.delete(pendingTransfer);
+         return paymentMapper.toResponse(savedPayment);
+     }
+@@ -873,7 +876,8 @@
+                 .gatewayReference(cardPaymentNotification.getRrn())
+                 .gatewayTransactionReference(cardPaymentNotification.getStan())
+                 .amount(cardPaymentNotification.getAmount())
+-                .paidAt(cardPaymentNotification.getTransactionTime())
++                .paidAt(toLocalDateTime(cardPaymentNotification.getTransactionTime()))
++                .paymentTime(toLocalDateTime(cardPaymentNotification.getTransactionTime()))
+                 .terminal(terminal)
+                 // .outletId(cardPaymentNotification.getOutletId())
+                 .processor("CAMS")
+@@ -886,11 +890,98 @@
+         sale.setPaymentMethod(PaymentMethod.CARD);
+ 
+         saleRepository.save(sale);
+-        completeSale(sale.getId(), cardPaymentNotification.getRrn(), PaymentStatus.SUCCESS, cardPaymentNotification.getTransactionTime());
+-        pendingCardPaymentService.consume(terminal.getTerminalSerialNumber(), cardPaymentNotification.getAmount());
++        completeSaleOrFlagForReview(sale, cardPaymentNotification.getRrn(), toLocalDateTime(cardPaymentNotification.getTransactionTime()));
++        pendingCardPaymentService.delete(pendingCardPayment);
+         return paymentMapper.toResponse(savedPayment);
+     }
+ 
++    /**
++     * The customer paid, but not the amount the sale was waiting for. The payment is recorded for review and the
++     * sale is NOT completed. The pending note stays until it expires, in case the rest is paid.
++     */
++    @Transactional
++    public PaymentResponse recordUnmatchedCamsTransfer(CamsPaymentNotification notification, PendingTransfer pendingTransfer) {
++        Sale sale = saleRepository.findBySaleNumber(pendingTransfer.getSaleNumber())
++                .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
++        Terminal terminal = terminalRepository.findByTerminalSerialNumber(notification.getDeviceSerial())
++                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found."));
++        LocalDateTime paidAt = toLocalDateTime(notification.getPaymentTime());
++        Payment payment = Payment.builder()
++                .paymentNumber(generatePaymentNumber())
++                .sale(sale)
++                .paymentStatus(PaymentStatus.RECONCILIATION_PENDING)
++                .paymentMethod(PaymentMethod.TRANSFER)
++                .gatewayReference(notification.getRequestReference())
++                .gatewayTransactionReference(notification.getSessionId())
++                .amount(notification.getAmount())
++                .paidAt(paidAt)
++                .paymentTime(paidAt)
++                .payerName(notification.getPayerName())
++                .payerAccountNumber(notification.getPayerAccountNumber())
++                .payerBank(notification.getPayerBankName())
++                .terminal(terminal)
++                .outletId(notification.getOutletId())
++                .narration(notification.getNarration())
++                .processor("CAMS")
++                .build();
++        Payment savedPayment = paymentRepository.save(payment);
++        sale.setPaymentStatus(PaymentStatus.RECONCILIATION_PENDING);
++        saleRepository.save(sale);
++        log.warn("CAMS transfer {} of {} does not match sale {} ({}); recorded for review",
++                notification.getRequestReference(), notification.getAmount(), sale.getSaleNumber(), sale.getNetAmount());
++        return paymentMapper.toResponse(savedPayment);
++    }
++
++    /** Same as recordUnmatchedCamsTransfer, for a card payment. */
++    @Transactional
++    public PaymentResponse recordUnmatchedCamsCard(CardPaymentNotification cardPaymentNotification, PendingCardPayment pendingCardPayment) {
++        Sale sale = saleRepository.findBySaleNumber(pendingCardPayment.getSaleNumber())
++                .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
++        Terminal terminal = terminalRepository.findByTerminalSerialNumber(cardPaymentNotification.getTerminalSerialNumber())
++                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found."));
++        LocalDateTime paidAt = toLocalDateTime(cardPaymentNotification.getTransactionTime());
++        Payment payment = Payment.builder()
++                .paymentNumber(generatePaymentNumber())
++                .sale(sale)
++                .paymentStatus(PaymentStatus.RECONCILIATION_PENDING)
++                .paymentMethod(PaymentMethod.CARD)
++                .gatewayReference(cardPaymentNotification.getRrn())
++                .gatewayTransactionReference(cardPaymentNotification.getStan())
++                .amount(cardPaymentNotification.getAmount())
++                .paidAt(paidAt)
++                .paymentTime(paidAt)
++                .terminal(terminal)
++                .processor("CAMS")
++                .build();
++        Payment savedPayment = paymentRepository.save(payment);
++        sale.setPaymentStatus(PaymentStatus.RECONCILIATION_PENDING);
++        saleRepository.save(sale);
++        log.warn("CAMS card payment {} of {} does not match sale {} ({}); recorded for review",
++                cardPaymentNotification.getRrn(), cardPaymentNotification.getAmount(), sale.getSaleNumber(), sale.getNetAmount());
++        return paymentMapper.toResponse(savedPayment);
++    }
++
++    /**
++     * The money is already in, so a problem completing the sale (for example not enough stock recorded) must not
++     * undo the payment. The payment stays recorded and the sale is flagged for review instead.
++     * completeSale checks before it changes anything, so catching its failure here is safe.
++     */
++    private void completeSaleOrFlagForReview(Sale sale, String transactionReference, LocalDateTime paidAt) {
++        try {
++            completeSale(sale.getId(), transactionReference, PaymentStatus.SUCCESS, paidAt);
++        } catch (BadRequestException | ResourceNotFoundException ex) {
++            log.warn("Payment {} was received but sale {} could not be completed: {}",
++                    transactionReference, sale.getSaleNumber(), ex.getMessage());
++            sale.setPaymentStatus(PaymentStatus.RECONCILIATION_PENDING);
++            saleRepository.save(sale);
++        }
++    }
++
++    /** CAMS sends UTC instants; FuelFlow stores local date-times. */
++    private static LocalDateTime toLocalDateTime(Instant instant) {
++        return instant == null ? LocalDateTime.now() : LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
++    }
++
+     private String generateSaleNumber(Station station) {
+         return "FuelFlow-"
+                     + ShiftUtil.businessDate(station.getTimeZone())
+--- a/src/main/java/org/inventory_tracker/service/SaleService.java
++++ b/src/main/java/org/inventory_tracker/service/SaleService.java
+@@ -15,6 +15,8 @@
+ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Transactional;
+ import java.time.LocalDate;
++import org.inventory_tracker.integration.cams.PendingPayment.card.PendingCardPaymentService;
++import org.inventory_tracker.integration.cams.PendingPayment.transfer.PendingTransferService;
+ import java.util.List;
+ 
+ 
+@@ -29,6 +31,8 @@
+     private final PumpRepository pumpRepository;
+     private final AttendantRepository attendantRepository;
+     private final AuthenticatedUserService authenticatedUserService;
++    private final PendingTransferService pendingTransferService;
++    private final PendingCardPaymentService pendingCardPaymentService;
+ 
+ 
+ //     @Transactional
+@@ -392,6 +396,9 @@
+             throw new BadRequestException("Completed sales cannot be cancelled. Use a refund or reversal process instead.");
+         }
+ 
++        // a cancelled sale must not leave a pending payment behind: it would block the terminal and could swallow a later payment
++        pendingTransferService.deleteBySaleNumber(sale.getSaleNumber());
++        pendingCardPaymentService.deleteBySaleNumber(sale.getSaleNumber());
+         sale.setSaleStatus(SaleStatus.CANCELLED);
+         sale.setPaymentStatus(PaymentStatus.CANCELLED);
+         return saleMapper.toResponse(saleRepository.save(sale));
+--- a/src/main/resources/application.properties
++++ b/src/main/resources/application.properties
+@@ -23,4 +23,15 @@
+ spring.mail.password=${MAIL_PASSWORD}
+ 
+ spring.mail.properties.mail.smtp.auth=true
+-spring.mail.properties.mail.smtp.starttls.enable=true
+\ No newline at end of file
++spring.mail.properties.mail.smtp.starttls.enable=true
++
++# CAMS webhook receiver (contract v1)
++# While a secret is being rotated, put the old one here so notices signed with either are accepted.
++cams.webhook.previous-secret=${CAMS_WEBHOOK_PREVIOUS_SECRET:}
++cams.webhook.tolerance-seconds=300
++# FuelFlow's institution id on CAMS. Notices for any other institution are ignored. Empty = not checked.
++cams.institution-id=${CAMS_INSTITUTION_ID:}
++# How long a pending payment stays open, and whether a terminal may have only one open payment at a time.
++cams.pending.transfer-ttl-minutes=15
++cams.pending.card-ttl-minutes=10
++cams.pending.single-open-per-terminal=true
+--- a/src/test/java/org/inventory_tracker/integration/cams/support/EventIdsTest.java
++++ b/src/test/java/org/inventory_tracker/integration/cams/support/EventIdsTest.java
+@@ -0,0 +1,26 @@
++package org.inventory_tracker.integration.cams.support;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertNull;
++
++import org.junit.jupiter.api.Test;
++
++class EventIdsTest {
++
++    @Test
++    void theEventIdIsPreferred() {
++        assertEquals("evt_A", EventIds.resolve(" evt_A ", "REF1"));
++    }
++
++    @Test
++    void theRequestReferenceIsTheFallback() {
++        assertEquals("evt_REF1", EventIds.resolve(null, " REF1 "));
++        assertEquals("evt_REF1", EventIds.resolve("  ", "REF1"));
++    }
++
++    @Test
++    void withNeitherThereIsNoKey() {
++        assertNull(EventIds.resolve(null, null));
++        assertNull(EventIds.resolve("", " "));
++    }
++}
+--- a/src/test/java/org/inventory_tracker/integration/cams/support/PendingMatcherTest.java
++++ b/src/test/java/org/inventory_tracker/integration/cams/support/PendingMatcherTest.java
+@@ -0,0 +1,64 @@
++package org.inventory_tracker.integration.cams.support;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertNull;
++import static org.junit.jupiter.api.Assertions.assertThrows;
++
++import java.math.BigDecimal;
++import java.util.List;
++import org.inventory_tracker.integration.cams.support.PendingMatcher.Candidate;
++import org.inventory_tracker.integration.cams.support.PendingMatcher.Decision;
++import org.inventory_tracker.integration.cams.support.PendingMatcher.Kind;
++import org.junit.jupiter.api.Test;
++
++class PendingMatcherTest {
++
++    private static Candidate<String> open(String sale, String amount) {
++        return new Candidate<>(sale, amount == null ? null : new BigDecimal(amount));
++    }
++
++    @Test
++    void nothingOpenMeansNone() {
++        assertEquals(Kind.NONE, PendingMatcher.decide(List.<Candidate<String>>of(), new BigDecimal("5000")).kind());
++        assertEquals(Kind.NONE, PendingMatcher.<String>decide(null, new BigDecimal("5000")).kind());
++        assertNull(PendingMatcher.<String>decide(null, new BigDecimal("5000")).pending());
++    }
++
++    @Test
++    void anExactAmountMatches() {
++        Decision<String> d = PendingMatcher.decide(List.of(open("S1", "5000.00")), new BigDecimal("5000.00"));
++        assertEquals(Kind.MATCH, d.kind());
++        assertEquals("S1", d.pending());
++    }
++
++    @Test
++    void scaleDoesNotMatter() {
++        assertEquals(Kind.MATCH, PendingMatcher.decide(List.of(open("S1", "5000.00")), new BigDecimal("5000")).kind());
++        assertEquals(Kind.MATCH, PendingMatcher.decide(List.of(open("S1", "5000")), new BigDecimal("5000.0")).kind());
++    }
++
++    @Test
++    void aDifferentAmountIsAMismatchOnTheOldestOpenPayment() {
++        Decision<String> d = PendingMatcher.decide(List.of(open("S1", "5000"), open("S2", "7000")), new BigDecimal("4000"));
++        assertEquals(Kind.AMOUNT_MISMATCH, d.kind());
++        assertEquals("S1", d.pending());
++    }
++
++    @Test
++    void withSeveralOpenPaymentsTheOldestExactAmountWins() {
++        Decision<String> d = PendingMatcher.decide(List.of(open("S1", "5000"), open("S2", "7000"), open("S3", "7000")), new BigDecimal("7000"));
++        assertEquals(Kind.MATCH, d.kind());
++        assertEquals("S2", d.pending());
++    }
++
++    @Test
++    void aPaymentWithoutAnAmountNeverMatches() {
++        Decision<String> d = PendingMatcher.decide(List.of(open("S1", null)), new BigDecimal("5000"));
++        assertEquals(Kind.AMOUNT_MISMATCH, d.kind());
++    }
++
++    @Test
++    void aNoticeWithoutAnAmountIsRefused() {
++        assertThrows(NullPointerException.class, () -> PendingMatcher.decide(List.of(open("S1", "5000")), null));
++    }
++}
+--- a/src/test/java/org/inventory_tracker/integration/cams/support/WebhookSignatureTest.java
++++ b/src/test/java/org/inventory_tracker/integration/cams/support/WebhookSignatureTest.java
+@@ -0,0 +1,127 @@
++package org.inventory_tracker.integration.cams.support;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++
++import java.nio.charset.StandardCharsets;
++import java.util.Arrays;
++import java.util.List;
++import org.inventory_tracker.integration.cams.support.WebhookSignature.Result;
++import org.junit.jupiter.api.Test;
++
++class WebhookSignatureTest {
++
++    private static final String SECRET = "test-secret-do-not-use-in-production";
++    private static final long NOW = 1_793_797_200L;
++    private static final byte[] BODY = "{\"eventId\":\"evt_1\",\"amount\":5000.00}".getBytes(StandardCharsets.UTF_8);
++
++    private static WebhookSignature verifier(String... secrets) {
++        return new WebhookSignature(Arrays.asList(secrets), 300);
++    }
++
++    private static String signedAt(long ts, byte[] body, String secret) {
++        return WebhookSignature.sign(secret, Long.toString(ts), body);
++    }
++
++    /** The test vector published in the webhook contract. The Go sender reproduces the same value. */
++    @Test
++    void reproducesTheContractTestVector() {
++        String body = "{\"eventId\":\"evt_test_0001\",\"eventType\":\"payment.success\",\"version\":\"1\",\"amount\":5000.00}";
++        assertEquals("3a34ddbefabc5e2ce03e0845cfe0c06ec93cd773e2891b0705d9c4549013b0ed",
++                WebhookSignature.sign(SECRET, "1793797200", body.getBytes(StandardCharsets.UTF_8)));
++    }
++
++    @Test
++    void acceptsAGenuineNotice() {
++        assertEquals(Result.VALID, verifier(SECRET).verify(BODY, Long.toString(NOW), signedAt(NOW, BODY, SECRET), NOW));
++    }
++
++    @Test
++    void rejectsAnAlteredBody() {
++        byte[] other = "{\"eventId\":\"evt_1\",\"amount\":9999.00}".getBytes(StandardCharsets.UTF_8);
++        assertEquals(Result.BAD_SIGNATURE, verifier(SECRET).verify(other, Long.toString(NOW), signedAt(NOW, BODY, SECRET), NOW));
++    }
++
++    @Test
++    void rejectsATimestampThatWasNotSigned() {
++        String signedForNow = signedAt(NOW, BODY, SECRET);
++        assertEquals(Result.BAD_SIGNATURE, verifier(SECRET).verify(BODY, Long.toString(NOW + 5), signedForNow, NOW));
++    }
++
++    @Test
++    void rejectsTheWrongSecret() {
++        assertEquals(Result.BAD_SIGNATURE, verifier(SECRET).verify(BODY, Long.toString(NOW), signedAt(NOW, BODY, "another-secret"), NOW));
++    }
++
++    @Test
++    void rejectsMissingHeaders() {
++        WebhookSignature v = verifier(SECRET);
++        String sig = signedAt(NOW, BODY, SECRET);
++        assertEquals(Result.MISSING_HEADERS, v.verify(BODY, null, sig, NOW));
++        assertEquals(Result.MISSING_HEADERS, v.verify(BODY, "  ", sig, NOW));
++        assertEquals(Result.MISSING_HEADERS, v.verify(BODY, Long.toString(NOW), null, NOW));
++        assertEquals(Result.MISSING_HEADERS, v.verify(BODY, Long.toString(NOW), "", NOW));
++        assertEquals(Result.MISSING_HEADERS, v.verify(null, Long.toString(NOW), sig, NOW));
++    }
++
++    @Test
++    void rejectsAStaleOrFutureOrNonNumericTimestamp() {
++        WebhookSignature v = verifier(SECRET);
++        long old = NOW - 301;
++        long future = NOW + 301;
++        assertEquals(Result.STALE_TIMESTAMP, v.verify(BODY, Long.toString(old), signedAt(old, BODY, SECRET), NOW));
++        assertEquals(Result.STALE_TIMESTAMP, v.verify(BODY, Long.toString(future), signedAt(future, BODY, SECRET), NOW));
++        assertEquals(Result.STALE_TIMESTAMP, v.verify(BODY, "yesterday", "abc", NOW));
++    }
++
++    @Test
++    void toleranceBoundaryIsFiveMinutesInclusive() {
++        WebhookSignature v = verifier(SECRET);
++        long edge = NOW - 300;
++        assertEquals(Result.VALID, v.verify(BODY, Long.toString(edge), signedAt(edge, BODY, SECRET), NOW));
++    }
++
++    @Test
++    void acceptsThePreviousSecretDuringRotation() {
++        WebhookSignature v = verifier("new-secret", "old-secret");
++        assertEquals(Result.VALID, v.verify(BODY, Long.toString(NOW), signedAt(NOW, BODY, "old-secret"), NOW));
++        assertEquals(Result.VALID, v.verify(BODY, Long.toString(NOW), signedAt(NOW, BODY, "new-secret"), NOW));
++        assertEquals(Result.BAD_SIGNATURE, v.verify(BODY, Long.toString(NOW), signedAt(NOW, BODY, "third-secret"), NOW));
++    }
++
++    @Test
++    void blankSecretsCanNeverValidateAnything() {
++        WebhookSignature v = new WebhookSignature(Arrays.asList("", "   ", null), 300);
++        assertEquals(Result.BAD_SIGNATURE, v.verify(BODY, Long.toString(NOW), signedAt(NOW, BODY, SECRET), NOW));
++        assertEquals(Result.BAD_SIGNATURE, v.verify(BODY, Long.toString(NOW), "00", NOW));
++    }
++
++    @Test
++    void ignoresUppercaseAndSurroundingSpacesInTheHeaders() {
++        String sig = signedAt(NOW, BODY, SECRET).toUpperCase();
++        assertEquals(Result.VALID, verifier(SECRET).verify(BODY, " " + NOW + " ", " " + sig + " ", NOW));
++    }
++
++    @Test
++    void rejectsASignatureOfTheWrongLengthOrNotHex() {
++        WebhookSignature v = verifier(SECRET);
++        String real = signedAt(NOW, BODY, SECRET);
++        assertEquals(Result.BAD_SIGNATURE, v.verify(BODY, Long.toString(NOW), real.substring(0, 63), NOW));
++        assertEquals(Result.BAD_SIGNATURE, v.verify(BODY, Long.toString(NOW), real + "00", NOW));
++        assertEquals(Result.BAD_SIGNATURE, v.verify(BODY, Long.toString(NOW), "not-hex-at-all", NOW));
++    }
++
++    @Test
++    void signsTheExactBytesNotAReEncodedString() {
++        byte[] utf8 = "{\"payerName\":\"\u00D1andi \u00D6kezie\"}".getBytes(StandardCharsets.UTF_8);
++        byte[] latin1 = "{\"payerName\":\"\u00D1andi \u00D6kezie\"}".getBytes(StandardCharsets.ISO_8859_1);
++        String sigOfUtf8 = signedAt(NOW, utf8, SECRET);
++        assertEquals(Result.VALID, verifier(SECRET).verify(utf8, Long.toString(NOW), sigOfUtf8, NOW));
++        assertEquals(Result.BAD_SIGNATURE, verifier(SECRET).verify(latin1, Long.toString(NOW), sigOfUtf8, NOW));
++    }
++
++    @Test
++    void anEmptyListOfSecretsFailsClosed() {
++        assertEquals(Result.BAD_SIGNATURE, new WebhookSignature(List.of(), 300)
++                .verify(BODY, Long.toString(NOW), signedAt(NOW, BODY, SECRET), NOW));
++    }
++}

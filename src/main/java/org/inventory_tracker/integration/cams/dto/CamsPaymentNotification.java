@@ -7,7 +7,7 @@ import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -61,6 +61,12 @@ public class CamsPaymentNotification {
      * CAMS References
      */
     private String requestReference;
+    /** Contract v1: the duplicate key, the kind of event, the payload version and the CAMS tenant. */
+    private String version;
+    private String eventId;
+    private String eventType;
+    private String institutionId;
+    private String merchantProfileId;
 
     private String sessionId;
 
@@ -78,7 +84,7 @@ public class CamsPaymentNotification {
 
     private PaymentMethod paymentMethod;
 
-    private LocalDateTime paymentTime;
+    private Instant paymentTime;
 
     private String payerName;
 

@@ -65,7 +65,9 @@ import java.util.List;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @Slf4j
@@ -838,7 +840,8 @@ public class PaymentService {
                 .gatewayReference(notification.getRequestReference())
                 .gatewayTransactionReference(notification.getSessionId())
                 .amount(notification.getAmount())
-                .paidAt(notification.getPaymentTime())
+                .paidAt(toLocalDateTime(notification.getPaymentTime()))
+                .paymentTime(toLocalDateTime(notification.getPaymentTime()))
                 .payerName(notification.getPayerName())
                 .payerAccountNumber(notification.getPayerAccountNumber())
                 .payerBank(notification.getPayerBankName())
@@ -859,7 +862,7 @@ public class PaymentService {
         // sale.setTransactionReference(notification.getRequestReference());
 
         saleRepository.save(sale);
-        completeSale(sale.getId(), notification.getRequestReference(), PaymentStatus.SUCCESS, notification.getPaymentTime());
+        completeSaleOrFlagForReview(sale, notification.getRequestReference(), toLocalDateTime(notification.getPaymentTime()));
         pendingTransferService.delete(pendingTransfer);
         return paymentMapper.toResponse(savedPayment);
     }
@@ -873,7 +876,8 @@ public class PaymentService {
                 .gatewayReference(cardPaymentNotification.getRrn())
                 .gatewayTransactionReference(cardPaymentNotification.getStan())
                 .amount(cardPaymentNotification.getAmount())
-                .paidAt(cardPaymentNotification.getTransactionTime())
+                .paidAt(toLocalDateTime(cardPaymentNotification.getTransactionTime()))
+                .paymentTime(toLocalDateTime(cardPaymentNotification.getTransactionTime()))
                 .terminal(terminal)
                 // .outletId(cardPaymentNotification.getOutletId())
                 .processor("CAMS")
@@ -886,9 +890,96 @@ public class PaymentService {
         sale.setPaymentMethod(PaymentMethod.CARD);
 
         saleRepository.save(sale);
-        completeSale(sale.getId(), cardPaymentNotification.getRrn(), PaymentStatus.SUCCESS, cardPaymentNotification.getTransactionTime());
-        pendingCardPaymentService.consume(terminal.getTerminalSerialNumber(), cardPaymentNotification.getAmount());
+        completeSaleOrFlagForReview(sale, cardPaymentNotification.getRrn(), toLocalDateTime(cardPaymentNotification.getTransactionTime()));
+        pendingCardPaymentService.delete(pendingCardPayment);
         return paymentMapper.toResponse(savedPayment);
+    }
+
+    /**
+     * The customer paid, but not the amount the sale was waiting for. The payment is recorded for review and the
+     * sale is NOT completed. The pending note stays until it expires, in case the rest is paid.
+     */
+    @Transactional
+    public PaymentResponse recordUnmatchedCamsTransfer(CamsPaymentNotification notification, PendingTransfer pendingTransfer) {
+        Sale sale = saleRepository.findBySaleNumber(pendingTransfer.getSaleNumber())
+                .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
+        Terminal terminal = terminalRepository.findByTerminalSerialNumber(notification.getDeviceSerial())
+                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found."));
+        LocalDateTime paidAt = toLocalDateTime(notification.getPaymentTime());
+        Payment payment = Payment.builder()
+                .paymentNumber(generatePaymentNumber())
+                .sale(sale)
+                .paymentStatus(PaymentStatus.RECONCILIATION_PENDING)
+                .paymentMethod(PaymentMethod.TRANSFER)
+                .gatewayReference(notification.getRequestReference())
+                .gatewayTransactionReference(notification.getSessionId())
+                .amount(notification.getAmount())
+                .paidAt(paidAt)
+                .paymentTime(paidAt)
+                .payerName(notification.getPayerName())
+                .payerAccountNumber(notification.getPayerAccountNumber())
+                .payerBank(notification.getPayerBankName())
+                .terminal(terminal)
+                .outletId(notification.getOutletId())
+                .narration(notification.getNarration())
+                .processor("CAMS")
+                .build();
+        Payment savedPayment = paymentRepository.save(payment);
+        sale.setPaymentStatus(PaymentStatus.RECONCILIATION_PENDING);
+        saleRepository.save(sale);
+        log.warn("CAMS transfer {} of {} does not match sale {} ({}); recorded for review",
+                notification.getRequestReference(), notification.getAmount(), sale.getSaleNumber(), sale.getNetAmount());
+        return paymentMapper.toResponse(savedPayment);
+    }
+
+    /** Same as recordUnmatchedCamsTransfer, for a card payment. */
+    @Transactional
+    public PaymentResponse recordUnmatchedCamsCard(CardPaymentNotification cardPaymentNotification, PendingCardPayment pendingCardPayment) {
+        Sale sale = saleRepository.findBySaleNumber(pendingCardPayment.getSaleNumber())
+                .orElseThrow(() -> new ResourceNotFoundException("Sale not found."));
+        Terminal terminal = terminalRepository.findByTerminalSerialNumber(cardPaymentNotification.getTerminalSerialNumber())
+                .orElseThrow(() -> new ResourceNotFoundException("Terminal not found."));
+        LocalDateTime paidAt = toLocalDateTime(cardPaymentNotification.getTransactionTime());
+        Payment payment = Payment.builder()
+                .paymentNumber(generatePaymentNumber())
+                .sale(sale)
+                .paymentStatus(PaymentStatus.RECONCILIATION_PENDING)
+                .paymentMethod(PaymentMethod.CARD)
+                .gatewayReference(cardPaymentNotification.getRrn())
+                .gatewayTransactionReference(cardPaymentNotification.getStan())
+                .amount(cardPaymentNotification.getAmount())
+                .paidAt(paidAt)
+                .paymentTime(paidAt)
+                .terminal(terminal)
+                .processor("CAMS")
+                .build();
+        Payment savedPayment = paymentRepository.save(payment);
+        sale.setPaymentStatus(PaymentStatus.RECONCILIATION_PENDING);
+        saleRepository.save(sale);
+        log.warn("CAMS card payment {} of {} does not match sale {} ({}); recorded for review",
+                cardPaymentNotification.getRrn(), cardPaymentNotification.getAmount(), sale.getSaleNumber(), sale.getNetAmount());
+        return paymentMapper.toResponse(savedPayment);
+    }
+
+    /**
+     * The money is already in, so a problem completing the sale (for example not enough stock recorded) must not
+     * undo the payment. The payment stays recorded and the sale is flagged for review instead.
+     * completeSale checks before it changes anything, so catching its failure here is safe.
+     */
+    private void completeSaleOrFlagForReview(Sale sale, String transactionReference, LocalDateTime paidAt) {
+        try {
+            completeSale(sale.getId(), transactionReference, PaymentStatus.SUCCESS, paidAt);
+        } catch (BadRequestException | ResourceNotFoundException ex) {
+            log.warn("Payment {} was received but sale {} could not be completed: {}",
+                    transactionReference, sale.getSaleNumber(), ex.getMessage());
+            sale.setPaymentStatus(PaymentStatus.RECONCILIATION_PENDING);
+            saleRepository.save(sale);
+        }
+    }
+
+    /** CAMS sends UTC instants; FuelFlow stores local date-times. */
+    private static LocalDateTime toLocalDateTime(Instant instant) {
+        return instant == null ? LocalDateTime.now() : LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
     }
 
     private String generateSaleNumber(Station station) {

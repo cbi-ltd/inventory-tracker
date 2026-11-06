@@ -4,6 +4,7 @@ import lombok.*;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -32,11 +33,13 @@ public class SecurityConfig {
                                 "/api/v1/pump-audits/shift-summary",
                                 "/api/v1/station-inventories/price",
                                 "/api/v1/sales",
-                                "/api/v1/sales/pos",
                                 "/api/v1/pump-audits/close",
                                 "/api/v1/pump-assignments/assignments",
                                 "/api/v1/corporate-agreement/pos/*"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/integrations/cams/transfer",
+                                "/api/v1/integrations/cams/card").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(camsAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

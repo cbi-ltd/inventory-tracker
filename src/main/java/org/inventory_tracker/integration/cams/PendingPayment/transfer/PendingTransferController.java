@@ -3,6 +3,7 @@ package org.inventory_tracker.integration.cams.PendingPayment.transfer;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.inventory_tracker.dto.request.RegisterPendingTransferRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,7 +15,7 @@ public class PendingTransferController {
     private final PendingTransferService pendingTransferService;
 
     @PostMapping
-    public ResponseEntity<Void> registerPendingTransfer(@Valid @RequestBody PendingTransfer pendingTransfer) {
+    public ResponseEntity<Void> registerPendingTransfer(@Valid @RequestBody RegisterPendingTransferRequest pendingTransfer) {
 
         pendingTransferService.registerPendingTransfer(
                 pendingTransfer.getVirtualAccountNumber(),

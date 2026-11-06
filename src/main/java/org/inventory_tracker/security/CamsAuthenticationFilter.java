@@ -112,11 +112,6 @@ public class CamsAuthenticationFilter extends OncePerRequestFilter {
 
                         ||
 
-                        ("GET".equalsIgnoreCase(method)
-                                && uri.equals("/api/v1/sales/pos"))
-
-                        ||
-
                         ("PUT".equalsIgnoreCase(method)
                                 && uri.equals("/api/v1/pump-audits/close"))
 
@@ -138,7 +133,14 @@ public class CamsAuthenticationFilter extends OncePerRequestFilter {
                         ||
 
                         ("GET".equalsIgnoreCase(method)
-                                && uri.equals("/api/v1/corporate-agreement/pos/fueling-companies"));
+                                && uri.equals("/api/v1/corporate-agreement/pos/fueling-companies"))
+
+                        ||
+
+                        // CAMS webhooks carry no user token; the controller checks their signature
+                        ("POST".equalsIgnoreCase(method)
+                                && (uri.equals("/api/v1/integrations/cams/transfer")
+                                        || uri.equals("/api/v1/integrations/cams/card")));
 
         }
 }
