@@ -27,7 +27,7 @@ public class CreateStationRequest {
 
     private String email;
 
-    @NotBlank(message = "Merchant account number is required")
+    // @NotBlank(message = "Merchant account number is required")
     private String merchantAccountNumber;
 
     private TerminalMode terminalMode;

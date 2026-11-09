@@ -3,7 +3,6 @@ package org.inventory_tracker.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.inventory_tracker.dto.request.CreateSaleRequest;
