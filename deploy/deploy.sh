@@ -3,6 +3,7 @@
 # Brings up Postgres always; starts the app only once the required CAMS secrets are present,
 # so the pipeline stays green while those are still being sourced from the CAMS team.
 set -euo pipefail
+umask 077   # any file we create (.env, .env.tmp) is owner-only — it holds DB + CAMS + mail secrets
 cd "$(dirname "$0")"
 
 IMAGE_TAG="${1:?usage: deploy.sh <image-tag>}"
@@ -18,7 +19,9 @@ COMPOSE="docker compose -f docker-compose.yml"
 touch .env; chmod 600 .env
 if ! grep -q '^DB_PASSWORD=' .env; then echo "DB_PASSWORD=$(openssl rand -hex 24)" >> .env; fi
 # rewrite the non-DB keys each deploy from the runner env (GitHub secrets)
-grep -v -E '^(IMAGE|CAMS_|MAIL_)=' .env > .env.tmp && mv .env.tmp .env
+# keep ONLY DB_PASSWORD from the prior .env; all IMAGE/CAMS_*/MAIL_* lines are re-written fresh
+grep -E '^DB_PASSWORD=' .env > .env.tmp && mv .env.tmp .env
+chmod 600 .env
 {
   echo "IMAGE=${REPO}:${IMAGE_TAG}"
   echo "CAMS_REQUEST_PROCESSOR=${CAMS_REQUEST_PROCESSOR:-}"
