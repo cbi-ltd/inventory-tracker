@@ -5,7 +5,6 @@ import jakarta.persistence.criteria.Predicate;
 import org.inventory_tracker.dto.request.PaymentFilterRequest;
 import org.inventory_tracker.entity.Payment;
 import org.springframework.data.jpa.domain.Specification;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -164,13 +163,9 @@ public class PaymentSpecification {
                 );
             }
 
-            query.orderBy(
-                    cb.desc(root.get("paymentTime"))
-            );
+            query.orderBy(cb.desc(root.get("paymentTime")));
 
-            return cb.and(
-                    predicates.toArray(new Predicate[0])
-            );
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
 }

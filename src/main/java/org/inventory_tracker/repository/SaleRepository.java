@@ -6,6 +6,8 @@ import org.inventory_tracker.enums.PaymentMethod;
 import org.inventory_tracker.enums.PaymentStatus;
 import org.inventory_tracker.enums.SaleStatus;
 import org.inventory_tracker.enums.Shift;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -48,6 +50,20 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
         @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate,
         @Param("shifts") Collection<Shift> shifts, @Param("terminalSerialNumber") String terminalSerialNumber,
         @Param("pumpId") Long pumpId);
+
+   @Query("""
+    SELECT s FROM Sale s
+    WHERE s.station.merchant.id = :merchantId
+      AND s.id = COALESCE(:saleId, s.id)
+      AND s.businessDate >= COALESCE(:startDate, s.businessDate)
+      AND s.businessDate <= COALESCE(:endDate, s.businessDate)
+      AND s.shift IN :shifts
+      AND s.terminal.terminalSerialNumber = COALESCE(:terminalSerialNumber, s.terminal.terminalSerialNumber)
+      AND s.pump.id = COALESCE(:pumpId, s.pump.id)
+    ORDER BY s.businessDate DESC, s.saleTime DESC
+    """)
+   Page<Sale> findSalesByPaginatedFilters(Long merchantId, Long saleId, LocalDate startDate, LocalDate endDate,
+        Collection<Shift> shifts, String terminalSerialNumber, Long pumpId, Pageable pageable);
 
    List<Sale> findByStation_Merchant_CamsMerchantIdAndBusinessDateOrderBySaleTimeDesc(String merchantId, LocalDate businessDate);
 

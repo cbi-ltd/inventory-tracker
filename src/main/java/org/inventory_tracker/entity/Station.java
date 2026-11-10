@@ -26,7 +26,7 @@ public class Station extends BaseEntity {
     private Merchant merchant;
 
     //Later, generate this automatically via CAMS
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String merchantAccountNumber;
 
     @Column(nullable = false)

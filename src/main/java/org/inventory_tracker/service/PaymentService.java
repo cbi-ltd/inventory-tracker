@@ -3,7 +3,6 @@ package org.inventory_tracker.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.inventory_tracker.dto.request.CreateSaleRequest;
@@ -674,9 +673,6 @@ public class PaymentService {
 
             throw new BadRequestException("Start date cannot be after end date.");
         }
-
-        // return paymentRepository.findAll(PaymentSpecification.filter(request))
-        //             .stream().map(paymentMapper::toResponse).toList();
 
         Specification<Payment> specification = PaymentSpecification.filter(request)
                     .and((root, query, criteriaBuilder) -> criteriaBuilder.equal(
