@@ -1,0 +1,47 @@
+# FuelFlow backend — staging runtime (Huawei ECS fuelflow-backend-staging).
+# Postgres runs on-box (staging choice). IMAGE + secrets come from .env, written by deploy.sh.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fuelflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fuelflow
+      POSTGRES_USER: fuelflow
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - fuelflow_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fuelflow -d fuelflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: ${IMAGE}
+    container_name: fuelflow-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 8080
+      DATABASE_URL: jdbc:postgresql://postgres:5432/fuelflow
+      DATABASE_USERNAME: fuelflow
+      DATABASE_PASSWORD: ${DB_PASSWORD}
+      CAMS_REQUEST_PROCESSOR: ${CAMS_REQUEST_PROCESSOR}
+      CAMS_JWT_SECRET: ${CAMS_JWT_SECRET}
+      CAMS_WEBHOOK_SECRET: ${CAMS_WEBHOOK_SECRET}
+      CAMS_WEBHOOK_PREVIOUS_SECRET: ${CAMS_WEBHOOK_PREVIOUS_SECRET}
+      CAMS_INSTITUTION_ID: ${CAMS_INSTITUTION_ID}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+    ports:
+      - "8080:8080"   # reached internally by cac-app-svr nginx (/fuel-api) and CAMS webhooks
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+volumes:
+  fuelflow_pg:
+    name: fuelflow_pg
