@@ -13,6 +13,8 @@ import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
 import org.inventory_tracker.repository.*;
 import org.inventory_tracker.security.AuthenticatedUserService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
@@ -294,8 +296,8 @@ public class SaleService {
     }
 
     @Transactional(readOnly = true)
-    public List<SaleResponse> getPosSales(Long saleId, LocalDate startDate, LocalDate endDate,
-                Shift shift, Collection<Shift> shifts, String terminalSerialNumber, Long pumpId) {
+    public Page<SaleResponse> getPosSales(Long saleId, LocalDate startDate, LocalDate endDate,
+                Shift shift, Collection<Shift> shifts, String terminalSerialNumber, Long pumpId, int page, int size) {
 
         if (terminalSerialNumber == null || terminalSerialNumber.isBlank()) {
                 throw new IllegalArgumentException("Terminal serial number is required");
@@ -319,9 +321,10 @@ public class SaleService {
                 selectedShifts = EnumSet.allOf(Shift.class);
         }
 
-        return saleRepository.findSalesByFilters(terminal.getStation().getMerchant().getId(), saleId, startDate, endDate,
-                        selectedShifts, terminalSerialNumber, pumpId)
-                                .stream().map(saleMapper::toResponse).toList();
+        Pageable pageable = Pageable.ofSize(size).withPage(page);
+        return saleRepository.findSalesByPaginatedFilters(terminal.getStation().getMerchant().getId(), saleId, startDate, endDate,
+                        selectedShifts, terminalSerialNumber, pumpId, pageable)
+                                .map(saleMapper::toResponse);
     }
 
     @Transactional(readOnly = true)

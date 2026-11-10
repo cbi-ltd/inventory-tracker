@@ -672,9 +672,6 @@ public class PaymentService {
             throw new BadRequestException("Start date cannot be after end date.");
         }
 
-        // return paymentRepository.findAll(PaymentSpecification.filter(request))
-        //             .stream().map(paymentMapper::toResponse).toList();
-
         Specification<Payment> specification = PaymentSpecification.filter(request)
                     .and((root, query, criteriaBuilder) -> criteriaBuilder.equal(
                                     root.get("sale").get("station")

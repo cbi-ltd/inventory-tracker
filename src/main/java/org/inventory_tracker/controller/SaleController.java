@@ -13,6 +13,8 @@ import org.inventory_tracker.enums.Shift;
 import org.inventory_tracker.service.PaymentService;
 import org.inventory_tracker.service.SaleService;
 import jakarta.validation.Valid;
+
+import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -95,18 +97,23 @@ public class SaleController {
 
     @GetMapping("/pos")
     @SecurityRequirements
-    public ResponseEntity<ApiSuccessResponse<List<SaleResponse>>> getPosSales(
+    public ResponseEntity<ApiSuccessResponse<Page<SaleResponse>>> getPosSales(
         @RequestParam(required = false) Long saleId,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
         @RequestParam(required = false) Shift shift,
         @RequestParam(required = false) List<Shift> shifts,
         @RequestParam(required = false) String terminalSerialNumber,
-        @RequestParam(required = false) Long pumpId
+        @RequestParam(required = false) Long pumpId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
     ) {
-        List<SaleResponse> sales = saleService.getPosSales(saleId, startDate, endDate, shift, shifts, terminalSerialNumber, pumpId);
-        int size = sales.size();
-        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Sales retrieved successfully", size, sales));
+        Page<SaleResponse> sales = saleService.getPosSales(saleId, startDate, endDate, shift, shifts, terminalSerialNumber, pumpId, page, size);
+        // int totalItems = sales.getNumberOfElements();  TOTAL ON CURRENT PAGE
+        int totalItems = (int) sales.getTotalElements();  // TOTAL ACROSS ALL PAGES
+
+        // IF WANT TO RETURN LIST INSTEAD OF A PAGE: return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Sales retrieved successfully", totalItems, sales.getContent()));
+        return ResponseEntity.ok(new ApiSuccessResponse<>(LocalDateTime.now(), HttpStatus.OK.value(), "Sales retrieved successfully", totalItems, sales));
     }
 
     @SecurityRequirement(name = "bearerAuth")
