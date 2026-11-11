@@ -42,7 +42,7 @@ echo "${GHCR_TOKEN}" | docker login "$REGISTRY" -u "${GHCR_USER}" --password-std
 $COMPOSE pull
 
 echo ">> Start Postgres"
-$COMPOSE up -d postgres
+$COMPOSE up -d postgres dozzle
 
 # --- only start the app when the mandatory CAMS secrets are present ---
 if [ -z "${CAMS_JWT_SECRET:-}" ] || [ -z "${CAMS_WEBHOOK_SECRET:-}" ] || [ -z "${CAMS_REQUEST_PROCESSOR:-}" ]; then

@@ -42,6 +42,19 @@ services:
       driver: json-file
       options: { max-size: "20m", max-file: "5" }
 
+  # Log viewer UI (ArgoCD-style). Bound to localhost only — reach it via an SSH
+  # local-forward over the jump host; never exposed on the network. docker.sock is read-only.
+  dozzle:
+    image: amir20/dozzle:latest   # internal ops tool; pin to a digest for prod hardening
+    container_name: dozzle
+    restart: unless-stopped
+    environment:
+      DOZZLE_NO_ANALYTICS: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "127.0.0.1:8888:8080"
+
 volumes:
   fuelflow_pg:
     name: fuelflow_pg
