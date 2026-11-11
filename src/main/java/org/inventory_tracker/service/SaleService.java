@@ -11,6 +11,8 @@ import org.inventory_tracker.enums.SaleStatus;
 import org.inventory_tracker.enums.Shift;
 import org.inventory_tracker.exception.BadRequestException;
 import org.inventory_tracker.exception.ResourceNotFoundException;
+import org.inventory_tracker.integration.cams.PendingPayment.card.PendingCardPaymentService;
+import org.inventory_tracker.integration.cams.PendingPayment.transfer.PendingTransferService;
 import org.inventory_tracker.repository.*;
 import org.inventory_tracker.security.AuthenticatedUserService;
 import org.springframework.data.domain.Page;
@@ -35,6 +37,8 @@ public class SaleService {
     private final AttendantRepository attendantRepository;
     private final AuthenticatedUserService authenticatedUserService;
     private final TerminalRepository terminalRepository;
+    private final PendingTransferService pendingTransferService;
+    private final PendingCardPaymentService pendingCardPaymentService;
 
 
 //     @Transactional
@@ -456,6 +460,9 @@ public class SaleService {
             throw new BadRequestException("Completed sales cannot be cancelled. Use a refund or reversal process instead.");
         }
 
+        // a cancelled sale must not leave a pending payment behind: it would block the terminal and could swallow a later payment
+        pendingTransferService.deleteBySaleNumber(sale.getSaleNumber());
+        pendingCardPaymentService.deleteBySaleNumber(sale.getSaleNumber());
         sale.setSaleStatus(SaleStatus.CANCELLED);
         sale.setPaymentStatus(PaymentStatus.CANCELLED);
         return saleMapper.toResponse(saleRepository.save(sale));
