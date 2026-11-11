@@ -65,8 +65,9 @@ services:
       - ops
 
 networks:
-  ops:
-    internal: true   # dozzle needs no network to app/postgres/internet; it reads the socket
+  # Dedicated network isolates Dozzle from app/postgres (they're on the default network).
+  # NOT 'internal' — an internal network can't publish the 127.0.0.1:8888 host port.
+  ops: {}
 
 volumes:
   fuelflow_pg:
