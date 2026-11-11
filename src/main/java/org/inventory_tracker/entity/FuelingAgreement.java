@@ -43,7 +43,6 @@ public class FuelingAgreement extends BaseEntity {
     @Column(nullable = false)
     private LocalDate startDate;
 
-    @Column(nullable = false)
     private LocalDate endDate;
 
     @Column(precision = 19, scale = 2, nullable = false)
