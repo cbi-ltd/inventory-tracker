@@ -9,6 +9,10 @@ cd "$(dirname "$0")"
 IMAGE_TAG="${1:?usage: deploy.sh <image-tag>}"
 REGISTRY="ghcr.io"
 REPO="ghcr.io/cbi-technologies-projects/fuelflow-backend"
+# Export the FULL repo:tag so docker-compose interpolates ${IMAGE} correctly.
+# (The workflow-level env IMAGE=<repo-only> leaks into this job and would otherwise
+#  win over the .env value, making compose pull <repo>:latest.)
+export IMAGE="${REPO}:${IMAGE_TAG}"
 APPDIR="/opt/fuelflow"
 install -d "$APPDIR"
 cp docker-compose.yml "$APPDIR/docker-compose.yml"
