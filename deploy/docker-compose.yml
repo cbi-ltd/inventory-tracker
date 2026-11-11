@@ -42,18 +42,31 @@ services:
       driver: json-file
       options: { max-size: "20m", max-file: "5" }
 
-  # Log viewer UI (ArgoCD-style). Bound to localhost only — reach it via an SSH
-  # local-forward over the jump host; never exposed on the network. docker.sock is read-only.
+  # Log viewer UI (ArgoCD-style). Localhost-only — reached via an SSH local-forward over the
+  # jump host (VPN + key gated); never exposed on the network. Hardened: pinned by digest,
+  # socket read-only, UI container-control + shell disabled, no extra privileges, isolated network.
   dozzle:
-    image: amir20/dozzle:latest   # internal ops tool; pin to a digest for prod hardening
+    image: amir20/dozzle@sha256:08cd5230e21e364241f3dcf26191f293166f7835654eb7e41168b9c685f0947b
     container_name: dozzle
     restart: unless-stopped
     environment:
       DOZZLE_NO_ANALYTICS: "true"
+      DOZZLE_ENABLE_ACTIONS: "false"   # no start/stop/restart of containers from the UI
+      DOZZLE_ENABLE_SHELL: "false"     # no exec-into-container from the UI
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "127.0.0.1:8888:8080"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - ops
+
+networks:
+  ops:
+    internal: true   # dozzle needs no network to app/postgres/internet; it reads the socket
 
 volumes:
   fuelflow_pg:
