@@ -118,6 +118,9 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
     runs-on: [self-hosted, fuelflow-backend]
     environment: staging
+    permissions:
+      contents: read
+      packages: read   # needed so the runner's GITHUB_TOKEN can pull the private GHCR image
     steps:
       - uses: actions/checkout@v4
       - name: Deploy
